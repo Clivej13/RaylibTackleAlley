@@ -1,0 +1,162 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "RaylibTackleAlley/1.0.0": {
+        "dependencies": {
+          "Raylib-cs": "8.0.0",
+          "RaylibGameFramework.Assets": "0.1.4",
+          "RaylibGameFramework.Configuration": "0.1.0",
+          "RaylibGameFramework.Input": "0.1.4",
+          "RaylibGameFramework.Menus": "0.1.1",
+          "RaylibGameFramework.ThreeD": "0.1.0"
+        },
+        "runtime": {
+          "RaylibTackleAlley.dll": {}
+        }
+      },
+      "Raylib-cs/8.0.0": {
+        "runtime": {
+          "lib/net8.0/Raylib-cs.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.0.0.0"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/linux-x64/native/libraylib.so": {
+            "rid": "linux-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-arm64/native/libraylib.dylib": {
+            "rid": "osx-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-x64/native/libraylib.dylib": {
+            "rid": "osx-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-x64/native/raylib.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-x86/native/raylib.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
+      "RaylibGameFramework.Assets/0.1.4": {
+        "dependencies": {
+          "Raylib-cs": "8.0.0"
+        },
+        "runtime": {
+          "lib/net9.0/RaylibGameFramework.Assets.dll": {
+            "assemblyVersion": "0.1.4.0",
+            "fileVersion": "0.1.4.0"
+          }
+        }
+      },
+      "RaylibGameFramework.Configuration/0.1.0": {
+        "runtime": {
+          "lib/net9.0/RaylibGameFramework.Configuration.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      },
+      "RaylibGameFramework.Input/0.1.4": {
+        "dependencies": {
+          "Raylib-cs": "8.0.0"
+        },
+        "runtime": {
+          "lib/net9.0/RaylibGameFramework.Input.dll": {
+            "assemblyVersion": "0.1.4.0",
+            "fileVersion": "0.1.4.0"
+          }
+        }
+      },
+      "RaylibGameFramework.Menus/0.1.1": {
+        "dependencies": {
+          "Raylib-cs": "8.0.0",
+          "RaylibGameFramework.Input": "0.1.4"
+        },
+        "runtime": {
+          "lib/net9.0/RaylibGameFramework.Menus.dll": {
+            "assemblyVersion": "0.1.1.0",
+            "fileVersion": "0.1.1.0"
+          }
+        }
+      },
+      "RaylibGameFramework.ThreeD/0.1.0": {
+        "dependencies": {
+          "Raylib-cs": "8.0.0",
+          "RaylibGameFramework.Assets": "0.1.4"
+        },
+        "runtime": {
+          "lib/net9.0/RaylibGameFramework.ThreeD.dll": {
+            "assemblyVersion": "0.1.0.0",
+            "fileVersion": "0.1.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RaylibTackleAlley/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Raylib-cs/8.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-m+fStTZjOGtkx05RNflERtKbmEUrIZ5/PFV5QXnlA02kAEwxxOC+XhNeCSZJhaGHu9d8m0eTMmefRhHueS3hkg==",
+      "path": "raylib-cs/8.0.0",
+      "hashPath": "raylib-cs.8.0.0.nupkg.sha512"
+    },
+    "RaylibGameFramework.Assets/0.1.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-VgqmIHBysvNC0HQW7g0C+KVxOJJGqbW8KwzmcCLNPAurAHDqjNQRs4lsdMloVnWJ+odzcU8fr1T09fq1ZVOytQ==",
+      "path": "raylibgameframework.assets/0.1.4",
+      "hashPath": "raylibgameframework.assets.0.1.4.nupkg.sha512"
+    },
+    "RaylibGameFramework.Configuration/0.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-c+5ag4XsbOJHsG4KZ8F0LQAE6H2D+gJE/Xt45UeJEgtu8V129Na/NPUDpwkDHy4yAvySjiXkQ+4ZNf2nDuG3DQ==",
+      "path": "raylibgameframework.configuration/0.1.0",
+      "hashPath": "raylibgameframework.configuration.0.1.0.nupkg.sha512"
+    },
+    "RaylibGameFramework.Input/0.1.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-7nid7MJdvhaeVxuMg95CPWpb6cDeEiCCQBnwBHyeSktc6GVGO+8uR8YeC9d3pBTwXxN4Y+DtDfd/bClgUp/0pQ==",
+      "path": "raylibgameframework.input/0.1.4",
+      "hashPath": "raylibgameframework.input.0.1.4.nupkg.sha512"
+    },
+    "RaylibGameFramework.Menus/0.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-CZrmkjZEfReueYGU0MsmFwT/vOL+5wZlDJffOCciWfWcVujR/9TczgVwJxuLImi1SorvFixkvs7rs6uPFwvOTg==",
+      "path": "raylibgameframework.menus/0.1.1",
+      "hashPath": "raylibgameframework.menus.0.1.1.nupkg.sha512"
+    },
+    "RaylibGameFramework.ThreeD/0.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-AIR6SRD+XKS19kPtBFkdsgdweT9B5YZJNl8akaiqd/eaNFE09fq5r8EfrLw4brH5nNBtFWXaS32M1yBiskNNiA==",
+      "path": "raylibgameframework.threed/0.1.0",
+      "hashPath": "raylibgameframework.threed.0.1.0.nupkg.sha512"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Raylib Tackle Alley",
+  "TargetFps": 60,
+  "VSync": true,
+  "Fullscreen": false,
+  "PlayerForwardSpeed": 9.0,
+  "PlayerLateralSpeed": 8.0,
+  "PlayerVerticalControl": 2.5,
+  "CameraFollowDistance": 9.0,
+  "CameraHeight": 5.5,
+  "CameraSmoothing": 10.0,
+  "FieldWidth": 24.0,
+  "FieldLength": 120.0,
+  "EndZoneLength": 12.0
+}

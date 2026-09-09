@@ -1,0 +1,6 @@
+{
+  "Assets": [
+    { "Key": "FootballField", "Type": "Model", "Path": "Assets/Models/football_field.glb" },
+    { "Key": "Stadium", "Type": "Model", "Path": "Assets/Models/stadium.glb" }
+  ]
+}
