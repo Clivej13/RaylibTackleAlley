@@ -1,0 +1,61 @@
+{
+  "source": "lowpoly_human_stage6.blend",
+  "source_sha256": "5bef11511113bfbccfd465230a5e3c3f740463d1715f254054c39d07c7ff3830",
+  "bones": {
+    "Root": null,
+    "Hips": "Root",
+    "Spine": "Hips",
+    "Chest": "Spine",
+    "Neck": "Chest",
+    "Head": "Neck",
+    "Clavicle.L": "Chest",
+    "UpperArm.L": "Clavicle.L",
+    "LowerArm.L": "UpperArm.L",
+    "Hand.L": "LowerArm.L",
+    "Clavicle.R": "Chest",
+    "UpperArm.R": "Clavicle.R",
+    "LowerArm.R": "UpperArm.R",
+    "Hand.R": "LowerArm.R",
+    "UpperLeg.L": "Hips",
+    "LowerLeg.L": "UpperLeg.L",
+    "Foot.L": "LowerLeg.L",
+    "UpperLeg.R": "Hips",
+    "LowerLeg.R": "UpperLeg.R",
+    "Foot.R": "LowerLeg.R"
+  },
+  "poses": {
+    "Pose_Neutral": {
+      "support_sole_y": -5.587935447692871e-09,
+      "hip_offset_y": 5.587935447692871e-09
+    },
+    "Pose_Athletic": {
+      "support_sole_y": 2.8522983086531895e-08,
+      "hip_offset_y": -0.13608139753341675
+    },
+    "Pose_KneeRaise": {
+      "support_sole_y": 7.311865601877798e-08,
+      "hip_offset_y": -0.01672823540866375
+    },
+    "Pose_ArmsForward": {
+      "support_sole_y": -5.587935447692871e-09,
+      "hip_offset_y": 5.587935447692871e-09
+    },
+    "Pose_CrossBody": {
+      "support_sole_y": -5.587935447692871e-09,
+      "hip_offset_y": 5.587935447692871e-09
+    },
+    "Pose_TorsoTwist": {
+      "support_sole_y": -5.587935447692871e-09,
+      "hip_offset_y": 5.587935447692871e-09
+    },
+    "Pose_HeadLean": {
+      "support_sole_y": -5.587935447692871e-09,
+      "hip_offset_y": 5.587935447692871e-09
+    },
+    "Pose_ShoulderDip": {
+      "support_sole_y": -5.587935447692871e-09,
+      "hip_offset_y": 5.587935447692871e-09
+    }
+  },
+  "manual_weight_painting": "None; deterministic anatomical weight ramps and rigid equipment regions."
+}

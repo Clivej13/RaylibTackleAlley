@@ -15,7 +15,7 @@ public sealed class TackleAlleyGame
     public bool Touchdown { get; private set; }
     public bool GameOver { get; private set; }
     public bool OutOfBounds { get; private set; }
-    public float TouchdownElapsed { get; private set; }
+    public float EndStateElapsed { get; private set; }
     public int SuccessfulRuns { get; private set; }
 
     public TackleAlleyGame(TackleAlleyConfig config, InputController input, AssetManager assets)
@@ -34,6 +34,12 @@ public sealed class TackleAlleyGame
         ResetRun();
     }
 
+    public void InitializeOpponentVisuals(AssetManager assets)
+    {
+        foreach (Opponent opponent in _opponents)
+            opponent.InitializeVisual(assets);
+    }
+
     public void ResetRun()
     {
         _player.Reset();
@@ -43,14 +49,16 @@ public sealed class TackleAlleyGame
         Touchdown = false;
         GameOver = false;
         OutOfBounds = false;
-        TouchdownElapsed = 0;
+        EndStateElapsed = 0;
     }
+
+    public void IgnoreNextMouseDelta() => _player.IgnoreNextMouseDelta();
 
     public void Update(float deltaTime)
     {
         if (Touchdown || GameOver)
         {
-            TouchdownElapsed += Math.Max(0, deltaTime);
+            EndStateElapsed += Math.Max(0, deltaTime);
             if (Touchdown)
             {
                 // Keep running after scoring, then stop in the middle of the end zone.
@@ -65,7 +73,7 @@ public sealed class TackleAlleyGame
         {
             OutOfBounds = true;
             GameOver = true;
-            TouchdownElapsed = 0;
+            EndStateElapsed = 0;
             _camera.Update(_player.Position, deltaTime);
             return;
         }
@@ -78,7 +86,7 @@ public sealed class TackleAlleyGame
             if (opponent.IsTouching(_player.Position))
             {
                 GameOver = true;
-                TouchdownElapsed = 0;
+                EndStateElapsed = 0;
                 return;
             }
         }

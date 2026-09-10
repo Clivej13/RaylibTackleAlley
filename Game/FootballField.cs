@@ -87,7 +87,7 @@ public sealed class FootballField
 
         float centerZ = FinishLineZ + _surfaceLength * 0.5f;
         float pulse = 0.5f + 0.5f * MathF.Sin((float)Raylib.GetTime() * 2f);
-        foreach (float side in new[] { -1f, 1f })
+        for (int side = -1; side <= 1; side += 2)
         {
             Raylib.DrawPlane(new Vector3(side * (HalfWidth + stripWidth * 0.5f), 0.025f, centerZ),
                 new Vector2(stripWidth, _surfaceLength), new Color(235, 40, 45, 48));

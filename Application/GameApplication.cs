@@ -12,17 +12,20 @@ public sealed class GameApplication
 {
     private readonly GameConfig _config;
     private readonly InputController _input;
+    private readonly InputConfig _inputConfig;
     private readonly MenuManager _mainMenu;
     private readonly MenuManager _pauseMenu;
     private readonly AssetManager _assets;
     private readonly TackleAlleyGame _game;
     private GameState _state = GameState.MainMenu;
     private bool _exitRequested;
+    private bool _mouseCaptured;
 
     public GameApplication(GameConfig config, InputConfig input, MenuConfig menus, AssetConfig assets, TackleAlleyConfig tuning)
     {
         _config = config;
         _input = new InputController(input);
+        _inputConfig = input;
         foreach (MenuItemDefinition item in menus.Menus["Options"].Items)
         {
             if (item.Function == "SetFullscreen")
@@ -47,14 +50,24 @@ public sealed class GameApplication
 
         try
         {
-            _assets.RequireAssets("FootballField", "Stadium");
+            _assets.RequireAssets("FootballField", "Stadium", "FootballPlayerAnimations", "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations");
             while (!_assets.ProcessNext())
             {
                 // Models must be loaded after the graphics context is initialized.
             }
 
+            _game.InitializeOpponentVisuals(_assets);
+
             while (!_exitRequested && !Raylib.WindowShouldClose())
             {
+                bool captureMouse = _state == GameState.Playing && Raylib.IsWindowFocused();
+                if (captureMouse != _mouseCaptured)
+                {
+                    if (captureMouse) Raylib.DisableCursor();
+                    else Raylib.EnableCursor();
+                    _mouseCaptured = captureMouse;
+                    _game.IgnoreNextMouseDelta();
+                }
                 _input.Update();
                 Update(Raylib.GetFrameTime());
                 Raylib.BeginDrawing();
@@ -64,10 +77,10 @@ public sealed class GameApplication
                 else if (_state == GameState.Paused)
                 {
                     _game.Draw();
-                    _pauseMenu.Draw();
+                    MenuDisplay.Draw(_pauseMenu, _inputConfig);
                 }
                 else
-                    _mainMenu.Draw();
+                    MenuDisplay.Draw(_mainMenu, _inputConfig);
                 Raylib.EndDrawing();
             }
         }
@@ -92,15 +105,8 @@ public sealed class GameApplication
                 else if (_game.Touchdown) _state = GameState.Touchdown;
                 break;
             case GameState.Touchdown:
-                if (_input.WasPressed("Pause") || _input.WasPressed("MenuConfirm") || _game.TouchdownElapsed >= 2.5f)
-                {
-                    _game.ResetRun();
-                    _state = GameState.Playing;
-                }
-                else _game.Update(deltaTime);
-                break;
             case GameState.GameOver:
-                if (_input.WasPressed("Pause") || _input.WasPressed("MenuConfirm") || _game.TouchdownElapsed >= 2.5f)
+                if (_input.WasPressed("Pause") || _input.WasPressed("MenuConfirm") || _game.EndStateElapsed >= 2.5f)
                 {
                     _game.ResetRun();
                     _state = GameState.Playing;
