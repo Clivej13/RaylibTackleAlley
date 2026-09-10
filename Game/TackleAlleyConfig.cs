@@ -8,6 +8,8 @@ public sealed class TackleAlleyConfig
     public float PlayerSprintSpeed { get; set; } = 11.5f;
     public float PlayerJukeSpeed { get; set; } = 8f;
     public float PlayerJukeDuration { get; set; } = 0.15f;
+    // Stick units per mouse pixel per frame; 20 pixels reaches full deflection.
+    public float MouseGestureSensitivity { get; set; } = 0.05f;
     public float CameraFollowDistance { get; set; } = 9f;
     public float CameraHeight { get; set; } = 5.5f;
     public float CameraSmoothing { get; set; } = 10f;
@@ -20,8 +22,27 @@ public sealed class TackleAlleyConfig
     // Include room for the stands beyond the full turf and both end zones.
     public float StadiumAssetWidth { get; set; } = 110f;
     public float StadiumAssetLength { get; set; } = 180f;
-    public float OpponentSpeed { get; set; } = 6.5f;
-    public float OpponentTriggerDistance { get; set; } = 12f;
+    public float OpponentJogSpeed { get; set; } = 4f;
+    public float OpponentRunSpeed { get; set; } = 6.5f;
+    public float OpponentSprintSpeed { get; set; } = 9f;
+    public float OpponentRunDistance { get; set; } = 20f;
+    public float OpponentSprintDistance { get; set; } = 8f;
+    // Extra separation required before dropping to a slower pace.
+    public float OpponentPaceHysteresis { get; set; } = 0.5f;
+
+    public void ValidateOpponentLocomotion()
+    {
+        if (!float.IsFinite(OpponentSprintDistance) || OpponentSprintDistance < 0f ||
+            !float.IsFinite(OpponentRunDistance) || OpponentSprintDistance >= OpponentRunDistance)
+            throw new ArgumentException("OpponentSprintDistance must be nonnegative and smaller than OpponentRunDistance.");
+        if (!float.IsFinite(OpponentPaceHysteresis) || OpponentPaceHysteresis < 0f ||
+            OpponentPaceHysteresis >= OpponentRunDistance - OpponentSprintDistance)
+            throw new ArgumentException("OpponentPaceHysteresis must be nonnegative and smaller than the distance band gap.");
+        if (!float.IsFinite(OpponentJogSpeed) || OpponentJogSpeed < 0f ||
+            !float.IsFinite(OpponentRunSpeed) || OpponentRunSpeed < 0f ||
+            !float.IsFinite(OpponentSprintSpeed) || OpponentSprintSpeed < 0f)
+            throw new ArgumentException("Opponent locomotion speeds must be finite and nonnegative.");
+    }
     public float TackleDistance { get; set; } = 1.8f;
     public bool DrawGameplayDebug { get; set; }
 }

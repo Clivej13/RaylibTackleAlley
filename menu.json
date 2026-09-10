@@ -24,8 +24,15 @@
       "Items": [
         { "Type": "KeyBind", "Text": "Move Left", "Function": "Rebind", "Action": "MoveLeft" },
         { "Type": "KeyBind", "Text": "Move Right", "Function": "Rebind", "Action": "MoveRight" },
-        { "Type": "Label", "Text": "Steer: A/D, arrows, left stick or D-pad" },
-        { "Type": "Label", "Text": "Forward/back assist: W/S or Up/Down" },
+        { "Type": "KeyBind", "Text": "Move Forward", "Function": "Rebind", "Action": "MoveForward" },
+        { "Type": "KeyBind", "Text": "Move Backward", "Function": "Rebind", "Action": "MoveBackward" },
+        { "Type": "KeyBind", "Text": "Sprint", "Function": "Rebind", "Action": "Sprint" },
+        { "Type": "KeyBind", "Text": "Juke Left", "Function": "Rebind", "Action": "RightStickLeft" },
+        { "Type": "KeyBind", "Text": "Juke Right", "Function": "Rebind", "Action": "RightStickRight" },
+        { "Type": "ControlDescription", "Text": "Spin Left", "KeyboardMouseDescription": "Mouse Down -> Left", "ControllerDescription": "Stick Back -> Roll Left" },
+        { "Type": "ControlDescription", "Text": "Spin Right", "KeyboardMouseDescription": "Mouse Down -> Right", "ControllerDescription": "Stick Back -> Roll Right" },
+        { "Type": "ControlDescription", "Text": "Head Fake", "KeyboardMouseDescription": "Shift + Mouse", "ControllerDescription": "RT + Right Stick" },
+        { "Type": "KeyBind", "Text": "Pause", "Function": "Rebind", "Action": "Pause" },
         { "Type": "Label", "Text": "Confirm: Enter / A   Back: Escape / B" },
         { "Type": "Button", "Text": "Back", "Function": "Back" }
       ]

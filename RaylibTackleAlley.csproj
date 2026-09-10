@@ -9,12 +9,13 @@
   <ItemGroup>
     <PackageReference Include="Raylib-cs" Version="8.0.0" />
     <PackageReference Include="RaylibGameFramework.Configuration" Version="0.1.0" />
-    <PackageReference Include="RaylibGameFramework.Input" Version="0.1.4" />
-    <PackageReference Include="RaylibGameFramework.Menus" Version="0.1.1" />
+    <PackageReference Include="RaylibGameFramework.Input" Version="0.1.5" />
+    <PackageReference Include="RaylibGameFramework.Menus" Version="0.1.2" />
     <PackageReference Include="RaylibGameFramework.Assets" Version="0.1.4" />
-    <PackageReference Include="RaylibGameFramework.ThreeD" Version="0.1.0" />
+    <PackageReference Include="RaylibGameFramework.ThreeD" Version="0.1.1" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Tests/**/*.cs" />
     <None Update="config.json;input.json;menu.json;assets.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="Assets\\**\\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

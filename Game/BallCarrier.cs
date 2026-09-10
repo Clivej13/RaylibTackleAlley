@@ -7,6 +7,7 @@ namespace RaylibTackleAlley.Game;
 public sealed class BallCarrier
 {
     private readonly TackleAlleyConfig _config;
+    private readonly RightStickInput _rightStick;
     private const float HeadLeanDistance = 0.6f;
     private const float BodyLeanFraction = 0.5f;
     private const float LeanResponse = 14f;
@@ -23,6 +24,7 @@ public sealed class BallCarrier
     private float _spinGestureRemaining;
     private bool _spinGestureReady = true;
     private bool _spinGestureConsumed;
+    private bool _mouseSpinGesture;
     private float _spinRemaining;
     private int _spinDirection;
 
@@ -37,11 +39,14 @@ public sealed class BallCarrier
     public BallCarrier(TackleAlleyConfig config)
     {
         _config = config;
+        _rightStick = new RightStickInput(config);
         Reset();
     }
 
     public void Reset()
     {
+        _rightStick.IgnoreNextMouseDelta();
+        _mouseSpinGesture = false;
         Position = Vector3.Zero;
         _headOffset = Vector3.Zero;
         _bodyOffset = Vector3.Zero;
@@ -56,19 +61,24 @@ public sealed class BallCarrier
         _spinDirection = 0;
     }
 
+    public void IgnoreNextMouseDelta() => _rightStick.IgnoreNextMouseDelta();
+
     public void Update(InputController input, float deltaTime, FootballField field)
     {
         float lateral = GetDirectionalValue(input.GetValue("MoveLeft"), input.GetValue("MoveRight"));
         deltaTime = Math.Max(0f, deltaTime);
-        float longitudinal = GetDirectionalValue(input.GetValue("MoveForward"), input.GetValue("MoveBackward"));
-        SpeedTier = input.GetValue("Sprint") > 0.5f ? 3
-            : Math.Abs(input.GetValue("MoveBackward")) > 0.35f ? 1 : 2;
+        // Forward/back input controls lean; backward also selects the slow running tier.
+        float backwardInput = input.GetValue("MoveBackward");
+        float longitudinalLean = GetDirectionalValue(input.GetValue("MoveForward"), backwardInput);
+        bool sprinting = input.GetValue("Sprint") > 0.5f;
+        SpeedTier = sprinting ? 3 : Math.Abs(backwardInput) > 0.35f ? 1 : 2;
 
-        float juke = GetDirectionalValue(input.GetValue("JukeLeft"), input.GetValue("JukeRight"));
-        float spinX = GetDirectionalValue(input.GetValue("SpinLeft"), input.GetValue("SpinRight"));
-        float spinBack = Math.Abs(input.GetValue("SpinBack"));
-        float headZ = GetDirectionalValue(input.GetValue("HeadForward"), input.GetValue("HeadBackward"));
-        bool headFake = input.GetValue("Sprint") > 0.5f;
+        var rightStick = _rightStick.Read(input);
+        float juke = rightStick.Direction.X;
+        float spinX = rightStick.Direction.X;
+        float spinBack = Math.Max(0f, rightStick.Direction.Y);
+        float headZ = rightStick.Direction.Y;
+        bool headFake = sprinting;
         if (headFake)
         {
             // Cancel moves and consume the gesture until the stick returns to neutral.
@@ -81,7 +91,7 @@ public sealed class BallCarrier
         }
         else
         {
-            UpdateSpinGesture(spinX, spinBack, headZ, deltaTime);
+            UpdateSpinGesture(spinX, spinBack, headZ, deltaTime, rightStick.IsMouse);
         }
         if (!headFake && Math.Abs(juke) < 0.25f && !_spinGestureConsumed)
             _jukeReady = true;
@@ -101,8 +111,8 @@ public sealed class BallCarrier
         _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
         float spinTime = Math.Min(deltaTime, _spinRemaining);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
-        Vector3 movementDirection = _spinRemaining > 0f
-            ? Vector3.Zero : new Vector3(lateral, 0f, longitudinal);
+        Vector3 bodyLeanDirection = _spinRemaining > 0f
+            ? Vector3.Zero : new Vector3(lateral, 0f, longitudinalLean);
         if (_jukeRemaining > 0f)
         {
             _headOffset = new Vector3(_jukeDirection * HeadLeanDistance, 0f, -ForwardLean);
@@ -112,41 +122,48 @@ public sealed class BallCarrier
         {
             // Head fakes never feed right-stick input into the torso's movement lean.
             Vector3 headDirection = headFake && (Math.Abs(spinX) > 0.25f || Math.Abs(headZ) > 0.25f)
-                ? new Vector3(spinX, 0f, headZ) : movementDirection;
-            UpdateLean(movementDirection, headDirection, deltaTime);
+                ? new Vector3(spinX, 0f, headZ) : bodyLeanDirection;
+            UpdateLean(bodyLeanDirection, headDirection, deltaTime);
         }
         Vector3 position = Position;
         // A move owns sideways movement until its animation ends.
         position.X += _jukeDirection * _config.PlayerJukeSpeed * jukeTime
             + _spinDirection * SpinSpeed * spinTime
             + lateral * _config.PlayerLateralSpeed * Math.Max(0f, deltaTime - jukeTime - spinTime);
+        // Forward travel is automatic, independent of the forward/back lean input.
         position.Z -= Speed * deltaTime;
         Position = field.ClampToOuterBoundary(position, 0.7f);
     }
 
     public void RunIntoEndZone(float deltaTime, float stopZ)
     {
-        _jukeRemaining = Math.Max(0f, _jukeRemaining - Math.Max(0f, deltaTime));
-        _spinRemaining = Math.Max(0f, _spinRemaining - Math.Max(0f, deltaTime));
-        UpdateLean(Vector3.Zero, Vector3.Zero, Math.Max(0f, deltaTime));
+        deltaTime = Math.Max(0f, deltaTime);
+        _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
+        _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
+        UpdateLean(Vector3.Zero, Vector3.Zero, deltaTime);
         Position = new Vector3(Position.X, Position.Y,
-            Math.Max(stopZ, Position.Z - Speed * Math.Max(0f, deltaTime)));
+            Math.Max(stopZ, Position.Z - Speed * deltaTime));
     }
 
-    private void UpdateSpinGesture(float side, float back, float headZ, float deltaTime)
+    private void UpdateSpinGesture(float side, float back, float headZ, float deltaTime, bool isMouse)
     {
         _spinGestureRemaining = Math.Max(0f, _spinGestureRemaining - deltaTime);
         if (Math.Abs(side) < 0.25f && back < 0.25f && Math.Abs(headZ) < 0.25f)
         {
+            // No mouse delta means no movement, not an explicit stick release.
+            // Retain a mouse back gesture only for the existing 0.4-second window.
+            if (_mouseSpinGesture && _spinGestureRemaining > 0f)
+                return;
             _spinGestureReady = true;
             _spinGestureConsumed = false;
             _spinGestureRemaining = 0f;
             return;
         }
 
-        // Start near straight back, then roll to either side without crossing neutral.
+        // Start near straight back, then roll to either side. Controller neutral cancels.
         if (_spinGestureReady && back >= 0.65f && Math.Abs(side) < 0.35f)
         {
+            _mouseSpinGesture = isMouse;
             _spinGestureReady = false;
             _spinGestureConsumed = true;
             if (_jukeRemaining <= 0f && _spinRemaining <= 0f)
@@ -180,10 +197,10 @@ public sealed class BallCarrier
         _ => 0f
     };
 
-    private void UpdateLean(Vector3 movementDirection, Vector3 headDirection, float deltaTime)
+    private void UpdateLean(Vector3 bodyLeanDirection, Vector3 headDirection, float deltaTime)
     {
         float blend = 1f - MathF.Exp(-LeanResponse * deltaTime);
-        _bodyOffset = Vector3.Lerp(_bodyOffset, GetLeanTarget(movementDirection) * BodyLeanFraction, blend);
+        _bodyOffset = Vector3.Lerp(_bodyOffset, GetLeanTarget(bodyLeanDirection) * BodyLeanFraction, blend);
         _headOffset = Vector3.Lerp(_headOffset, GetLeanTarget(headDirection), blend);
     }
 

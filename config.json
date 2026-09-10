@@ -11,6 +11,7 @@
   "PlayerSprintSpeed": 11.5,
   "PlayerJukeSpeed": 8.0,
   "PlayerJukeDuration": 0.15,
+  "MouseGestureSensitivity": 0.05,
   "CameraFollowDistance": 9.0,
   "CameraHeight": 5.5,
   "CameraSmoothing": 10.0,
@@ -21,7 +22,11 @@
   "FieldAssetLength": 120.0,
   "StadiumAssetWidth": 110.0,
   "StadiumAssetLength": 180.0,
-  "OpponentSpeed": 6.5,
-  "OpponentTriggerDistance": 12.0,
-  "TackleDistance": 1.8
+  "OpponentJogSpeed": 4.0,
+  "OpponentRunSpeed": 6.5,
+  "OpponentSprintSpeed": 9.0,
+  "OpponentRunDistance": 20.0,
+  "OpponentSprintDistance": 8.0,
+  "OpponentPaceHysteresis": 0.5,
+  "TackleDistance": 1.4
 }
