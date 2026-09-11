@@ -68,13 +68,16 @@ playerWorld = player.Model.Transform
             * Translation(Position + groundingOffset + jukeHop)
 
 footballWorld = FootballGripLocal * currentAnimatedHand * playerWorld
-drawTransform = footballAsset.Transform * footballWorld
+drawTransform = Matrix4x4.Transpose(footballWorld)
 ```
 
 The canonical model's base transform is included. VisualYawDegrees retains the
 existing smoothed directional yaw and temporary Spin rotation. The player draw
 still uses DrawModelEx with exactly those outer position/rotation/scale values.
-Football draws with its complete matrix and identity DrawModelEx arguments.
+Football draws with its complete matrix transposed at the native Raylib boundary
+and identity DrawModelEx arguments. The managed attachment composition stays in
+System.Numerics row-vector form. Absolute assignment replaces the local Model
+copy's transform; the previous multiplication did not accumulate across frames.
 
 Update/RunIntoEndZone first apply the animation pose, then finish movement,
 yaw, spin and hop state, then query AnimationPlayer.TryGetBoneTransform("Hand.R").
@@ -92,7 +95,14 @@ confirm the standalone football has three materials, no skeleton or animations,
 and is absent from player GLBs. Existing controls, acceleration, camera and helmet
 tests remain included.
 
-Release build: zero warnings/errors. Full test suite: 88 passed, zero skipped.
+Release test build: zero warnings/errors. Full test suite: 89 passed, zero skipped.
+FootballRenderTests compares BallCarrier.Draw framebuffer pixels against an
+independent native DrawModelEx position/axis-angle/scale reference across all
+three carry tiers and three yaw states. It checks the football is visible, the
+asset length is 27–29 cm, and the world-scaled length is 26–30 cm. Removing only
+the transpose fails this regression (3,863 mismatched pixels against 2,126 visible
+football pixels in the first case); restoring it passes. This verifies the
+native render boundary as well as the existing managed Hand.R attachment tests.
 The validation tool rejects the clean subcommand; dotnet build -t:Clean runs the
 equivalent MSBuild Clean target successfully.
 

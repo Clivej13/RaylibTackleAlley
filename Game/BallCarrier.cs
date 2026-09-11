@@ -382,7 +382,8 @@ public sealed class BallCarrier
             Vector3.UnitY, VisualYawDegrees, new Vector3(_visualScale), Color.White);
         if (_football is not { } football)
             throw new InvalidOperationException("Initialize the standalone football asset.");
-        football.Transform *= _footballWorldTransform;
+        // Model is a value copy; transpose only at the System.Numerics -> native Raylib boundary.
+        football.Transform = Matrix4x4.Transpose(_footballWorldTransform);
         Raylib.DrawModelEx(football, Vector3.Zero, Vector3.UnitY, 0f, Vector3.One, Color.White);
     }
 }
