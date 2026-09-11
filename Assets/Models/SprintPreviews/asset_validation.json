@@ -26,6 +26,5 @@
   "subframe_minimum_sole_y": 0,
   "pads_chest_relative_vertex_error": 5.923094425902304e-07,
   "endpoint_mesh_error_m": 0.0,
-  "concurrent_code_changes_not_edited_by_sprint_task": [],
-  "preserved_source_and_code_files": 37
+  "approved_content_and_csharp_sources_preserved": true
 }

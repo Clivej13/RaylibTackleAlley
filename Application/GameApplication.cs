@@ -50,13 +50,14 @@ public sealed class GameApplication
 
         try
         {
-            _assets.RequireAssets("FootballField", "Stadium", "FootballPlayerAnimations", "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations");
+            _assets.RequireAssets("FootballField", "Stadium", "Football", "FootballPlayer", "FootballPlayerAnimations", "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations",
+                "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations");
             while (!_assets.ProcessNext())
             {
                 // Models must be loaded after the graphics context is initialized.
             }
 
-            _game.InitializeOpponentVisuals(_assets);
+            _game.InitializeVisuals(_assets);
 
             while (!_exitRequested && !Raylib.WindowShouldClose())
             {

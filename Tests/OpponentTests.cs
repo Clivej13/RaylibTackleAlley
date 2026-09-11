@@ -20,7 +20,7 @@ public sealed class OpponentTests
         opponent.Update(new(0, 0, -distance), 0.1f);
         Assert.Equal(pace, opponent.Pace);
         Assert.Equal(speed, opponent.MovementSpeed);
-        Assert.Equal(-speed * 0.1f, opponent.Position.Z, 5);
+        Assert.Equal(-(4f + opponent.CurrentSpeed) * 0.05f, opponent.Position.Z, 5);
         Assert.Equal(0f, opponent.Position.Y);
     }
 
@@ -53,6 +53,47 @@ public sealed class OpponentTests
     }
 
     [Fact]
+    public void PaceRampsUpAndDownAndIntegratesConsistentlyAcrossFrameRates()
+    {
+        var opponent = new Opponent(Vector3.Zero, new());
+        void Tick(float distance, float dt) =>
+            opponent.Update(opponent.Position + new Vector3(0, 0, -distance), dt);
+        Tick(12f, 0.1f);
+        Assert.Equal(OpponentPace.Run, opponent.Pace);
+        Assert.InRange(opponent.CurrentSpeed, 4.1f, 6.4f);
+        Tick(12f, 0.2f);
+        Assert.Equal(6.5f, opponent.CurrentSpeed, 4);
+        Tick(3f, 0.1f);
+        Assert.Equal(OpponentPace.Sprint, opponent.Pace);
+        Assert.InRange(opponent.CurrentSpeed, 6.6f, 8.9f);
+        Tick(3f, 0.2f);
+        Assert.Equal(9f, opponent.CurrentSpeed, 4);
+        Tick(12f, 0.1f);
+        Assert.InRange(opponent.CurrentSpeed, 6.6f, 8.9f);
+        Tick(12f, 0.1f);
+        Assert.Equal(6.5f, opponent.CurrentSpeed, 4);
+        Tick(30f, 0.2f);
+        Assert.Equal(4f, opponent.CurrentSpeed, 4);
+        foreach (float distance in new[] { 3f, 30f })
+        {
+            opponent.Reset();
+            Tick(3f, 0.6f);
+            Vector3 start = opponent.Position;
+            Tick(distance, 0.7f);
+            float speed = opponent.CurrentSpeed;
+            float travel = opponent.Position.Z - start.Z;
+            opponent.Reset();
+            Tick(3f, 0.6f);
+            start = opponent.Position;
+            for (int i = 0; i < 42; i++) Tick(distance, 1f / 60f);
+            Assert.Equal(speed, opponent.CurrentSpeed, 4);
+            Assert.Equal(travel, opponent.Position.Z - start.Z, 4);
+        }
+        opponent.Reset();
+        Assert.Equal(4f, opponent.CurrentSpeed);
+    }
+
+    [Fact]
     public void DefaultLocomotionTuningIsUnchanged()
     {
         var config = new TackleAlleyConfig();
@@ -74,8 +115,10 @@ public sealed class OpponentTests
         foreach (var (distance, speed) in new[] { (15f, 1f), (7f, 2f), (2f, 3f) })
         {
             var opponent = new Opponent(Vector3.Zero, config);
-            opponent.Update(new(distance, 0, 0), 0.1f);
-            Assert.Equal(speed * 0.1f, opponent.Position.X, 5);
+            opponent.Update(new(distance, 0, 0), 0f);
+            Assert.Equal(speed, opponent.TargetSpeed);
+            opponent.Update(new(distance, 0, 0), 0.05f);
+            Assert.Equal((1f + opponent.CurrentSpeed) * 0.025f, opponent.Position.X, 5);
         }
     }
 
@@ -89,15 +132,18 @@ public sealed class OpponentTests
             new() { OpponentSprintDistance = sprint, OpponentRunDistance = run }));
 
     [Fact]
-    public void TackleRadiusIsStillOnePointEightRegardlessOfPace()
+    public void TackleRadiusIsOnePointFourRegardlessOfPace()
     {
         var opponent = new Opponent(Vector3.Zero, new());
-        Assert.Equal(1.8f, new TackleAlleyConfig().TackleDistance);
+        Assert.Equal(1.4f, new TackleAlleyConfig().TackleDistance);
+        using var json = System.Text.Json.JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "config.json")));
+        Assert.Equal(1.4f, json.RootElement.GetProperty("TackleDistance").GetSingle());
         foreach (float distance in new[] { 30f, 12f, 3f })
         {
             opponent.Update(new(0, 0, -distance), 0);
-            Assert.True(opponent.IsTouching(new(1.8f, 0, 0)));
-            Assert.False(opponent.IsTouching(new(1.801f, 0, 0)));
+            Assert.True(opponent.IsTouching(new(1.4f, 0, 0)));
+            Assert.False(opponent.IsTouching(new(1.401f, 0, 0)));
         }
     }
 
@@ -154,7 +200,8 @@ public sealed class OpponentTests
                 var actual = Vertices(a); var expected = Vertices(b);
                 Assert.True(actual.Zip(expected).All(pair => MathF.Abs(pair.First - pair.Second) < 0.0001f));
                 Assert.Contains(actual.Zip(untouched), pair => MathF.Abs(pair.First - pair.Second) > 0.001f);
-                Assert.Equal(-a.MovementSpeed * 0.15f, a.Position.Z, 4);
+                Assert.Equal(-(4f + a.CurrentSpeed) * 0.075f, a.Position.Z, 4);
+                Assert.Equal(b.Position.Z, a.Position.Z, 4);
                 Assert.Equal(0f, a.Position.Y);
                 Assert.Equal(0f, Field<float>(a, "_yawDegrees"), 4);
             }
@@ -163,22 +210,37 @@ public sealed class OpponentTests
             var runner = opponents[2];
             var reference = opponents[3];
             var model = Field<ModelInstance>(runner, "_model");
+            Assert.Equal(0f, Field<AnimationPlayer>(runner, "_animation").CurrentTime);
+            runner.Update(new(0, 0, -30), 0.23f);
             foreach (var (distance, name) in new[] {
                 (12f, "Run"), (3f, "Sprint"), (8.51f, "Run"), (20.51f, "Jog") })
             {
                 var previous = Field<AnimationPlayer>(runner, "_animation");
+                float phase = previous.CurrentTime / (previous.FrameCount / previous.FramesPerSecond);
+                Assert.InRange(phase, 0.01f, 0.99f);
+                var otherAnimation = Field<AnimationPlayer>(opponents[1], "_animation");
+                float otherTime = otherAnimation.CurrentTime;
                 var otherPose = Vertices(opponents[1]);
                 runner.Update(runner.Position + new Vector3(0, 0, -distance), 0);
                 Assert.Equal(name, runner.AnimationName);
                 Assert.NotSame(previous, Field<AnimationPlayer>(runner, "_animation"));
                 Assert.Same(model, Field<ModelInstance>(runner, "_model"));
                 Assert.Equal(otherPose, Vertices(opponents[1]));
+                Assert.Equal(otherTime, otherAnimation.CurrentTime);
+                var selected = Field<AnimationPlayer>(runner, "_animation");
+                Assert.Equal(phase, selected.CurrentTime / (selected.FrameCount / selected.FramesPerSecond), 5);
 
                 reference.Reset();
                 reference.Update(new(0, 0, -distance), 0);
+                Field<AnimationPlayer>(reference, "_animation").SeekPhase(phase);
                 runner.Update(runner.Position + new Vector3(0, 0, -distance), 0.15f);
                 reference.Update(reference.Position + new Vector3(0, 0, -distance), 0.15f);
                 Assert.Equal(Vertices(reference), Vertices(runner));
+
+                reference.Reset();
+                Assert.Equal("Jog", reference.AnimationName);
+                Assert.Equal(0f, Field<AnimationPlayer>(reference, "_animation").CurrentTime);
+                Assert.Equal(0f, Field<AnimationPlayer>(reference, "_animation").CurrentFrame);
             }
         }
         finally

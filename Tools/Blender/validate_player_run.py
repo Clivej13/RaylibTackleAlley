@@ -2,6 +2,9 @@
 from pathlib import Path
 import bpy,json,struct,math
 from mathutils import Matrix
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from validate_helmet_skinning import head_relative_vertices
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'Assets/Models'
 def signature():
  r=bpy.data.objects['PlayerRig']
@@ -39,10 +42,9 @@ for f in range(1,26):
  assert r.pose.bones['Root'].matrix_basis==Matrix.Identity(4)
  assert abs(r.pose.bones['Hips'].location.x)+abs(r.pose.bones['Hips'].location.z)<1e-8
  matrices[f]={p.name:p.matrix.copy()@p.bone.matrix_local.inverted() for p in r.pose.bones}
- for name in ['Helmet','Facemask','Visor','ChinStrap']:
-  o=bpy.data.objects[name]; rel=r.pose.bones['Head'].matrix.inverted()@o.matrix_world
-  if f==1:helmet[name]=rel.copy()
-  assert max(abs(rel[i][j]-helmet[name][i][j]) for i in range(4) for j in range(4))<1e-5
+ for name, rel in head_relative_vertices(r,dg).items():
+  if f==1:helmet[name]=rel
+  assert max((a-b).length for a,b in zip(rel,helmet[name]))<1e-5
  vals=[]
  for name in ['LeftFoot','RightFoot']:
   o=bpy.data.objects[name].evaluated_get(dg); vals.append(min((o.matrix_world@v.co).y for v in o.data.vertices))

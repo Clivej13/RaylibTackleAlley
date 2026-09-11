@@ -1,0 +1,48 @@
+{
+  "validation_source": "HandRigPreviews/validation.json",
+  "equipment_geometry_and_weights_unchanged": true,
+  "head_only_export_vertices": {
+    "football_player.glb": {
+      "Helmet": 1160,
+      "Facemask": 840,
+      "Visor": 200,
+      "ChinStrap": 352
+    },
+    "lowpoly_human_jog_validation.glb": {
+      "Helmet": 1160,
+      "Facemask": 840,
+      "Visor": 200,
+      "ChinStrap": 352
+    },
+    "lowpoly_human_run_validation.glb": {
+      "Helmet": 1160,
+      "Facemask": 840,
+      "Visor": 200,
+      "ChinStrap": 352
+    },
+    "lowpoly_human_sprint_validation.glb": {
+      "Helmet": 1160,
+      "Facemask": 840,
+      "Visor": 200,
+      "ChinStrap": 352
+    },
+    "football_player_carry_jog.glb": {
+      "Helmet": 1160,
+      "Facemask": 840,
+      "Visor": 200,
+      "ChinStrap": 352
+    },
+    "football_player_carry_run.glb": {
+      "Helmet": 1160,
+      "Facemask": 840,
+      "Visor": 200,
+      "ChinStrap": 352
+    },
+    "football_player_carry_sprint.glb": {
+      "Helmet": 1160,
+      "Facemask": 840,
+      "Visor": 200,
+      "ChinStrap": 352
+    }
+  }
+}

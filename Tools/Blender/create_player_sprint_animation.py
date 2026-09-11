@@ -6,6 +6,9 @@ Existing +Y-up coordinates are retained in GLB with export_yup=False.
 from pathlib import Path
 import bpy, math, json, hashlib, struct
 from mathutils import Vector, Quaternion
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from player_hand_rig import key_hand_poses
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'Assets/Models'
 PRE=OUT/'SprintPreviews'; PRE.mkdir(exist_ok=True)
 SOURCE=OUT/'lowpoly_human_run.blend'
@@ -114,6 +117,7 @@ for f in range(1,22):
 assert hashlib.sha256(SOURCE.read_bytes()).hexdigest()==source_hash
 scene.frame_set(1); scene.camera=bpy.data.objects['FrontThreeQuarter']
 scene['stage_notes']='Approved Stage 6 rig plus in-place Sprint. Geometry, weights, skeleton and equipment parenting unchanged.'
+key_hand_poses(rig)
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'lowpoly_human_sprint.blend'))
 # Export only Sprint; inspection actions remain retained in the .blend.
 for other in list(bpy.data.actions):

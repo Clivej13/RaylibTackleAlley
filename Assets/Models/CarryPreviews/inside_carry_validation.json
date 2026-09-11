@@ -1,0 +1,219 @@
+{
+  "code_unchanged": true,
+  "normal_and_standalone_assets_byte_identical": true,
+  "clips": {
+    "jog": {
+      "changed_curves": [
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:0",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:1",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:2",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:3",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:0",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:1",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:2",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:3",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:0",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:1",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:2",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:3"
+      ],
+      "geometry_weights_rest_pose_exact": true,
+      "other_curves_and_lower_body_exact": true,
+      "range": [
+        1,
+        29
+      ],
+      "timing": [
+        1,
+        28,
+        30,
+        1.0,
+        [
+          [
+            "Left contact",
+            1
+          ],
+          [
+            "Left passing",
+            5
+          ],
+          [
+            "Left push-off / right knee forward",
+            10
+          ],
+          [
+            "Right contact",
+            15
+          ],
+          [
+            "Right passing",
+            19
+          ],
+          [
+            "Right push-off / left knee forward",
+            24
+          ],
+          [
+            "Loop closure",
+            29
+          ]
+        ]
+      ],
+      "inside_relationship": {
+        "quarter_frame_samples": 113,
+        "minimum_ball_inward_of_forearm_m": 0.11037223041057587,
+        "ball_center_chest_rest_height_m": [
+          1.3150326013565063,
+          1.3165103197097778
+        ],
+        "football_upward_tilt_degrees": [
+          36.749185568831855,
+          37.38098456726488
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.013728713616728783
+      }
+    },
+    "run": {
+      "changed_curves": [
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:0",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:1",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:2",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:3",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:0",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:1",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:2",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:3",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:0",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:1",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:2",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:3"
+      ],
+      "geometry_weights_rest_pose_exact": true,
+      "other_curves_and_lower_body_exact": true,
+      "range": [
+        1,
+        25
+      ],
+      "timing": [
+        1,
+        24,
+        30,
+        1.0,
+        [
+          [
+            "Left contact",
+            1
+          ],
+          [
+            "Left passing",
+            5
+          ],
+          [
+            "Left push-off / right knee forward",
+            9
+          ],
+          [
+            "Right contact",
+            13
+          ],
+          [
+            "Right passing",
+            17
+          ],
+          [
+            "Right push-off / left knee forward",
+            21
+          ],
+          [
+            "Loop closure",
+            25
+          ]
+        ]
+      ],
+      "inside_relationship": {
+        "quarter_frame_samples": 97,
+        "minimum_ball_inward_of_forearm_m": 0.11018045246601105,
+        "ball_center_chest_rest_height_m": [
+          1.3145101070404053,
+          1.3170359134674072
+        ],
+        "football_upward_tilt_degrees": [
+          36.520632697459725,
+          37.60075007715719
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.014629109762609005
+      }
+    },
+    "sprint": {
+      "changed_curves": [
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:0",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:1",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:2",
+        "pose.bones[\"UpperArm.R\"].rotation_quaternion:3",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:0",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:1",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:2",
+        "pose.bones[\"LowerArm.R\"].rotation_quaternion:3",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:0",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:1",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:2",
+        "pose.bones[\"Hand.R\"].rotation_quaternion:3"
+      ],
+      "geometry_weights_rest_pose_exact": true,
+      "other_curves_and_lower_body_exact": true,
+      "range": [
+        1,
+        21
+      ],
+      "timing": [
+        1,
+        20,
+        30,
+        1.0,
+        [
+          [
+            "Left contact",
+            1
+          ],
+          [
+            "Left passing",
+            4
+          ],
+          [
+            "Left push-off / right knee forward",
+            7
+          ],
+          [
+            "Right contact",
+            11
+          ],
+          [
+            "Right passing",
+            14
+          ],
+          [
+            "Right push-off / left knee forward",
+            17
+          ],
+          [
+            "Loop closure",
+            21
+          ]
+        ]
+      ],
+      "inside_relationship": {
+        "quarter_frame_samples": 81,
+        "minimum_ball_inward_of_forearm_m": 0.11002612113952637,
+        "ball_center_chest_rest_height_m": [
+          1.3140935897827148,
+          1.3174571990966797
+        ],
+        "football_upward_tilt_degrees": [
+          36.33647494514908,
+          37.77462072710634
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.015315123833715916
+      }
+    }
+  }
+}

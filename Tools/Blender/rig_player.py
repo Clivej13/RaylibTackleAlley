@@ -5,6 +5,9 @@ World convention: +Y up, -Z forward; bone local Y follows its length.
 from pathlib import Path
 import bpy, math, json, hashlib
 from mathutils import Vector, Quaternion
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from player_hand_rig import install, key_hand_poses
 ROOT=Path(__file__).resolve().parents[2]
 OUT=ROOT/'Assets/Models'
 PRE=OUT/'RigPreviews'; PRE.mkdir(exist_ok=True)
@@ -77,14 +80,16 @@ def skin(o,fn):
  mod=o.modifiers.new('Player linear skin','ARMATURE'); mod.object=rig
  mod.use_deform_preserve_volume=False
 equipment=['Helmet','Facemask','Visor','ChinStrap']
-assembly=bpy.data.objects.new('HelmetAssembly',None); scene.collection.objects.link(assembly)
-bpy.context.view_layer.update()
-assembly.parent=rig; assembly.parent_type='BONE'; assembly.parent_bone='Head'
-bpy.context.view_layer.update(); assembly.matrix_world.identity()
-assembly['detachable_equipment']=True
 for o in meshes:
  if o.name in equipment:
-  world=o.matrix_world.copy(); o.parent=assembly; o.matrix_world=world
+  # Worn equipment uses the runtime skeletal path, with no rigid node dependency.
+  world=o.matrix_world.copy()
+  o.vertex_groups.clear()
+  skin(o,lambda v:{'Head':1.0})
+  o.matrix_world=world
+  for group in list(o.vertex_groups):
+   if group.name!='Head':o.vertex_groups.remove(group)
+  o['detachable_equipment']=True
  elif o.name=='ShoulderPads':
   # Each disconnected shell region is rigid: caps follow clavicles, plates chest.
   regions={g.name:{v.index for v in o.data.vertices if any(e.group==g.index for e in v.groups)} for g in o.vertex_groups}
@@ -94,6 +99,7 @@ for o in meshes:
    return {'Chest':1}
   skin(o,padweight); o['equipment']='Rigid chest plates and articulated rigid clavicle caps; detachable mesh'
  else:skin(o,lambda v,o=o:weights(o,o.matrix_world@v.co))
+install(rig)
 rig['axes']='+Y up; -Z forward; +X character left; local Y along bone; local Z aligned to world +Z where possible'
 rig['source']=source.name; rig['pose_usage']='Single-frame deformation tests only; no gameplay animations'
 def rot(n,axis,deg):
@@ -133,14 +139,19 @@ for name,changes in poses.items():
   scene.camera=bpy.data.objects[view]; scene.render.filepath=str(PRE/(name+'_'+view+'.png'))
   bpy.ops.render.render(write_still=True)
 for o in meshes:
- assert signatures[o.name]==([tuple(v.co) for v in o.data.vertices],[tuple(p.vertices) for p in o.data.polygons]),o.name
- if o.name not in equipment:
+ if o.name not in ('LeftHand','RightHand'):
+  assert signatures[o.name]==([tuple(v.co) for v in o.data.vertices],[tuple(p.vertices) for p in o.data.polygons]),o.name
+ if o.name in equipment:
+  assert [g.name for g in o.vertex_groups]==['Head']
+  assert all(len(v.groups)==1 and v.groups[0].weight==1.0 for v in o.data.vertices),o.name
+ else:
   ids={g.index for g in o.vertex_groups if g.name in data.bones and data.bones[g.name].use_deform}
   assert all(abs(sum(g.weight for g in v.groups if g.group in ids)-1)<1e-5 for v in o.data.vertices),o.name
-assert len(data.bones)==20
+assert len(data.bones)==24
 assert all(abs(v['support_sole_y'])<1e-5 for v in report['poses'].values())
 assert hashlib.sha256(source.read_bytes()).hexdigest()==source_hash
 rig.animation_data.action=bpy.data.actions['Pose_Neutral']; scene.frame_set(1)
+key_hand_poses(rig)
 scene.camera=bpy.data.objects['FrontThreeQuarter']
 scene['rig_validation']='Geometry unchanged; normalized linear skin weights; rigid helmet; rigid pad regions; 8 single-frame test actions; root at origin.'
 scene['stage_notes']='Rigged Stage 6. Separate overlapping source anatomical meshes preserved. Inspect joint seams before animation lock.'

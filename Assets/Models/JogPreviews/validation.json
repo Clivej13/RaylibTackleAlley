@@ -1,6 +1,6 @@
 {
   "source": "lowpoly_human_rigged.blend",
-  "source_sha256": "24ce28e325bb1eb656badf3af051892a39cb510efd1a49d7aa4c09a5f6f7792b",
+  "source_sha256": "ad18003b4a2baacd65271dab620cb6f1316d0ccc665ec734dc2429040fd4fb77",
   "action": "Jog",
   "fps": 30,
   "keyed_range": [
@@ -248,5 +248,6 @@
         0.2236553356051445
       ]
     }
-  ]
+  ],
+  "hand_upgrade": "24 joints; fitted fingers/thumbs; original locomotion unchanged"
 }

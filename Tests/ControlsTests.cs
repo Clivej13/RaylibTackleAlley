@@ -98,16 +98,213 @@ public sealed class ControlsTests : IDisposable
     public void KeyboardMovementRemainsAnAutoRunner(KeyboardKey key, int direction, int tier)
     {
         Vector3 before = _player.Position;
+        float speedBefore = _player.CurrentForwardSpeed;
         Event(2, (int)key);
         Tick();
         Assert.Equal(direction * _config.PlayerLateralSpeed * Dt, _player.Position.X - before.X, 4);
         Assert.Equal(tier, _player.SpeedTier);
-        Assert.Equal(-_player.Speed * Dt, _player.Position.Z - before.Z, 4);
+        Assert.Equal(-(speedBefore + _player.CurrentForwardSpeed) * 0.5f * Dt, _player.Position.Z - before.Z, 4);
         if (key == KeyboardKey.W)
             Assert.True(Field<Vector3>(_player, "_bodyOffset").Z < -0.1f);
         if (key == KeyboardKey.Left)
             Assert.True(_input.WasPressed("MenuLeft"));
         Event(1, (int)key);
+    }
+
+    [Fact]
+    public void ForwardSpeedRampsWithoutDelayingSteeringAndResetRestoresRun()
+    {
+        _player.Reset();
+        Event(2, (int)KeyboardKey.LeftShift);
+        Event(2, (int)KeyboardKey.D);
+        Tick(dt: 0f);
+        Assert.Equal(3, _player.SpeedTier);
+        Assert.Equal("CarrySprint", _player.AnimationName);
+        Assert.Equal(11.5f, _player.TargetForwardSpeed);
+        Assert.Equal(9f, _player.CurrentForwardSpeed);
+        Tick(dt: 0.1f);
+        Assert.InRange(_player.CurrentForwardSpeed, 9.1f, 11.4f);
+        Assert.Equal(0.8f, _player.Position.X, 5);
+        Tick(dt: 0.2f);
+        Assert.Equal(11.5f, _player.CurrentForwardSpeed, 4);
+        Event(1, (int)KeyboardKey.LeftShift);
+        Tick(dt: 0f);
+        Assert.Equal(9f, _player.TargetForwardSpeed);
+        Assert.Equal("CarryRun", _player.AnimationName);
+        Tick(dt: 0.1f);
+        Assert.InRange(_player.CurrentForwardSpeed, 9.1f, 11.4f);
+        Tick(dt: 0.1f);
+        Assert.Equal(9f, _player.CurrentForwardSpeed, 4);
+        Event(2, (int)KeyboardKey.S);
+        Tick(dt: 0.2f);
+        Assert.Equal(6.5f, _player.TargetForwardSpeed);
+        Assert.Equal(6.5f, _player.CurrentForwardSpeed, 4);
+        Assert.Equal("CarryJog", _player.AnimationName);
+        _player.Reset();
+        Assert.Equal(2, _player.SpeedTier);
+        Assert.Equal(9f, _player.CurrentForwardSpeed);
+        Assert.Equal("CarryRun", _player.AnimationName);
+        Event(1, (int)KeyboardKey.D);
+        Event(1, (int)KeyboardKey.S);
+    }
+
+    [Theory]
+    [InlineData(KeyboardKey.LeftShift)]
+    [InlineData(KeyboardKey.S)]
+    public void ForwardRampSpeedAndDistanceAreFrameRateIndependent(KeyboardKey key)
+    {
+        Event(2, (int)key);
+        _player.Reset();
+        Tick(dt: 0.4f);
+        float speed = _player.CurrentForwardSpeed;
+        Vector3 position = _player.Position;
+        _player.Reset();
+        for (int i = 0; i < 24; i++) Tick(dt: 1f / 60f);
+        Assert.Equal(speed, _player.CurrentForwardSpeed, 4);
+        Assert.Equal(position.Z, _player.Position.Z, 4);
+        Event(1, (int)key);
+    }
+
+    [Fact]
+    public void GameCameraUsesPhysicalSpeedAndResetDiscardsOldZoom()
+    {
+        var game = new TackleAlleyGame(_config, _input, new AssetManager(new AssetConfig()));
+        var player = Field<BallCarrier>(game, "_player");
+        var camera = Field<ThirdPersonCamera>(game, "_camera");
+        Event(2, (int)KeyboardKey.LeftShift);
+        _input.Update();
+        game.Update(0f);
+        Assert.Equal(3, player.SpeedTier);
+        Assert.Equal(9f, player.CurrentForwardSpeed);
+        Assert.Equal(6.75f, camera.Camera.Position.Z);
+        game.Update(0.1f);
+        float desiredZ = player.Position.Z + camera.DistanceForSpeed(player.CurrentForwardSpeed);
+        float expectedZ = 6.75f + (desiredZ - 6.75f) * (1f - MathF.Exp(-1f));
+        Assert.Equal(expectedZ, camera.Camera.Position.Z, 5);
+        game.ResetRun();
+        Assert.Equal(9f, player.CurrentForwardSpeed);
+        Assert.Equal(new Vector3(0f, 5.5f, 6.75f), camera.Camera.Position);
+        Event(1, (int)KeyboardKey.LeftShift);
+    }
+
+    private float VisualYaw => (float)typeof(BallCarrier)
+        .GetProperty("VisualYawDegrees", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_player)!;
+
+    [Theory]
+    [InlineData(KeyboardKey.W, 0f)]
+    [InlineData(KeyboardKey.A, -30f)]
+    [InlineData(KeyboardKey.D, 30f)]
+    public void RunningYawUsesMovementInputAndTurnsTowardTravel(KeyboardKey key, float target)
+    {
+        _player.Reset();
+        Event(2, (int)key);
+        Tick();
+        Assert.Equal(target, Field<float>(_player, "_targetRunYaw"));
+        float yaw = Field<float>(_player, "_currentRunYaw");
+        if (target == 0f) Assert.Equal(0f, yaw);
+        else
+        {
+            Assert.Equal(Math.Sign(target), Math.Sign(yaw));
+            Assert.InRange(Math.Abs(yaw), 0.01f, Math.Abs(target) - 0.01f);
+        }
+        Vector3 facing = Vector3.Transform(-Vector3.UnitZ,
+            Matrix4x4.CreateRotationY(VisualYaw * MathF.PI / 180f));
+        Assert.Equal(Math.Sign(target), Math.Sign(facing.X));
+        Assert.True(facing.Z < 0f);
+        Event(1, (int)key);
+        Tick();
+        Assert.Equal(0f, Field<float>(_player, "_targetRunYaw"));
+        Assert.True(Math.Abs(Field<float>(_player, "_currentRunYaw")) <= Math.Abs(yaw));
+    }
+
+    [Theory]
+    [InlineData(-1f)]
+    [InlineData(-0.5f)]
+    [InlineData(0f)]
+    [InlineData(0.5f)]
+    [InlineData(1f)]
+    public void ControllerYawUsesTheSameAnalogValueAsLateralMovement(float axis)
+    {
+        _player.Reset();
+        Axis(GamepadAxis.LeftX, axis);
+        Tick();
+        float lateral = _player.Position.X / (_config.PlayerLateralSpeed * Dt);
+        Assert.Equal(lateral * 30f, Field<float>(_player, "_targetRunYaw"), 4);
+        Assert.Equal(2, _player.SpeedTier);
+        Assert.Equal(-_config.PlayerForwardSpeed * Dt, _player.Position.Z, 4);
+    }
+
+    [Fact]
+    public void RunningYawIsFrameRateIndependentAndReversesSmoothly()
+    {
+        _player.Reset();
+        Event(2, (int)KeyboardKey.D);
+        Tick(dt: 0.1f);
+        float singleStep = Field<float>(_player, "_currentRunYaw");
+        _player.Reset();
+        for (int i = 0; i < 10; i++) Tick(dt: 0.01f);
+        Assert.Equal(singleStep, Field<float>(_player, "_currentRunYaw"), 4);
+        Event(1, (int)KeyboardKey.D);
+        Event(2, (int)KeyboardKey.A);
+        Tick(dt: 0f);
+        Assert.Equal(-30f, Field<float>(_player, "_targetRunYaw"));
+        Assert.Equal(singleStep, Field<float>(_player, "_currentRunYaw"), 4);
+        Tick();
+        Assert.InRange(Field<float>(_player, "_currentRunYaw"), -29.99f, singleStep - 0.01f);
+        Event(1, (int)KeyboardKey.A);
+    }
+
+    [Theory]
+    [InlineData(-20, -1)]
+    [InlineData(20, 1)]
+    public void SpinAddsItsOwnRotationAndResetClearsBothYaws(int mouseDelta, int spinDirection)
+    {
+        _player.Reset();
+        Event(2, (int)KeyboardKey.D);
+        Tick();
+        Tick(0, 20);
+        Vector3 before = _player.Position;
+        Tick(mouseDelta);
+        Assert.Equal(spinDirection, Field<int>(_player, "_spinDirection"));
+        Assert.Equal(0.45f - Dt, Field<float>(_player, "_spinRemaining"), 4);
+        Assert.Equal(spinDirection * 10f * Dt, _player.Position.X - before.X, 4);
+        Assert.Equal(-_player.Speed * Dt, _player.Position.Z - before.Z, 4);
+        float runYaw = Field<float>(_player, "_currentRunYaw");
+        Assert.Equal(30f, Field<float>(_player, "_targetRunYaw"));
+        Assert.Equal(-runYaw + spinDirection * 360f * (Dt / 0.45f), VisualYaw, 3);
+        Event(1, (int)KeyboardKey.D);
+        Event(2, (int)KeyboardKey.A);
+        Tick(dt: 0.2f);
+        Assert.Equal(-30f, Field<float>(_player, "_targetRunYaw"));
+        Assert.True(Field<float>(_player, "_spinRemaining") > 0f);
+        Tick(dt: 0.3f);
+        Assert.Equal(0f, Field<float>(_player, "_spinRemaining"));
+        Assert.Equal(-Field<float>(_player, "_currentRunYaw"), VisualYaw);
+        Tick(0, 20); Tick(mouseDelta);
+        Assert.True(Field<float>(_player, "_spinRemaining") > 0f);
+        _player.Reset();
+        Assert.Equal(0f, Field<float>(_player, "_currentRunYaw"));
+        Assert.Equal(0f, Field<float>(_player, "_targetRunYaw"));
+        Assert.Equal(0f, VisualYaw);
+        Assert.Equal(Vector3.Zero, _player.Position);
+        Assert.Equal(2, _player.SpeedTier);
+        Event(1, (int)KeyboardKey.A);
+    }
+
+    [Fact]
+    public void EndZoneTravelSmoothlyFacesDownfieldWithoutChangingMovement()
+    {
+        Event(2, (int)KeyboardKey.D);
+        Tick(dt: 0.1f);
+        Event(1, (int)KeyboardKey.D);
+        float yaw = Field<float>(_player, "_currentRunYaw");
+        Vector3 before = _player.Position;
+        _player.RunIntoEndZone(Dt, -100f);
+        Assert.Equal(0f, Field<float>(_player, "_targetRunYaw"));
+        Assert.InRange(Field<float>(_player, "_currentRunYaw"), 0.01f, yaw - 0.01f);
+        Assert.Equal(before.X, _player.Position.X);
+        Assert.Equal(before.Y, _player.Position.Y);
+        Assert.Equal(before.Z - _player.Speed * Dt, _player.Position.Z, 4);
     }
 
     [Theory]

@@ -34,8 +34,9 @@ public sealed class TackleAlleyGame
         ResetRun();
     }
 
-    public void InitializeOpponentVisuals(AssetManager assets)
+    public void InitializeVisuals(AssetManager assets)
     {
+        _player.InitializeVisual(assets);
         foreach (Opponent opponent in _opponents)
             opponent.InitializeVisual(assets);
     }
@@ -45,7 +46,7 @@ public sealed class TackleAlleyGame
         _player.Reset();
         foreach (Opponent opponent in _opponents)
             opponent.Reset();
-        _camera.Reset(_player.Position);
+        _camera.Reset(_player.Position, _player.CurrentForwardSpeed);
         Touchdown = false;
         GameOver = false;
         OutOfBounds = false;
@@ -63,7 +64,7 @@ public sealed class TackleAlleyGame
             {
                 // Keep running after scoring, then stop in the middle of the end zone.
                 _player.RunIntoEndZone(deltaTime, _field.GoalLineZ - _field.EndZoneLength * 0.5f);
-                _camera.Update(_player.Position, deltaTime);
+                _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
             }
             return;
         }
@@ -74,12 +75,12 @@ public sealed class TackleAlleyGame
             OutOfBounds = true;
             GameOver = true;
             EndStateElapsed = 0;
-            _camera.Update(_player.Position, deltaTime);
+            _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
             return;
         }
         foreach (Opponent opponent in _opponents)
             opponent.Update(_player.Position, deltaTime);
-        _camera.Update(_player.Position, deltaTime);
+        _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
 
         foreach (Opponent opponent in _opponents)
         {

@@ -6,6 +6,9 @@ from pathlib import Path
 import bpy
 import json
 import struct
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 OUT = Path(__file__).resolve().parents[2] / 'Assets/Models'
 bpy.ops.wm.open_mainfile(filepath=str(OUT / 'lowpoly_human_rigged.blend'))
@@ -45,12 +48,14 @@ assert len(doc['animations']) == 1
 doc['animations'][0]['name'] = 'Jog'
 nodes = {n['name']: n for n in doc['nodes']}
 assert expected_meshes <= {n['name'] for n in doc['nodes'] if 'mesh' in n}
-assert {'HelmetAssembly', 'Helmet', 'Facemask', 'Visor', 'ChinStrap', 'ShoulderPads'} <= nodes.keys()
+assert {'Helmet', 'Facemask', 'Visor', 'ChinStrap', 'ShoulderPads'} <= nodes.keys()
+from validate_helmet_skinning import validate_glb
+validate_glb(path)
 assert 'skin' in nodes['ShoulderPads']
-assert len(doc['skins'][0]['joints']) == 20
+assert len(doc['skins'][0]['joints']) == 24
 payload = json.dumps(doc, separators=(',', ':')).encode()
 payload += b' ' * (-len(payload) % 4)
 tail = raw[20 + size:]
 path.write_bytes(struct.pack('<4sII', b'glTF', 2, 20 + len(payload) + len(tail))
                  + struct.pack('<II', len(payload), 0x4e4f534a) + payload + tail)
-print('CANONICAL_EXPORT_COMPLETE', len(expected_meshes), 'meshes, Jog, 20 joints')
+print('CANONICAL_EXPORT_COMPLETE', len(expected_meshes), 'meshes, Jog, 24 joints')

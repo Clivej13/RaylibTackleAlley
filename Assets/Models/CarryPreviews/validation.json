@@ -1,0 +1,88 @@
+{
+  "validation_source": "../HandRigPreviews/validation.json",
+  "production_football": "football.glb",
+  "skeleton_bones": 24,
+  "assets": {
+    "football_player_carry_jog.blend": {
+      "existing_motion_preserved_except_carry_right_arm_rotations": true,
+      "non_hand_geometry_preserved": true,
+      "non_hand_weights_equipment_preserved": true,
+      "skeleton_bones": 24,
+      "keyed_range": [
+        1,
+        29
+      ],
+      "fps": 30,
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.0001629542966838926,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.00304237543605268,
+          "Index": 0.004800435621291399,
+          "Middle": 0.0048001972027122974,
+          "Ring": 0.004799988120794296,
+          "Little": 0.004799732938408852,
+          "Thumb": 0.004800416063517332
+        },
+        "attachment_matrix_error": 2.7567148208618164e-07,
+        "ball_chest_relative_excursion_m": 0.004502772489421723,
+        "loop_all_mesh_vertex_error_m": 0.0
+      }
+    },
+    "football_player_carry_run.blend": {
+      "existing_motion_preserved_except_carry_right_arm_rotations": true,
+      "non_hand_geometry_preserved": true,
+      "non_hand_weights_equipment_preserved": true,
+      "skeleton_bones": 24,
+      "keyed_range": [
+        1,
+        25
+      ],
+      "fps": 30,
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.00016285378660541028,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.003042148193344474,
+          "Index": 0.004800519440323114,
+          "Middle": 0.004800502210855484,
+          "Ring": 0.004800411872565746,
+          "Little": 0.004800225142389536,
+          "Thumb": 0.004800151102244854
+        },
+        "attachment_matrix_error": 3.0547380447387695e-07,
+        "ball_chest_relative_excursion_m": 0.007697219984924807,
+        "loop_all_mesh_vertex_error_m": 0.0
+      }
+    },
+    "football_player_carry_sprint.blend": {
+      "existing_motion_preserved_except_carry_right_arm_rotations": true,
+      "non_hand_geometry_preserved": true,
+      "non_hand_weights_equipment_preserved": true,
+      "skeleton_bones": 24,
+      "keyed_range": [
+        1,
+        21
+      ],
+      "fps": 30,
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.0001629235630389303,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.003042265074327588,
+          "Index": 0.004800015594810247,
+          "Middle": 0.004799951799213886,
+          "Ring": 0.004799933638423681,
+          "Little": 0.0048000020906329155,
+          "Thumb": 0.004800104070454836
+        },
+        "attachment_matrix_error": 3.0547380447387695e-07,
+        "ball_chest_relative_excursion_m": 0.01024838985675665,
+        "loop_all_mesh_vertex_error_m": 0.0
+      }
+    }
+  }
+}
