@@ -2,6 +2,9 @@
 from pathlib import Path
 import bpy,json,struct,math
 from mathutils import Matrix
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from validate_helmet_skinning import head_relative_vertices
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'Assets/Models'
 def signature():
  r=bpy.data.objects['PlayerRig']
@@ -40,10 +43,9 @@ for f in range(1,22):
  assert r.pose.bones['Root'].matrix_basis==Matrix.Identity(4)
  assert abs(r.pose.bones['Hips'].location.x)+abs(r.pose.bones['Hips'].location.z)<1e-8
  matrices[f]={p.name:p.matrix.copy()@p.bone.matrix_local.inverted() for p in r.pose.bones}
- for name in ['Helmet','Facemask','Visor','ChinStrap']:
-  o=bpy.data.objects[name]; rel=r.pose.bones['Head'].matrix.inverted()@o.matrix_world
-  if f==1:helmet[name]=rel.copy()
-  assert max(abs(rel[i][j]-helmet[name][i][j]) for i in range(4) for j in range(4))<1e-5
+ for name, rel in head_relative_vertices(r,dg).items():
+  if f==1:helmet[name]=rel
+  assert max((a-b).length for a,b in zip(rel,helmet[name]))<1e-5
  vals=[]
  for name in ['LeftFoot','RightFoot']:
   o=bpy.data.objects[name].evaluated_get(dg); vals.append(min((o.matrix_world@v.co).y for v in o.data.vertices))
@@ -92,11 +94,9 @@ def snapshot(frame):
 endpoint_error=max((a-b).length for a,b in zip(snapshot(1),snapshot(21)))
 assert endpoint_error<1e-6
 result['endpoint_mesh_error_m']=endpoint_error
-import hashlib
-hashes=json.loads((ROOT/'Tools/Blender/sprint_preservation_hashes.json').read_text())
-changed=[p for p,h in hashes.items() if hashlib.sha256((ROOT/p).read_bytes()).hexdigest()!=h]
-assert not [p for p in changed if not p.endswith('.cs')],changed
-result['concurrent_code_changes_not_edited_by_sprint_task']=changed
-result['preserved_source_and_code_files']=len(hashes)-len(changed)
+# Rebuilt blend bytes change with equipment rigging; compare approved content.
+from validate_helmet_preservation import main as validate_preservation
+validate_preservation()
+result['approved_content_and_csharp_sources_preserved']=True
 (OUT/'SprintPreviews'/'asset_validation.json').write_text(json.dumps(result,indent=2))
 print(json.dumps(result))

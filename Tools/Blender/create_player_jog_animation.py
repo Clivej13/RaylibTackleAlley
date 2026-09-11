@@ -5,6 +5,9 @@ Existing +Y-up coordinates are retained in GLB with export_yup=False.
 from pathlib import Path
 import bpy, math, json, hashlib, struct
 from mathutils import Vector, Quaternion
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from player_hand_rig import key_hand_poses
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'Assets/Models'
 PRE=OUT/'JogPreviews'; PRE.mkdir(exist_ok=True)
 SOURCE=OUT/'lowpoly_human_rigged.blend'
@@ -91,6 +94,7 @@ for f in range(1,30):
 assert hashlib.sha256(SOURCE.read_bytes()).hexdigest()==source_hash
 scene.frame_set(1); scene.camera=bpy.data.objects['FrontThreeQuarter']
 scene['stage_notes']='Approved Stage 6 rig plus in-place Jog. Geometry, weights, skeleton and equipment parenting unchanged.'
+key_hand_poses(rig)
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'lowpoly_human_jog.blend'))
 # Export only Jog; inspection actions remain retained in the .blend.
 for other in list(bpy.data.actions):
@@ -116,5 +120,4 @@ scene.render.ffmpeg.constant_rate_factor='HIGH'; scene.render.filepath=str(PRE/'
 bpy.ops.render.render(animation=True)
 (PRE/'validation.json').write_text(json.dumps({'source':SOURCE.name,'source_sha256':source_hash,'action':'Jog','fps':30,'keyed_range':[1,29],'playback_range':[1,28],'duration_seconds':28/30,'endpoint_mesh_error_m':error,'root_translation':False,'rig_weight_corrections':None,'samples':samples},indent=2))
 print('JOG_COMPLETE endpoint_error=',error)
-
 

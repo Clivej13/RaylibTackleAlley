@@ -1,6 +1,6 @@
 {
   "source": "lowpoly_human_jog.blend",
-  "source_sha256": "2f7b8aa0d252d4f78394e7d880917f5e60ee7ce155eed35247a90f28a383890b",
+  "source_sha256": "d47e8b025d4094b82c8fac3bc610e2a9dff621b123e77144f2a79145280b0c82",
   "action": "Run",
   "fps": 30,
   "keyed_range": [
@@ -216,5 +216,6 @@
         0.2840911412447691
       ]
     }
-  ]
+  ],
+  "hand_upgrade": "24 joints; fitted fingers/thumbs; original locomotion unchanged"
 }

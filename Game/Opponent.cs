@@ -22,6 +22,8 @@ public sealed class Opponent
 
     public OpponentPace Pace { get; private set; } = OpponentPace.Jog;
     public Vector3 Position => _position;
+    public float CurrentSpeed { get; private set; }
+    public float TargetSpeed => MovementSpeed;
     public float MovementSpeed => Pace switch
     {
         OpponentPace.Jog => _config.OpponentJogSpeed,
@@ -89,6 +91,7 @@ public sealed class Opponent
     {
         _position = _spawnPosition;
         Pace = OpponentPace.Jog;
+        CurrentSpeed = TargetSpeed;
         _yawDegrees = 180f;
         SelectAnimation();
         _animation?.SeekTime(0f);
@@ -99,8 +102,17 @@ public sealed class Opponent
         if (!_animations.TryGetValue(AnimationName, out AnimationPlayer? next) ||
             ReferenceEquals(next, _animation))
             return;
+        float phase = 0f;
+        if (_animation is { } previous)
+        {
+            float duration = previous.FrameCount / previous.FramesPerSecond;
+            if (float.IsFinite(duration) && duration > 0f &&
+                float.IsFinite(previous.CurrentTime))
+                phase = previous.CurrentTime / duration;
+        }
+        // Preserve the gait cycle across clips with different durations.
         _animation = next;
-        _animation.SeekTime(0f);
+        _animation.SeekPhase(float.IsFinite(phase) ? phase : 0f);
     }
 
     private OpponentPace SelectPace(float distance)
@@ -125,11 +137,14 @@ public sealed class Opponent
         }
         // Advance the active clip at authored speed; world movement remains game-driven.
         _animation?.Update(Math.Max(0f, deltaTime));
+        var step = SpeedRamp.Advance(CurrentSpeed, TargetSpeed,
+            _config.ForwardAcceleration, _config.ForwardDeceleration, deltaTime);
+        CurrentSpeed = step.Speed;
         Vector3 direction = playerPosition - _position;
         direction.Y = 0;
         if (direction.LengthSquared() > 0.001f)
         {
-            _position += Vector3.Normalize(direction) * MovementSpeed * Math.Max(0, deltaTime);
+            _position += Vector3.Normalize(direction) * step.Distance;
             // Rotate authored -Z forward to actual movement; clips never move the world position.
             if (MovementSpeed > 0f && deltaTime > 0f)
                 _yawDegrees = MathF.Atan2(-direction.X, -direction.Z) * (180f / MathF.PI);

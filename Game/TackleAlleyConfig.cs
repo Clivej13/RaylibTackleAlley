@@ -10,7 +10,13 @@ public sealed class TackleAlleyConfig
     public float PlayerJukeDuration { get; set; } = 0.15f;
     // Stick units per mouse pixel per frame; 20 pixels reaches full deflection.
     public float MouseGestureSensitivity { get; set; } = 0.05f;
-    public float CameraFollowDistance { get; set; } = 9f;
+    // Units/s²: adjacent 2.5-unit tiers take 0.30s up and 0.20s down.
+    public float ForwardAcceleration { get; set; } = 2.5f / 0.30f;
+    public float ForwardDeceleration { get; set; } = 2.5f / 0.20f;
+    // Follow offsets behind the player: 90%, 75%, and 60% of the original 9 units.
+    public float CameraSpeed1Distance { get; set; } = 8.10f;
+    public float CameraSpeed2Distance { get; set; } = 6.75f;
+    public float CameraSpeed3Distance { get; set; } = 5.40f;
     public float CameraHeight { get; set; } = 5.5f;
     public float CameraSmoothing { get; set; } = 10f;
     public float FieldWidth { get; set; } = 24f;
@@ -43,6 +49,6 @@ public sealed class TackleAlleyConfig
             !float.IsFinite(OpponentSprintSpeed) || OpponentSprintSpeed < 0f)
             throw new ArgumentException("Opponent locomotion speeds must be finite and nonnegative.");
     }
-    public float TackleDistance { get; set; } = 1.8f;
+    public float TackleDistance { get; set; } = 1.4f;
     public bool DrawGameplayDebug { get; set; }
 }

@@ -1,6 +1,8 @@
 using System.Numerics;
 using Raylib_cs;
 using RaylibGameFramework.Input;
+using RaylibGameFramework.Assets;
+using RaylibGameFramework.ThreeD;
 
 namespace RaylibTackleAlley.Game;
 
@@ -8,6 +10,61 @@ public sealed class BallCarrier
 {
     private readonly TackleAlleyConfig _config;
     private readonly RightStickInput _rightStick;
+    private const float VisualHeight = 2f;
+    private ModelInstance? _model;
+    // Borrowed asset value; only the draw-local copy's transform is changed.
+    private Model? _football;
+    private Matrix4x4 _footballWorldTransform = Matrix4x4.Identity;
+    private const string CarryHandBone = "Hand.R";
+
+    // Metres, row-vector convention. Derived from player_hand_rig.py's
+    // fit_carry/attach_football, not a world-space offset. See Tests/FootballAttachment.md.
+    private static readonly Matrix4x4 FootballGripLocal = new(
+        -0.35795751f, 0.34925157f, -0.86596175f, 0f,
+        -0.61571349f, 0.60892960f, 0.50010163f, 0f,
+         0.70197102f, 0.71219947f, -0.00293202f, 0f,
+        -0.12157734f, 0.02833468f, -0.00747214f, 1f);
+
+    private Vector3 RenderPosition
+    {
+        get
+        {
+            float hop = _jukeRemaining > 0f && _config.PlayerJukeDuration > 0f
+                ? 0.35f * MathF.Sin(MathF.PI * (1f - _jukeRemaining / _config.PlayerJukeDuration)) : 0f;
+            return Position + new Vector3(0f, _groundOffset + hop, 0f);
+        }
+    }
+
+    private Matrix4x4 PlayerWorldTransform =>
+        (_model?.Model.Transform ?? Matrix4x4.Identity) *
+        Matrix4x4.CreateScale(_visualScale) *
+        Matrix4x4.CreateRotationY(VisualYawDegrees * MathF.PI / 180f) *
+        Matrix4x4.CreateTranslation(RenderPosition);
+
+    private void UpdateFootballAttachment()
+    {
+        if (_model is null) return;
+        if (_animation is null || !_animation.TryGetBoneTransform(CarryHandBone, out Matrix4x4 hand))
+            throw new InvalidDataException("Carry animation must expose the current animated Hand.R transform.");
+        // AnimationPlayer.Update/Seek applies the pose before this query. World state
+        // (position, yaw, spin and hop) has also finished updating for this frame.
+        _footballWorldTransform = FootballGripLocal * hand * PlayerWorldTransform;
+    }
+    private readonly Dictionary<string, AnimationPlayer> _animations = new();
+    private AnimationPlayer? _animation;
+    private float _visualScale;
+    private float _groundOffset;
+    private const float MaxRunYawDegrees = 30f;
+    private const float RunYawResponse = 12f;
+    private float _currentRunYaw;
+    private float _targetRunYaw;
+
+    // Input yaw is left-negative/right-positive. Around world +Y, authored -Z
+    // needs the opposite sign to face the corresponding world X direction.
+    private float VisualYawDegrees => -_currentRunYaw + (_spinRemaining > 0f
+        ? _spinDirection * 360f * (1f - _spinRemaining / SpinDuration) : 0f);
+
+    // Retain the existing lean/input state, but never apply it to the model.
     private const float HeadLeanDistance = 0.6f;
     private const float BodyLeanFraction = 0.5f;
     private const float LeanResponse = 14f;
@@ -29,12 +86,87 @@ public sealed class BallCarrier
     private int _spinDirection;
 
     public int SpeedTier { get; private set; } = 2;
+    public float CurrentForwardSpeed { get; private set; }
+    public float TargetForwardSpeed => Speed;
     public float Speed => SpeedTier switch
     {
         1 => _config.PlayerSlowSpeed,
         3 => _config.PlayerSprintSpeed,
         _ => _config.PlayerForwardSpeed
     };
+
+    // Tier 0 remains reserved; no stationary clip is selected.
+    public string AnimationName => SpeedTier switch
+    {
+        1 => "CarryJog",
+        2 => "CarryRun",
+        3 => "CarrySprint",
+        _ => throw new InvalidOperationException("No locomotion clip for this speed tier.")
+    };
+
+    // AssetManager owns instances and borrowed clips; instances are released first.
+    public unsafe void InitializeVisual(AssetManager assets)
+    {
+        if (_model is not null)
+            return;
+
+        var clips = new Dictionary<string, ModelAnimation>();
+        foreach (string key in new[] { "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations" })
+            foreach (ModelAnimation clip in assets.GetModelAnimations(key))
+                clips[new string(clip.Name)] = clip;
+
+        ModelInstance model = assets.CreateModelInstance("FootballPlayer");
+        try
+        {
+            // Construct the initial CarryRun player last so its starting pose is applied last.
+            foreach (string name in new[] { "CarryJog", "CarrySprint", "CarryRun" })
+            {
+                if (!clips.TryGetValue(name, out ModelAnimation clip) || clip.KeyFrameCount <= 0 ||
+                    !Raylib.IsModelAnimationValid(model.Model, clip))
+                    throw new InvalidDataException($"{name} must be nonempty and compatible with FootballPlayer.");
+                // BallCarrier owns its playback clocks and deformable model instance.
+                // Raylib resamples glTF animation at 60 Hz independently of Blender FPS.
+                _animations.Add(name, new AnimationPlayer(model, clip, loop: true));
+            }
+            BoundingBox bounds = Raylib.GetModelBoundingBox(model.Model);
+            float height = bounds.Max.Y - bounds.Min.Y;
+            if (!float.IsFinite(height) || height <= 0f)
+                throw new InvalidDataException("FootballPlayer must have a finite positive height.");
+            _visualScale = VisualHeight / height;
+            _groundOffset = -bounds.Min.Y * _visualScale;
+            _football = assets.GetModel("Football");
+            _model = model;
+            SelectAnimation();
+            UpdateFootballAttachment();
+        }
+        catch
+        {
+            _model = null;
+            _football = null;
+            _animation = null;
+            _animations.Clear();
+            assets.ReleaseModelInstance(model);
+            throw;
+        }
+    }
+
+    private void SelectAnimation()
+    {
+        if (!_animations.TryGetValue(AnimationName, out AnimationPlayer? next) ||
+            ReferenceEquals(next, _animation))
+            return;
+        float phase = 0f;
+        if (_animation is { } previous)
+        {
+            float duration = previous.FrameCount / previous.FramesPerSecond;
+            if (float.IsFinite(duration) && duration > 0f &&
+                float.IsFinite(previous.CurrentTime))
+                phase = previous.CurrentTime / duration;
+        }
+        // Preserve the gait cycle across clips with different durations.
+        _animation = next;
+        _animation.SeekPhase(float.IsFinite(phase) ? phase : 0f);
+    }
 
     public BallCarrier(TackleAlleyConfig config)
     {
@@ -48,9 +180,14 @@ public sealed class BallCarrier
         _rightStick.IgnoreNextMouseDelta();
         _mouseSpinGesture = false;
         Position = Vector3.Zero;
+        _currentRunYaw = 0f;
+        _targetRunYaw = 0f;
         _headOffset = Vector3.Zero;
         _bodyOffset = Vector3.Zero;
         SpeedTier = 2;
+        CurrentForwardSpeed = TargetForwardSpeed;
+        SelectAnimation();
+        _animation?.SeekTime(0f);
         _jukeRemaining = 0f;
         _jukeDirection = 0;
         _jukeReady = true;
@@ -59,6 +196,7 @@ public sealed class BallCarrier
         _spinGestureConsumed = false;
         _spinRemaining = 0f;
         _spinDirection = 0;
+        UpdateFootballAttachment();
     }
 
     public void IgnoreNextMouseDelta() => _rightStick.IgnoreNextMouseDelta();
@@ -67,11 +205,15 @@ public sealed class BallCarrier
     {
         float lateral = GetDirectionalValue(input.GetValue("MoveLeft"), input.GetValue("MoveRight"));
         deltaTime = Math.Max(0f, deltaTime);
+        UpdateRunYaw(lateral, deltaTime);
         // Forward/back input controls lean; backward also selects the slow running tier.
         float backwardInput = input.GetValue("MoveBackward");
         float longitudinalLean = GetDirectionalValue(input.GetValue("MoveForward"), backwardInput);
         bool sprinting = input.GetValue("Sprint") > 0.5f;
         SpeedTier = sprinting ? 3 : Math.Abs(backwardInput) > 0.35f ? 1 : 2;
+
+        SelectAnimation();
+        _animation?.Update(deltaTime);
 
         var rightStick = _rightStick.Read(input);
         float juke = rightStick.Direction.X;
@@ -131,8 +273,9 @@ public sealed class BallCarrier
             + _spinDirection * SpinSpeed * spinTime
             + lateral * _config.PlayerLateralSpeed * Math.Max(0f, deltaTime - jukeTime - spinTime);
         // Forward travel is automatic, independent of the forward/back lean input.
-        position.Z -= Speed * deltaTime;
+        position.Z -= AdvanceForwardSpeed(deltaTime);
         Position = field.ClampToOuterBoundary(position, 0.7f);
+        UpdateFootballAttachment();
     }
 
     public void RunIntoEndZone(float deltaTime, float stopZ)
@@ -140,9 +283,20 @@ public sealed class BallCarrier
         deltaTime = Math.Max(0f, deltaTime);
         _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
+        _animation?.Update(deltaTime);
         UpdateLean(Vector3.Zero, Vector3.Zero, deltaTime);
+        UpdateRunYaw(0f, deltaTime);
         Position = new Vector3(Position.X, Position.Y,
-            Math.Max(stopZ, Position.Z - Speed * deltaTime));
+            Math.Max(stopZ, Position.Z - AdvanceForwardSpeed(deltaTime)));
+        UpdateFootballAttachment();
+    }
+
+    private float AdvanceForwardSpeed(float deltaTime)
+    {
+        var step = SpeedRamp.Advance(CurrentForwardSpeed, TargetForwardSpeed,
+            _config.ForwardAcceleration, _config.ForwardDeceleration, deltaTime);
+        CurrentForwardSpeed = step.Speed;
+        return step.Distance;
     }
 
     private void UpdateSpinGesture(float side, float back, float headZ, float deltaTime, bool isMouse)
@@ -197,6 +351,13 @@ public sealed class BallCarrier
         _ => 0f
     };
 
+    private void UpdateRunYaw(float lateral, float deltaTime)
+    {
+        _targetRunYaw = lateral * MaxRunYawDegrees;
+        float blend = 1f - MathF.Exp(-RunYawResponse * deltaTime);
+        _currentRunYaw += (_targetRunYaw - _currentRunYaw) * blend;
+    }
+
     private void UpdateLean(Vector3 bodyLeanDirection, Vector3 headDirection, float deltaTime)
     {
         float blend = 1f - MathF.Exp(-LeanResponse * deltaTime);
@@ -214,24 +375,14 @@ public sealed class BallCarrier
 
     public void Draw()
     {
-        float hop = _jukeRemaining > 0f && _config.PlayerJukeDuration > 0f
-            ? 0.35f * MathF.Sin(MathF.PI * (1f - _jukeRemaining / _config.PlayerJukeDuration)) : 0f;
-        float rotation = _spinRemaining > 0f
-            ? _spinDirection * 360f * (1f - _spinRemaining / SpinDuration) : 0f;
-        Rlgl.PushMatrix();
-        Rlgl.Translatef(Position.X, Position.Y + hop, Position.Z);
-        Rlgl.Rotatef(rotation, 0f, 1f, 0f);
-        DrawBlock( new Vector3(0f, 0.4f, 0f), new Vector3(1f, 0.8f, 1f), Color.DarkBrown);
-        DrawBlock(new Vector3(0f, 1.2f, 0f) + _bodyOffset,
-            new Vector3(1.4f, 0.8f, 1.1f), Color.Orange);
-        DrawBlock(new Vector3(0f, 1.9f, 0f) + _headOffset,
-            new Vector3(0.7f, 0.6f, 0.7f), Color.Gold);
-        Rlgl.PopMatrix();
-    }
-
-    private static void DrawBlock(Vector3 center, Vector3 size, Color color)
-    {
-        Raylib.DrawCube(center, size.X, size.Y, size.Z, color);
-        Raylib.DrawCubeWires(center, size.X, size.Y, size.Z, Color.Black);
+        if (_model is null)
+            throw new InvalidOperationException("Initialize player visuals after loading assets.");
+        // Spin remains an independent temporary rotation over the smoothed running yaw.
+        Raylib.DrawModelEx(_model.Model, RenderPosition,
+            Vector3.UnitY, VisualYawDegrees, new Vector3(_visualScale), Color.White);
+        if (_football is not { } football)
+            throw new InvalidOperationException("Initialize the standalone football asset.");
+        football.Transform *= _footballWorldTransform;
+        Raylib.DrawModelEx(football, Vector3.Zero, Vector3.UnitY, 0f, Vector3.One, Color.White);
     }
 }

@@ -1,0 +1,104 @@
+ M Application/GameApplication.cs
+ M Assets/Models/JogPreviews/Jog_LeftContact_Front.png
+ M Assets/Models/JogPreviews/Jog_LeftPassing_Side.png
+ M Assets/Models/JogPreviews/Jog_LeftPushOff_Side.png
+ M Assets/Models/JogPreviews/Jog_RightContact_Front.png
+ M Assets/Models/JogPreviews/Jog_RightPassing_FrontThreeQuarter.png
+ M Assets/Models/JogPreviews/Jog_RightPushOff_FrontThreeQuarter.png
+ M Assets/Models/JogPreviews/Jog_Stride_FrontThreeQuarter.png
+ M Assets/Models/JogPreviews/Jog_loop.mp4
+ M Assets/Models/JogPreviews/validation.json
+ M Assets/Models/RigPreviews/Pose_ArmsForward_Front.png
+ M Assets/Models/RigPreviews/Pose_ArmsForward_FrontThreeQuarter.png
+ M Assets/Models/RigPreviews/Pose_Athletic_Front.png
+ M Assets/Models/RigPreviews/Pose_Athletic_FrontThreeQuarter.png
+ M Assets/Models/RigPreviews/Pose_CrossBody_Front.png
+ M Assets/Models/RigPreviews/Pose_CrossBody_FrontThreeQuarter.png
+ M Assets/Models/RigPreviews/Pose_HeadLean_Front.png
+ M Assets/Models/RigPreviews/Pose_HeadLean_FrontThreeQuarter.png
+ M Assets/Models/RigPreviews/Pose_KneeRaise_Front.png
+ M Assets/Models/RigPreviews/Pose_KneeRaise_FrontThreeQuarter.png
+ M Assets/Models/RigPreviews/Pose_Neutral_Front.png
+ M Assets/Models/RigPreviews/Pose_Neutral_FrontThreeQuarter.png
+ M Assets/Models/RigPreviews/Pose_ShoulderDip_Front.png
+ M Assets/Models/RigPreviews/Pose_ShoulderDip_FrontThreeQuarter.png
+ M Assets/Models/RigPreviews/Pose_TorsoTwist_Front.png
+ M Assets/Models/RigPreviews/Pose_TorsoTwist_FrontThreeQuarter.png
+ M Assets/Models/RunPreviews/Run_LeftContact_Front.png
+ M Assets/Models/RunPreviews/Run_LeftPassing_Side.png
+ M Assets/Models/RunPreviews/Run_LeftPushOff_Side.png
+ M Assets/Models/RunPreviews/Run_RightContact_Front.png
+ M Assets/Models/RunPreviews/Run_RightPassing_FrontThreeQuarter.png
+ M Assets/Models/RunPreviews/Run_RightPushOff_FrontThreeQuarter.png
+ M Assets/Models/RunPreviews/Run_Stride_FrontThreeQuarter.png
+ M Assets/Models/RunPreviews/Run_loop.mp4
+ M Assets/Models/RunPreviews/validation.json
+ M Assets/Models/SprintPreviews/Sprint_LeftContact_Front.png
+ M Assets/Models/SprintPreviews/Sprint_LeftPassing_Side.png
+ M Assets/Models/SprintPreviews/Sprint_LeftPushOff_Side.png
+ M Assets/Models/SprintPreviews/Sprint_RightContact_Front.png
+ M Assets/Models/SprintPreviews/Sprint_RightPassing_FrontThreeQuarter.png
+ M Assets/Models/SprintPreviews/Sprint_RightPushOff_FrontThreeQuarter.png
+ M Assets/Models/SprintPreviews/Sprint_Stride_FrontThreeQuarter.png
+ M Assets/Models/SprintPreviews/Sprint_loop.mp4
+ M Assets/Models/SprintPreviews/asset_validation.json
+ M Assets/Models/SprintPreviews/validation.json
+ M Assets/Models/football_player.glb
+ M Assets/Models/lowpoly_human_jog.blend
+ M Assets/Models/lowpoly_human_jog_validation.glb
+ M Assets/Models/lowpoly_human_rigged.blend
+ M Assets/Models/lowpoly_human_run.blend
+ M Assets/Models/lowpoly_human_run_validation.glb
+ M Assets/Models/lowpoly_human_sprint.blend
+ M Assets/Models/lowpoly_human_sprint_validation.glb
+ M Game/BallCarrier.cs
+ M Game/Opponent.cs
+ M Game/TackleAlleyConfig.cs
+ M Game/TackleAlleyGame.cs
+ M Game/ThirdPersonCamera.cs
+ M Tests/ControlsTests.cs
+ M Tests/HelmetAttachment.md
+ M Tests/OpponentLocomotion.md
+ M Tests/OpponentTests.cs
+ M Tools/Blender/create_player_jog_animation.py
+ M Tools/Blender/create_player_run_animation.py
+ M Tools/Blender/create_player_sprint_animation.py
+ M Tools/Blender/export_football_player.py
+ M Tools/Blender/rig_player.py
+ M Tools/Blender/validate_player_jog.py
+ M Tools/Blender/validate_player_run.py
+ M Tools/Blender/validate_player_sprint.py
+ M assets.json
+ M config.json
+?? Assets/Models/CarryPreviews/
+?? Assets/Models/HandRigPreviews/
+?? Assets/Models/football.blend
+?? Assets/Models/football.glb
+?? Assets/Models/football_player_carry_jog.blend
+?? Assets/Models/football_player_carry_jog.glb
+?? Assets/Models/football_player_carry_run.blend
+?? Assets/Models/football_player_carry_run.glb
+?? Assets/Models/football_player_carry_sprint.blend
+?? Assets/Models/football_player_carry_sprint.glb
+?? Assets/Models/helmet_skinning_validation.json
+?? Game/SpeedRamp.cs
+?? Tests/BallCarrierAnimationTests.cs
+?? Tests/CameraTests.cs
+?? Tests/SkinnedHelmetTests.cs
+?? Tools/Blender/__pycache__/
+?? Tools/Blender/create_football.py
+?? Tools/Blender/create_player_carry_animations.py
+?? Tools/Blender/fit_football_grip.py
+?? Tools/Blender/hand_grip_fit.json
+?? Tools/Blender/hand_rig_baseline.json.gz
+?? Tools/Blender/helmet_preservation_baseline.json.gz
+?? Tools/Blender/player_carry_notes.md
+?? Tools/Blender/player_football_hand_notes.md
+?? Tools/Blender/player_hand_rig.py
+?? Tools/Blender/rebuild_football_hand_assets.py
+?? Tools/Blender/upgrade_player_hands.py
+?? Tools/Blender/validate_helmet_preservation.py
+?? Tools/Blender/validate_helmet_skinning.py
+?? Tools/Blender/validate_player_carry.py
+?? Tools/Blender/validate_player_hands.py
+
