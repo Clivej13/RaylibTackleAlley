@@ -22,7 +22,8 @@ public sealed class FootballRenderTests
         try
         {
             assets.RequireAssets("Football", "FootballPlayer", "FootballPlayerCarryJogAnimations",
-                "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations");
+                "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
+                "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations");
             while (!assets.ProcessNext()) { }
             var player = new BallCarrier(new TackleAlleyConfig());
             player.InitializeVisual(assets);

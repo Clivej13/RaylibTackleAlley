@@ -48,7 +48,8 @@ public sealed class BallCarrierAnimationTests
         {
             assets.RequireAssets("Football", "FootballPlayer", "FootballPlayerAnimations",
                 "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations",
-                "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations");
+                "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
+                "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations");
             while (!assets.ProcessNext()) { }
             var config = new TackleAlleyConfig();
             var input = new InputController(InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json")));
@@ -143,6 +144,40 @@ public sealed class BallCarrierAnimationTests
                 Assert.Equal(otherPose, Vertices(opponent));
                 Assert.Equal(0f, Field<AnimationPlayer>(opponent, "_animation").CurrentTime);
             }
+
+            // Exercise both real one-shot clips, including attachment on every frame,
+            // sprint interruption protection, and the authored return gait phases.
+            foreach (var (from, to, cut, exitPhase) in new[] {
+                (KeyboardKey.A, KeyboardKey.D, "CutRight", 9f / 24f),
+                (KeyboardKey.D, KeyboardKey.A, "CutLeft", 21f / 24f) })
+            {
+                Key(KeyboardKey.A, false); Key(KeyboardKey.D, false);
+                Key(KeyboardKey.LeftShift, false);
+                player.Reset(); baseline.Reset();
+                Key(KeyboardKey.LeftShift, true);
+                Key(from, true); Tick(0.02f);
+                Key(KeyboardKey.LeftShift, false);
+                Key(from, false); Tick(0.05f);
+                Key(to, true); Tick(0f);
+                Assert.Equal(cut, player.AnimationName);
+                Assert.Same(clocks[cut], Field<AnimationPlayer>(player, "_animation"));
+                Assert.Equal(0f, clocks[cut].CurrentTime);
+                Tick(0.1f);
+                Key(KeyboardKey.LeftShift, true);
+                Tick(0.1f);
+                Assert.Equal(cut, player.AnimationName);
+                Tick(0.1f);
+                Assert.Equal(cut, player.AnimationName);
+                Tick(0.08f);
+                Assert.Equal("CarrySprint", player.AnimationName);
+                Assert.Same(clocks["CarrySprint"], Field<AnimationPlayer>(player, "_animation"));
+                float expectedTime = exitPhase * (clocks["CarrySprint"].FrameCount /
+                    clocks["CarrySprint"].FramesPerSecond) + 0.38f - 22f / 60f;
+                Assert.Equal(expectedTime, clocks["CarrySprint"].CurrentTime, 5);
+                Assert.Equal(otherPose, Vertices(opponent));
+                Key(to, false); Key(KeyboardKey.LeftShift, false);
+            }
+            player.Reset(); baseline.Reset();
 
             // Compare initialized/uninitialized movement for lateral travel, juke,
             // spin gestures, head fake cancellation, and boundary clamping.
