@@ -319,7 +319,7 @@ public sealed class ControlsTests : IDisposable
             CheckStep();
         }
         Assert.Equal(updated, Field<float>(_player, "_effectiveLateral"), 4);
-        Assert.Equal(-updated * 30f, VisualYaw, 4);
+        Assert.Equal(-updated * 45f, VisualYaw, 4);
         Event(1, (int)KeyboardKey.LeftShift);
 
         void CheckStep()
@@ -327,8 +327,8 @@ public sealed class ControlsTests : IDisposable
             float before = _player.Position.X;
             Tick(dt: 0.05f);
             float movementSteering = (_player.Position.X - before) / (_config.PlayerLateralSpeed * 0.05f);
-            Assert.Equal(movementSteering * 30f, Field<float>(_player, "_targetRunYaw"), 4);
-            Assert.Equal(-movementSteering * 30f, VisualYaw, 4);
+            Assert.Equal(movementSteering * 45f, Field<float>(_player, "_targetRunYaw"), 4);
+            Assert.Equal(-movementSteering * 45f, VisualYaw, 4);
         }
     }
 
@@ -362,13 +362,80 @@ public sealed class ControlsTests : IDisposable
         Event(1, (int)KeyboardKey.LeftShift);
     }
 
+    [Theory]
+    [InlineData(-1f, "CutRight", false)]
+    [InlineData(1f, "CutLeft", false)]
+    [InlineData(-1f, "CutRight", true)]
+    [InlineData(1f, "CutLeft", true)]
+    public void CutFreezesIncomingYawAndHandsOffBeforeLocomotion(float incomingSide, string cut, bool sprint)
+    {
+        Axis(GamepadAxis.LeftX, incomingSide);
+        Event(2, (int)KeyboardKey.LeftShift);
+        Tick(dt: 0.6f);
+        float incomingYaw = Field<float>(_player, "_currentRunYaw");
+        Assert.Equal(incomingSide * 45f, incomingYaw);
+        Event(1, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, -incomingSide);
+        Tick(dt: Dt);
+        Assert.Equal(cut, _player.AnimationName);
+        CheckFrozen();
+
+        if (sprint) Event(2, (int)KeyboardKey.LeftShift);
+        for (int i = 0; i < 20; i++)
+        {
+            // Live input alternates between the incoming and destination directions.
+            Axis(GamepadAxis.LeftX, i % 2 == 0 ? incomingSide : -incomingSide);
+            Tick(dt: Dt);
+            Assert.Equal(cut, _player.AnimationName);
+            CheckFrozen();
+        }
+
+        Axis(GamepadAxis.LeftX, -incomingSide);
+        Tick(dt: Field<float>(_player, "_cutRemaining"));
+        Assert.Equal(sprint ? "CarrySprint" : "CarryRun", _player.AnimationName);
+        float destination = -incomingSide * 45f;
+        Assert.Equal(destination, Field<float>(_player, "_currentRunYaw"));
+        Assert.Equal(destination, Field<float>(_player, "_targetRunYaw"));
+        Assert.Equal(-destination, VisualYaw);
+
+        Event(1, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, -incomingSide);
+        Tick();
+        Assert.Equal("CarryRun", _player.AnimationName);
+        Assert.Equal(destination, Field<float>(_player, "_currentRunYaw"));
+        Assert.Equal(destination, Field<float>(_player, "_targetRunYaw"));
+
+        void CheckFrozen()
+        {
+            Assert.Equal(incomingYaw, Field<float>(_player, "_currentRunYaw"));
+            Assert.Equal(incomingYaw, Field<float>(_player, "_targetRunYaw"));
+            Assert.Equal(-incomingYaw, VisualYaw);
+        }
+    }
+
+    [Theory]
+    [InlineData(-1f)]
+    [InlineData(1f)]
+    public void EndZoneCutKeepsIncomingYawUntilHandoff(float incomingSide)
+    {
+        ArmCut(incomingSide);
+        float incomingYaw = Field<float>(_player, "_currentRunYaw");
+        Axis(GamepadAxis.LeftX, -incomingSide); Tick(dt: 0f);
+        _player.RunIntoEndZone(0.1f, -100f);
+        Assert.Equal(incomingYaw, Field<float>(_player, "_currentRunYaw"));
+        _player.RunIntoEndZone(Field<float>(_player, "_cutRemaining"), -100f);
+        Assert.Equal("CarryRun", _player.AnimationName);
+        Assert.Equal(-incomingSide * 45f, Field<float>(_player, "_currentRunYaw"));
+        Assert.Equal(-incomingSide * 45f, Field<float>(_player, "_targetRunYaw"));
+    }
+
     private float VisualYaw => (float)typeof(BallCarrier)
         .GetProperty("VisualYawDegrees", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_player)!;
 
     [Theory]
     [InlineData(KeyboardKey.W, 0f)]
-    [InlineData(KeyboardKey.A, -30f)]
-    [InlineData(KeyboardKey.D, 30f)]
+    [InlineData(KeyboardKey.A, -45f)]
+    [InlineData(KeyboardKey.D, 45f)]
     public void RunningYawUsesMovementInputAndTurnsTowardTravel(KeyboardKey key, float target)
     {
         _player.Reset();
@@ -404,7 +471,7 @@ public sealed class ControlsTests : IDisposable
         Axis(GamepadAxis.LeftX, axis);
         Tick();
         float lateral = _player.Position.X / (_config.PlayerLateralSpeed * Dt);
-        Assert.Equal(lateral * 30f, Field<float>(_player, "_targetRunYaw"), 4);
+        Assert.Equal(lateral * 45f, Field<float>(_player, "_targetRunYaw"), 4);
         Assert.Equal(2, _player.SpeedTier);
         Assert.Equal(-_config.PlayerForwardSpeed * Dt, _player.Position.Z, 4);
     }
@@ -422,10 +489,10 @@ public sealed class ControlsTests : IDisposable
         Event(1, (int)KeyboardKey.D);
         Event(2, (int)KeyboardKey.A);
         Tick(dt: 0f);
-        Assert.Equal(-30f, Field<float>(_player, "_targetRunYaw"));
+        Assert.Equal(-45f, Field<float>(_player, "_targetRunYaw"));
         Assert.Equal(singleStep, Field<float>(_player, "_currentRunYaw"), 4);
         Tick();
-        Assert.InRange(Field<float>(_player, "_currentRunYaw"), -29.99f, singleStep - 0.01f);
+        Assert.InRange(Field<float>(_player, "_currentRunYaw"), -44.99f, singleStep - 0.01f);
         Event(1, (int)KeyboardKey.A);
     }
 
@@ -445,12 +512,12 @@ public sealed class ControlsTests : IDisposable
         Assert.Equal(spinDirection * 10f * Dt, _player.Position.X - before.X, 4);
         Assert.Equal(-_player.Speed * Dt, _player.Position.Z - before.Z, 4);
         float runYaw = Field<float>(_player, "_currentRunYaw");
-        Assert.Equal(30f, Field<float>(_player, "_targetRunYaw"));
+        Assert.Equal(45f, Field<float>(_player, "_targetRunYaw"));
         Assert.Equal(-runYaw + spinDirection * 360f * (Dt / 0.45f), VisualYaw, 3);
         Event(1, (int)KeyboardKey.D);
         Event(2, (int)KeyboardKey.A);
         Tick(dt: 0.2f);
-        Assert.Equal(-30f, Field<float>(_player, "_targetRunYaw"));
+        Assert.Equal(-45f, Field<float>(_player, "_targetRunYaw"));
         Assert.True(Field<float>(_player, "_spinRemaining") > 0f);
         Tick(dt: 0.3f);
         Assert.Equal(0f, Field<float>(_player, "_spinRemaining"));

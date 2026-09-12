@@ -17,17 +17,23 @@ OUT = ROOT / 'Assets/Models'
 PRE = OUT / 'CutPreviews'
 SOURCE = OUT / 'football_player_carry_run.blend'
 CONFIG = {
-    'CutRight': {'plant': 'L', 'direction': -1, 'phase': [19,20,21,22,23,24,2,4,6,8,9,10],
+    # Clip directions use the in-game rear view; bone L/R names stay unchanged.
+    'CutLeft': {'plant': 'L', 'direction': -1, 'phase': [19,20,21,22,23,24,2,4,6,8,9,10],
         'anchor': [.29,.1205,-.11], 'foot_yaw': -10,
         'lean': [0,-4,-9,-9,-4,5,12,11,6,2,0,0],
         'yaw': [0,-4,-9,-8,-2,10,17,15,8,3,0,0],
         'drop': [0,.025,.055,.080,.100,.090,.060,.030,.010,0,0,0], 'drive': .09},
-    'CutLeft': {'plant': 'R', 'direction': 1, 'phase': [7,8,9,10,11,12,14,16,18,20,21,22],
+    'CutRight': {'plant': 'R', 'direction': 1, 'phase': [7,8,9,10,11,12,14,16,18,20,21,22],
         'anchor': [-.28,.1205,-.10], 'foot_yaw': 8,
         'lean': [0,3.5,8,8,3,-5,-11,-10,-5,-1.5,0,0],
         'yaw': [0,3,8,7,1,-9,-16,-14,-7,-2,0,0],
         'drop': [0,.022,.052,.077,.095,.085,.055,.026,.008,0,0,0], 'drive': .08},
 }
+# Heading relative to incoming run, positive yaw turns left in the rear view.
+TURN = [0,3,8,15,25,38,50,64,76,84,89,90]
+CHEST_LEAD = [0,4,8,12,14,13,11,8,5,2,0,0]
+HEAD_LEAD = [0,6,9,10,10,9,7,5,3,1,0,0]
+
 PLANT_WEIGHT = [0,.15,.70,1,1,1,1,.65,.25,0,0,0]
 DRIVE = [0,0,0,0,.2,.55,1,.85,.45,.12,0,0]
 PLANT_LIFT = [0,.035,.015,0,0,0,0,.065,.045,0,0,0]
@@ -58,7 +64,7 @@ def rotate(rig, name, axis, degrees):
     p.rotation_quaternion = Quaternion(local, math.radians(degrees)) @ p.rotation_quaternion
 
 
-def solve_leg(rig, side, target, orientation):
+def solve_leg(rig, side, target, orientation, heading=0):
     """Use Blender's two-bone IK; bake only rotations and discard authoring controls."""
     scene = bpy.context.scene
     lower = rig.pose.bones['LowerLeg.' + side]
@@ -69,7 +75,7 @@ def solve_leg(rig, side, target, orientation):
     scene.collection.objects.link(goal)
     scene.collection.objects.link(pole)
     goal.location = target
-    pole.location = (target.x, .5, -1.2)
+    pole.location = target + Quaternion((0,1,0), math.radians(heading)) @ Vector((0,.4,-1.2))
     c = lower.constraints.new('IK')
     c.target, c.pole_target = goal, pole
     c.pole_angle = -math.pi/2
@@ -96,38 +102,6 @@ def solve_leg(rig, side, target, orientation):
     bpy.data.objects.remove(pole, do_unlink=True)
 
 
-def refine_exit(rig, cfg, frame):
-    """Only the post-push Drive/Recover phases turn into the outgoing stride."""
-    if frame <= 13:
-        return
-    amount = min((frame-13)/4, 1)
-    recovery = max(0, (frame-17)/6)
-    direction = cfg['direction']
-    yaw = -direction * (25*amount + 13*recovery)
-    turn = Quaternion((0,1,0), math.radians(yaw))
-    feet = {s: rig.pose.bones['Foot.'+s].matrix.copy() for s in ('L','R')}
-    rotate(rig, 'Hips', (0,1,0), yaw)
-    rotate(rig, 'Chest', (0,1,0), -direction*6*amount)
-    rotate(rig, 'Head', (0,1,0), -direction*8*amount)
-    bpy.context.view_layer.update()
-    for side, original in feet.items():
-        target = turn @ original.translation
-        orientation = turn @ original.to_quaternion()
-        if side != cfg['plant']:
-            target.x += direction * (.10*amount + .025*recovery)
-            target.z -= .045*amount
-        else:
-            # Release the push foot, fold it and draw it below the pelvis.
-            target.x = target.x*(1-.45*amount)
-            target.y += .055*amount
-            target.z *= 1-.35*amount
-        obj = bpy.data.objects['LeftFoot' if side == 'L' else 'RightFoot']
-        rest_inv = rig.data.bones['Foot.'+side].matrix_local.inverted()
-        low = min((orientation @ (rest_inv @ obj.matrix_world @ v.co)).y + target.y for v in obj.data.vertices)
-        target.y += max(0, .0005-low)
-        solve_leg(rig, side, target, orientation)
-
-
 def build(name, cfg):
     bpy.ops.wm.open_mainfile(filepath=str(SOURCE))
     bpy.context.preferences.filepaths.save_version = 0
@@ -142,7 +116,7 @@ def build(name, cfg):
                         'feet': {s: rig.pose.bones['Foot.'+s].matrix.copy() for s in ('L','R')}})
     action = bpy.data.actions.new(name)
     action.use_fake_user = True
-    action['description'] = 'CarryRun-based in-place direction reversal; ' + cfg['plant'] + ' plant; release-Sprint transition'
+    action['description'] = 'Relative 0-to-90-degree cut with staggered head/chest/pelvis turn; ' + cfg['plant'] + ' plant; release-Sprint transition'
     rig.animation_data.action = action
     for i, sample in enumerate(samples):
         frame = i+1
@@ -153,19 +127,21 @@ def build(name, cfg):
         for p in rig.pose.bones:
             loc, quat, scale = sample['basis'][p.name]
             p.location, p.rotation_quaternion, p.scale = loc, quat, scale
+        heading = -cfg['direction']*sample_curve(TURN, time)
+        turn = Quaternion((0,1,0), math.radians(heading))
         rotate(rig, 'Hips', (0,0,1), sample_curve(cfg['lean'], time))
-        rotate(rig, 'Hips', (0,1,0), sample_curve(cfg['yaw'], time))
+        rotate(rig, 'Root', (0,1,0), heading)
         rig.pose.bones['Hips'].location.y -= drop
         rotate(rig, 'Spine', (1,0,0), -drop*50)
-        rotate(rig, 'Chest', (0,1,0), -cfg['direction']*6*drive)
-        rotate(rig, 'Head', (0,1,0), cfg['direction']*3*drive)
+        rotate(rig, 'Chest', (0,1,0), -cfg['direction']*sample_curve(CHEST_LEAD, time))
+        rotate(rig, 'Head', (0,1,0), -cfg['direction']*sample_curve(HEAD_LEAD, time))
         rotate(rig, 'UpperArm.L', (1,0,0), -12*drive)
         bpy.context.view_layer.update()
         if 0 < time < 10:
             for side in ('L','R'):
                 original = sample['feet'][side]
-                target = original.translation.copy()
-                orientation = original.to_quaternion()
+                target = turn @ original.translation
+                orientation = turn @ original.to_quaternion()
                 if side == cfg['plant']:
                     weight = sample_curve(PLANT_WEIGHT, time)
                     target = target.lerp(Vector(cfg['anchor']), weight)
@@ -181,8 +157,7 @@ def build(name, cfg):
                 rest_inv = rig.data.bones['Foot.'+side].matrix_local.inverted()
                 low = min((orientation @ (rest_inv @ obj.matrix_world @ v.co)).y + target.y for v in obj.data.vertices)
                 target.y += max(0, .0005-low)
-                solve_leg(rig, side, target, orientation)
-        refine_exit(rig, cfg, frame)
+                solve_leg(rig, side, target, orientation, heading)
         for p in rig.pose.bones:
             for prop in ('location', 'rotation_quaternion', 'scale'):
                 p.keyframe_insert(prop, frame=frame, group=p.name)
@@ -201,7 +176,7 @@ def build(name, cfg):
     scene['cut_main_plant_foot'] = 'Foot.'+cfg['plant']
     scene['cut_plant_locked_frames'] = [7,13]
     scene['cut_duration_seconds'] = 11/30
-    scene['cut_notes'] = 'No root or horizontal Hips motion. Temporary IK baked to existing bones. Production ball preview-only.'
+    scene['cut_notes'] = 'Root yaw only, no root translation or horizontal Hips motion. Temporary IK baked to existing bones. Production ball preview-only.'
     scene.frame_set(1)
     path = OUT / ('football_player_' + name.replace('Cut','cut_').lower())
     bpy.ops.wm.save_as_mainfile(filepath=str(path.with_suffix('.blend')))

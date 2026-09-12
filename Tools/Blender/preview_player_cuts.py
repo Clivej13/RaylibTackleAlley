@@ -45,9 +45,9 @@ def main():
         scene.render.resolution_percentage = 100
         scene.render.image_settings.file_format = 'PNG'
         camera = scene.camera
-        camera.data.ortho_scale = 2.15
+        camera.data.ortho_scale = 2.4
         sheet_pixels = np.zeros((1080,2880,4), dtype=np.float32)
-        for row,(view,location) in enumerate((('Front',(0,1.5,-4)),('Rear',(-2.5,1.8,4)))):
+        for row,(view,location) in enumerate((('Rear',(0,1.5,4)),('Front',(0,1.5,-4)))):
             camera.location = location
             look(camera, (0,.88,0))
             for column,(frame,phase) in enumerate(((1,'Approach'),(7,'Plant'),(9,'Load'),(13,'Push'),(17,'Drive'),(23,'Recover'))):
@@ -75,7 +75,9 @@ def main():
         look(camera, (0,1.24,0))
         scene.render.filepath = str(PRE / (name+'_Tuck_Push.png'))
         bpy.ops.render.render(write_still=True)
-        camera.data.ortho_scale = 2.15
+        camera.data.ortho_scale = 2.4
+        look(camera, (0,.88,0))
+        camera.location = (0,1.5,4)
         look(camera, (0,.88,0))
         scene.frame_start, scene.frame_end = 1,23
         scene.render.image_settings.file_format = 'FFMPEG'

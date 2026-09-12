@@ -1,10 +1,11 @@
 """Validate the saved one-shot cuts against CarryRun and the canonical player."""
 from pathlib import Path
 import json
+import math
 import sys
 sys.dont_write_bytecode = True
 import bpy
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -34,9 +35,11 @@ def main():
     reference = snapshot()
     rig = bpy.data.objects['PlayerRig']
     source_poses = {}
+    source_world = {}
     for f in sorted({p for cfg in CONFIG.values() for p in source_phases(cfg)}):
         bpy.context.scene.frame_set(int(f), subframe=f-int(f))
         source_poses[f] = pose(rig)
+        source_world[f] = {p.name:p.matrix.copy() for p in rig.pose.bones}
     ball_geometry = mesh_geometry(bpy.data.objects['FootballPreview'])
     canonical = skeleton(*glb(OUT / 'football_player.glb'))
     report = {'approved_assets_byte_identical': True, 'code_and_root_json_unchanged': True, 'clips': {}}
@@ -64,10 +67,24 @@ def main():
             max_endpoint_error = max(max_endpoint_error, max(abs(a-b) for n,v in pose(rig).items()
                 for xs,ys in zip(v,expected[n]) for a,b in zip(xs,ys)))
         assert max_endpoint_error < 1e-6, ('CarryRun entry pose changed', max_endpoint_error)
-        baseline = json.loads((PRE / 'exit_refinement_before.json').read_text())[name.replace('Cut','').lower()]
-        for f in range(1,14):
+        yaw_samples = {}
+        for f in range(1,24):
             scene.frame_set(f)
-            assert pose(rig) == baseline[str(f)], ('Early/push pose changed', name, f)
+            yaw_samples[f] = {}
+            for n in ('Root','Hips','Chest','Head'):
+                forward = rig.pose.bones[n].matrix.to_3x3() @ rig.data.bones[n].matrix_local.to_3x3().inverted() @ Vector((0,0,-1))
+                yaw_samples[f][n] = math.degrees(math.atan2(-forward.x,-forward.z))
+        sign = 1 if name == 'CutLeft' else -1
+        assert all(abs(v)<.1 for v in yaw_samples[1].values()), ('Entry heading',yaw_samples[1])
+        assert all(abs(v-sign*90)<3 for v in yaw_samples[23].values()), ('Exit heading',yaw_samples[23])
+        assert abs(yaw_samples[23]['Root']-sign*90) < .001
+        assert 35 < sign*yaw_samples[13]['Hips'] < 65
+        assert sign*yaw_samples[9]['Head'] > sign*yaw_samples[9]['Chest'] > sign*yaw_samples[9]['Hips']
+        assert all(sign*(yaw_samples[f+1]['Hips']-yaw_samples[f]['Hips']) >= -.1 for f in range(1,23))
+        turn = Matrix.Rotation(math.radians(sign*90),4,'Y')
+        handoff_error = max(abs(rig.pose.bones[n].matrix[r][c]-(turn @ m)[r][c])
+            for n,m in source_world[phases[-1]].items() if n != 'Root' for r in range(4) for c in range(4))
+        assert handoff_error < 1e-5, ('CarryRun handoff mismatch',handoff_error)
         for f, phase in enumerate(phases, 1):
             scene.frame_set(f)
             current_pose = pose(rig)
@@ -81,7 +98,7 @@ def main():
         for tick in range(4,93):
             scene.frame_set(tick//4, subframe=tick%4/4)
             assert rig.matrix_world == Matrix.Identity(4)
-            assert rig.pose.bones['Root'].matrix_basis == Matrix.Identity(4)
+            assert rig.pose.bones['Root'].location.length < 1e-8
             hips = rig.pose.bones['Hips']
             assert abs(hips.location.x)+abs(hips.location.z) < 1e-8
             for p in rig.pose.bones:
@@ -104,7 +121,7 @@ def main():
         assert ground_min > -.002, ('Foot penetration', name, ground_min)
         assert ground_max < .003, ('Plant hovering', name, ground_max)
         assert max(knee_angles) > 45, ('Insufficient load flexion', knee_angles)
-        grip = grip_metrics(rig, require_loop=False)
+        grip = grip_metrics(rig, require_loop=False, allow_root_yaw=True)
         inside = relationship()
         doc, read = glb(path.with_suffix('.glb'))
         assert skeleton(doc, read) == canonical
@@ -119,19 +136,21 @@ def main():
             values = read(sampler['output'])
             if bone in canonical[0]:
                 assert len(read(sampler['input'])) == 23, ('Missing 60 Hz bake keys', bone)
-            if bone == 'Root':
-                assert all(v == values[0] for v in values), ('Exported root motion', target['path'])
+            if bone == 'Root' and target['path'] != 'rotation':
+                assert all(max(abs(a-b) for a,b in zip(v,values[0])) < 1e-6 for v in values), ('Exported root translation/scale', target['path'])
             if bone == 'Hips' and target['path'] == 'translation':
-                assert all(v[0] == values[0][0] and v[2] == values[0][2] for v in values)
+                assert all(abs(v[0]-values[0][0])+abs(v[2]-values[0][2]) < 1e-6 for v in values)
         helmet = validate_glb(path.with_suffix('.glb'))
         report['clips'][name] = {'duration_seconds': 11/30, 'keyed_frames': [1,23], 'fps':60,
             'main_plant_foot': 'Foot.'+cfg['plant'], 'locked_plant_frames':[7,13],
             'maximum_plant_vertex_drift_m':slip, 'minimum_foot_height_m':ground_min,
             'maximum_planted_sole_height_m':ground_max, 'plant_knee_flexion_degrees': [min(knee_angles),max(knee_angles)],
             'source_phases':phases, 'entry_pose_error':max_endpoint_error,
-            'frames_1_through_13_unchanged':True, 'exit_preview_frames':[17,23],
+            'local_yaw_degrees':yaw_samples, 'nominal_local_turn_degrees':sign*90,
+            'carryrun_handoff_matrix_error':handoff_error, 'progressive_pelvis_turn':True,
+            'head_leads_chest_leads_hips':True,
             'right_arm_and_finger_pose_data_exact':True, 'geometry_weights_rest_skeleton_exact':True,
-            'canonical_joint_count':len(canonical[0]), 'no_root_or_horizontal_hips_motion':True,
+            'canonical_joint_count':len(canonical[0]), 'no_root_translation_or_horizontal_hips_motion':True,
             'helmet_head_only_export_vertices':helmet, 'grip':grip, 'inside_relationship':inside}
     (PRE / 'validation.json').write_text(json.dumps(report, indent=2))
     print('CUT_VALIDATION_PASSED', json.dumps(report))
