@@ -161,7 +161,7 @@ def mesh_geometry(obj):
                    [(list(p.vertices), p.material_index) for p in obj.data.polygons]))
 
 
-def grip_metrics(rig, require_loop=True):
+def grip_metrics(rig, require_loop=True, allow_root_yaw=False):
     scene = bpy.context.scene
     ball = bpy.data.objects[BALL]
     obj = bpy.data.objects['RightHand']
@@ -214,7 +214,12 @@ def grip_metrics(rig, require_loop=True):
             reference = relative.copy()
         attachment_error = max(attachment_error, max(abs(relative[i][j]-reference[i][j]) for i in range(4) for j in range(4)))
         ball_positions.append(rig.pose.bones['Chest'].matrix.inverted() @ ball.matrix_world.translation)
-        assert rig.pose.bones['Root'].matrix_basis == Matrix.Identity(4)
+        if allow_root_yaw:
+            root = rig.pose.bones['Root']
+            assert root.location.length < 1e-8
+            assert (root.matrix_basis.to_3x3() @ Vector((0,1,0)) - Vector((0,1,0))).length < 1e-6
+        else:
+            assert rig.pose.bones['Root'].matrix_basis == Matrix.Identity(4)
         head_relative_vertices(rig, dg)
     assert penetration < .001, penetration
     assert max(gaps.values()) < .006, gaps

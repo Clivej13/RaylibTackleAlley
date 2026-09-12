@@ -148,8 +148,8 @@ public sealed class BallCarrierAnimationTests
             // Exercise both real one-shot clips, including attachment on every frame,
             // sprint interruption protection, and the authored return gait phases.
             foreach (var (from, to, cut, exitPhase) in new[] {
-                (KeyboardKey.A, KeyboardKey.D, "CutRight", 9f / 24f),
-                (KeyboardKey.D, KeyboardKey.A, "CutLeft", 21f / 24f) })
+                (KeyboardKey.A, KeyboardKey.D, "CutRight", 21f / 24f),
+                (KeyboardKey.D, KeyboardKey.A, "CutLeft", 9f / 24f) })
             {
                 Key(KeyboardKey.A, false); Key(KeyboardKey.D, false);
                 Key(KeyboardKey.LeftShift, false);

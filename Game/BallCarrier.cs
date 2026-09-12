@@ -57,7 +57,7 @@ public sealed class BallCarrier
     // Two input units (-1 to +1) in 0.6 seconds; small corrections settle sooner.
     private const float SprintSteeringRate = 2f / 0.6f;
     private float _effectiveLateral;
-    private const float MaxRunYawDegrees = 30f;
+    private const float MaxRunYawDegrees = 45f;
     private const float RunYawResponse = 12f;
     private float _currentRunYaw;
     private float _targetRunYaw;
@@ -236,13 +236,17 @@ public sealed class BallCarrier
                 -SprintSteeringRate * deltaTime, SprintSteeringRate * deltaTime)
             : lateral;
 
-        // Sprint steering already limits the turn; facing shares that movement state.
-        if (sprinting)
-            _currentRunYaw = _targetRunYaw = _effectiveLateral * MaxRunYawDegrees;
-        else
-            UpdateRunYaw(lateral, deltaTime);
-
         UpdateCutGesture(lateral, deltaTime);
+        // Relative cut clips own the turn; retain the incoming external yaw.
+        if (_cutName is null)
+        {
+            // Sprint steering already limits the turn; facing shares that movement state.
+            if (sprinting)
+                _currentRunYaw = _targetRunYaw = _effectiveLateral * MaxRunYawDegrees;
+            else
+                UpdateRunYaw(lateral, deltaTime);
+        }
+
         AdvanceAnimation(deltaTime);
 
         var rightStick = _rightStick.Read(input);
@@ -313,9 +317,10 @@ public sealed class BallCarrier
         deltaTime = Math.Max(0f, deltaTime);
         _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
+        if (_cutName is null)
+            UpdateRunYaw(0f, deltaTime);
         AdvanceAnimation(deltaTime);
         UpdateLean(Vector3.Zero, Vector3.Zero, deltaTime);
-        UpdateRunYaw(0f, deltaTime);
         Position = new Vector3(Position.X, Position.Y,
             Math.Max(stopZ, Position.Z - AdvanceForwardSpeed(deltaTime)));
         UpdateFootballAttachment();
@@ -347,6 +352,7 @@ public sealed class BallCarrier
             {
                 _cutName = side > 0 ? "CutRight" : "CutLeft";
                 _cutRemaining = CutDuration;
+                _targetRunYaw = _currentRunYaw;
                 _lastCutSide = 0;
                 _cutReversalRemaining = 0f;
             }
@@ -372,9 +378,11 @@ public sealed class BallCarrier
         _cutRemaining = Math.Max(0f, _cutRemaining - cutTime);
         if (_cutRemaining > 0f) return;
 
-        // Match the authored exit: CarryRun frame 10 (right) or 22 (left),
+        // Match the authored exit: CarryRun frame 22 (right) or 10 (left),
         // on its 24-interval gait. Sprint/Jog use the equivalent gait phase.
-        float exitPhase = _cutName == "CutRight" ? 9f / 24f : 21f / 24f;
+        float exitPhase = _cutName == "CutRight" ? 21f / 24f : 9f / 24f;
+        // Neutral locomotion takes over the absolute heading from the local 90-degree turn.
+        _currentRunYaw = _targetRunYaw = _cutName == "CutLeft" ? -MaxRunYawDegrees : MaxRunYawDegrees;
         _cutName = null;
         SelectAnimation();
         _animation?.SeekPhase(exitPhase);
