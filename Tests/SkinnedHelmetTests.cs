@@ -84,7 +84,8 @@ public sealed class SkinnedHelmetTests
         try
         {
             assets.RequireAssets("FootballPlayerAnimations", "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations",
-                "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations");
+                "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
+                "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations");
             while (!assets.ProcessNext()) { }
             var players = new List<(ModelInstance Model, AnimationPlayer Player, Vector3[] Local)>();
             foreach (var (key, name) in new[] {

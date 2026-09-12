@@ -54,6 +54,9 @@ public sealed class BallCarrier
     private AnimationPlayer? _animation;
     private float _visualScale;
     private float _groundOffset;
+    // Two input units (-1 to +1) in 0.6 seconds; small corrections settle sooner.
+    private const float SprintSteeringRate = 2f / 0.6f;
+    private float _effectiveLateral;
     private const float MaxRunYawDegrees = 30f;
     private const float RunYawResponse = 12f;
     private float _currentRunYaw;
@@ -85,6 +88,16 @@ public sealed class BallCarrier
     private float _spinRemaining;
     private int _spinDirection;
 
+    private const float CutThreshold = 0.65f;
+    private const float CutReversalWindow = 0.40f;
+    // Authored keys 1-23 at 60 Hz, including the final recovery pose.
+    private const float CutDuration = 22f / 60f;
+    private bool _wasSprinting;
+    private int _lastCutSide;
+    private float _cutReversalRemaining;
+    private string? _cutName;
+    private float _cutRemaining;
+
     public int SpeedTier { get; private set; } = 2;
     public float CurrentForwardSpeed { get; private set; }
     public float TargetForwardSpeed => Speed;
@@ -96,13 +109,13 @@ public sealed class BallCarrier
     };
 
     // Tier 0 remains reserved; no stationary clip is selected.
-    public string AnimationName => SpeedTier switch
+    public string AnimationName => _cutName ?? (SpeedTier switch
     {
         1 => "CarryJog",
         2 => "CarryRun",
         3 => "CarrySprint",
         _ => throw new InvalidOperationException("No locomotion clip for this speed tier.")
-    };
+    });
 
     // AssetManager owns instances and borrowed clips; instances are released first.
     public unsafe void InitializeVisual(AssetManager assets)
@@ -111,7 +124,8 @@ public sealed class BallCarrier
             return;
 
         var clips = new Dictionary<string, ModelAnimation>();
-        foreach (string key in new[] { "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations" })
+        foreach (string key in new[] { "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
+            "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations" })
             foreach (ModelAnimation clip in assets.GetModelAnimations(key))
                 clips[new string(clip.Name)] = clip;
 
@@ -119,14 +133,14 @@ public sealed class BallCarrier
         try
         {
             // Construct the initial CarryRun player last so its starting pose is applied last.
-            foreach (string name in new[] { "CarryJog", "CarrySprint", "CarryRun" })
+            foreach (string name in new[] { "CutLeft", "CutRight", "CarryJog", "CarrySprint", "CarryRun" })
             {
                 if (!clips.TryGetValue(name, out ModelAnimation clip) || clip.KeyFrameCount <= 0 ||
                     !Raylib.IsModelAnimationValid(model.Model, clip))
                     throw new InvalidDataException($"{name} must be nonempty and compatible with FootballPlayer.");
                 // BallCarrier owns its playback clocks and deformable model instance.
                 // Raylib resamples glTF animation at 60 Hz independently of Blender FPS.
-                _animations.Add(name, new AnimationPlayer(model, clip, loop: true));
+                _animations.Add(name, new AnimationPlayer(model, clip, loop: name != "CutLeft" && name != "CutRight"));
             }
             BoundingBox bounds = Raylib.GetModelBoundingBox(model.Model);
             float height = bounds.Max.Y - bounds.Min.Y;
@@ -156,7 +170,7 @@ public sealed class BallCarrier
             ReferenceEquals(next, _animation))
             return;
         float phase = 0f;
-        if (_animation is { } previous)
+        if (_cutName is null && _animation is { } previous)
         {
             float duration = previous.FrameCount / previous.FramesPerSecond;
             if (float.IsFinite(duration) && duration > 0f &&
@@ -180,10 +194,16 @@ public sealed class BallCarrier
         _rightStick.IgnoreNextMouseDelta();
         _mouseSpinGesture = false;
         Position = Vector3.Zero;
+        _effectiveLateral = 0f;
         _currentRunYaw = 0f;
         _targetRunYaw = 0f;
         _headOffset = Vector3.Zero;
         _bodyOffset = Vector3.Zero;
+        _cutName = null;
+        _cutRemaining = 0f;
+        _wasSprinting = false;
+        _lastCutSide = 0;
+        _cutReversalRemaining = 0f;
         SpeedTier = 2;
         CurrentForwardSpeed = TargetForwardSpeed;
         SelectAnimation();
@@ -205,15 +225,25 @@ public sealed class BallCarrier
     {
         float lateral = GetDirectionalValue(input.GetValue("MoveLeft"), input.GetValue("MoveRight"));
         deltaTime = Math.Max(0f, deltaTime);
-        UpdateRunYaw(lateral, deltaTime);
         // Forward/back input controls lean; backward also selects the slow running tier.
         float backwardInput = input.GetValue("MoveBackward");
         float longitudinalLean = GetDirectionalValue(input.GetValue("MoveForward"), backwardInput);
         bool sprinting = input.GetValue("Sprint") > 0.5f;
         SpeedTier = sprinting ? 3 : Math.Abs(backwardInput) > 0.35f ? 1 : 2;
 
-        SelectAnimation();
-        _animation?.Update(deltaTime);
+        _effectiveLateral = SpeedTier == 3
+            ? _effectiveLateral + Math.Clamp(lateral - _effectiveLateral,
+                -SprintSteeringRate * deltaTime, SprintSteeringRate * deltaTime)
+            : lateral;
+
+        // Sprint steering already limits the turn; facing shares that movement state.
+        if (sprinting)
+            _currentRunYaw = _targetRunYaw = _effectiveLateral * MaxRunYawDegrees;
+        else
+            UpdateRunYaw(lateral, deltaTime);
+
+        UpdateCutGesture(lateral, deltaTime);
+        AdvanceAnimation(deltaTime);
 
         var rightStick = _rightStick.Read(input);
         float juke = rightStick.Direction.X;
@@ -271,7 +301,7 @@ public sealed class BallCarrier
         // A move owns sideways movement until its animation ends.
         position.X += _jukeDirection * _config.PlayerJukeSpeed * jukeTime
             + _spinDirection * SpinSpeed * spinTime
-            + lateral * _config.PlayerLateralSpeed * Math.Max(0f, deltaTime - jukeTime - spinTime);
+            + _effectiveLateral * _config.PlayerLateralSpeed * Math.Max(0f, deltaTime - jukeTime - spinTime);
         // Forward travel is automatic, independent of the forward/back lean input.
         position.Z -= AdvanceForwardSpeed(deltaTime);
         Position = field.ClampToOuterBoundary(position, 0.7f);
@@ -283,12 +313,72 @@ public sealed class BallCarrier
         deltaTime = Math.Max(0f, deltaTime);
         _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
-        _animation?.Update(deltaTime);
+        AdvanceAnimation(deltaTime);
         UpdateLean(Vector3.Zero, Vector3.Zero, deltaTime);
         UpdateRunYaw(0f, deltaTime);
         Position = new Vector3(Position.X, Position.Y,
             Math.Max(stopZ, Position.Z - AdvanceForwardSpeed(deltaTime)));
         UpdateFootballAttachment();
+    }
+
+    private void UpdateCutGesture(float lateral, float deltaTime)
+    {
+        bool sprinting = SpeedTier == 3;
+        bool releasedSprint = _wasSprinting && !sprinting;
+        bool pressedSprint = !_wasSprinting && sprinting;
+        _wasSprinting = sprinting;
+        _cutReversalRemaining = Math.Max(0f, _cutReversalRemaining - deltaTime);
+        if (_cutName is not null)
+        {
+            _lastCutSide = 0;
+            _cutReversalRemaining = 0f;
+            return;
+        }
+
+        // Freeze the previous strong raw direction for this release opportunity.
+        // Neutral and Sprint re-presses neither replace it nor refresh its timer.
+        if (releasedSprint && _cutReversalRemaining <= 0f && _lastCutSide != 0)
+            _cutReversalRemaining = CutReversalWindow;
+
+        int side = Math.Abs(lateral) >= CutThreshold ? Math.Sign(lateral) : 0;
+        if (_cutReversalRemaining > 0f)
+        {
+            if (side != 0 && _lastCutSide == -side)
+            {
+                _cutName = side > 0 ? "CutRight" : "CutLeft";
+                _cutRemaining = CutDuration;
+                _lastCutSide = 0;
+                _cutReversalRemaining = 0f;
+            }
+            return;
+        }
+
+        // Only a Sprint session supplies a direction for the next release.
+        if (!sprinting || pressedSprint) _lastCutSide = 0;
+        if (sprinting && side != 0) _lastCutSide = side;
+    }
+
+    private void AdvanceAnimation(float deltaTime)
+    {
+        SelectAnimation();
+        if (_cutName is null)
+        {
+            _animation?.Update(deltaTime);
+            return;
+        }
+
+        float cutTime = Math.Min(deltaTime, _cutRemaining);
+        _animation?.Update(cutTime);
+        _cutRemaining = Math.Max(0f, _cutRemaining - cutTime);
+        if (_cutRemaining > 0f) return;
+
+        // Match the authored exit: CarryRun frame 10 (right) or 22 (left),
+        // on its 24-interval gait. Sprint/Jog use the equivalent gait phase.
+        float exitPhase = _cutName == "CutRight" ? 9f / 24f : 21f / 24f;
+        _cutName = null;
+        SelectAnimation();
+        _animation?.SeekPhase(exitPhase);
+        _animation?.Update(deltaTime - cutTime);
     }
 
     private float AdvanceForwardSpeed(float deltaTime)

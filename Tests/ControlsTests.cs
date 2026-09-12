@@ -112,7 +112,7 @@ public sealed class ControlsTests : IDisposable
     }
 
     [Fact]
-    public void ForwardSpeedRampsWithoutDelayingSteeringAndResetRestoresRun()
+    public void ForwardSpeedRampsIndependentlyOfSprintSteeringAndResetRestoresRun()
     {
         _player.Reset();
         Event(2, (int)KeyboardKey.LeftShift);
@@ -124,7 +124,7 @@ public sealed class ControlsTests : IDisposable
         Assert.Equal(9f, _player.CurrentForwardSpeed);
         Tick(dt: 0.1f);
         Assert.InRange(_player.CurrentForwardSpeed, 9.1f, 11.4f);
-        Assert.Equal(0.8f, _player.Position.X, 5);
+        Assert.InRange(_player.Position.X, 0.01f, 0.79f);
         Tick(dt: 0.2f);
         Assert.Equal(11.5f, _player.CurrentForwardSpeed, 4);
         Event(1, (int)KeyboardKey.LeftShift);
@@ -184,6 +184,181 @@ public sealed class ControlsTests : IDisposable
         game.ResetRun();
         Assert.Equal(9f, player.CurrentForwardSpeed);
         Assert.Equal(new Vector3(0f, 5.5f, 6.75f), camera.Camera.Position);
+        Event(1, (int)KeyboardKey.LeftShift);
+    }
+
+    private void ArmCut(float initial)
+    {
+        Event(2, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, initial); Tick();
+        Event(1, (int)KeyboardKey.LeftShift); Tick(dt: 0f);
+    }
+
+    [Fact]
+    public void SprintReleaseArmsCutWindow()
+    {
+        ArmCut(-0.9f);
+        Assert.Equal("CarryRun", _player.AnimationName);
+        Assert.Equal(0.40f, Field<float>(_player, "_cutReversalRemaining"));
+        Assert.Equal(-1, Field<int>(_player, "_lastCutSide"));
+    }
+
+    [Theory]
+    [InlineData(-0.9f, "CutRight", 0f)]
+    [InlineData(0.9f, "CutLeft", 0f)]
+    [InlineData(-0.9f, "CutRight", 0.35f)]
+    [InlineData(0.9f, "CutLeft", 0.38f)]
+    public void ReleasedSprintReversalCutsIncludingBriefNeutral(float initial, string expected, float neutralTime)
+    {
+        ArmCut(initial);
+        Axis(GamepadAxis.LeftX, 0f); Tick(dt: neutralTime);
+        Axis(GamepadAxis.LeftX, -initial); Tick(dt: 0.01f);
+        Assert.Equal(expected, _player.AnimationName);
+        Tick(dt: 0.4f);
+        Assert.Equal("CarryRun", _player.AnimationName);
+        Tick();
+        Assert.Equal("CarryRun", _player.AnimationName);
+    }
+
+    [Fact]
+    public void SprintRepressPreservesWindowAndUsesRawSteering()
+    {
+        ArmCut(-0.9f);
+        Event(2, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, 0f); Tick(dt: 0.1f);
+        Assert.Equal(0.30f, Field<float>(_player, "_cutReversalRemaining"), 5);
+        Axis(GamepadAxis.LeftX, 0.9f); Tick();
+        Assert.True(Field<float>(_player, "_effectiveLateral") < 0.65f);
+        Assert.Equal("CutRight", _player.AnimationName);
+        Event(1, (int)KeyboardKey.LeftShift);
+    }
+
+    [Theory]
+    [InlineData(0.9f, 0.41f)]
+    [InlineData(0.5f, 0.02f)]
+    [InlineData(0f, 0.02f)]
+    public void ExpiredOrMissingStrongDirectionDoesNotCut(float strength, float neutralTime)
+    {
+        ArmCut(-strength);
+        Axis(GamepadAxis.LeftX, 0f); Tick(dt: neutralTime);
+        Axis(GamepadAxis.LeftX, 0.9f); Tick();
+        Assert.Equal("CarryRun", _player.AnimationName);
+    }
+
+    [Fact]
+    public void ReversalWithoutSprintReleaseDoesNotCut()
+    {
+        Axis(GamepadAxis.LeftX, -0.9f); Tick();
+        Axis(GamepadAxis.LeftX, 0.9f); Tick();
+        Assert.Equal("CarryRun", _player.AnimationName);
+        Event(2, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, -0.9f); Tick();
+        Assert.Equal("CarrySprint", _player.AnimationName);
+        Event(1, (int)KeyboardKey.LeftShift);
+    }
+
+    [Fact]
+    public void SprintDuringCutFinishesOneShotThenReturnsToSprint()
+    {
+        ArmCut(-0.9f);
+        Axis(GamepadAxis.LeftX, 0.9f); Tick();
+        Event(2, (int)KeyboardKey.LeftShift); Tick(dt: 0.1f);
+        Assert.Equal(3, _player.SpeedTier);
+        Assert.Equal("CutRight", _player.AnimationName);
+        Assert.True(_player.CurrentForwardSpeed > _config.PlayerForwardSpeed);
+        Tick(dt: 0.2f);
+        Assert.Equal("CutRight", _player.AnimationName);
+        Tick(dt: 0.06f);
+        Assert.Equal("CarrySprint", _player.AnimationName);
+        Assert.Equal(_config.PlayerSprintSpeed, _player.CurrentForwardSpeed);
+        Event(1, (int)KeyboardKey.LeftShift);
+    }
+
+    [Theory]
+    [InlineData(30)]
+    [InlineData(60)]
+    [InlineData(120)]
+    public void SprintReversalIsRateLimitedAndReachesFullInputInPointSixSeconds(int fps)
+    {
+        Axis(GamepadAxis.LeftX, -1f); Tick();
+        Event(2, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, 1f);
+        float before = _player.Position.X;
+        Tick(dt: 1f / fps);
+        Assert.Equal(1f, _input.GetValue("MoveRight"));
+        Assert.True(_player.Position.X < before); // Still travelling left despite raw right input.
+        Assert.InRange(Field<float>(_player, "_effectiveLateral"), -1f, -0.8f);
+        for (int i = 1; i < fps / 2; i++) { Axis(GamepadAxis.LeftX, 1f); Tick(dt: 1f / fps); }
+        Assert.InRange(Field<float>(_player, "_effectiveLateral"), 0.65f, 0.68f);
+        for (int i = fps / 2; i < fps * 7 / 10; i++) { Axis(GamepadAxis.LeftX, 1f); Tick(dt: 1f / fps); }
+        Assert.Equal(1f, Field<float>(_player, "_effectiveLateral"), 5);
+        before = _player.Position.X;
+        Axis(GamepadAxis.LeftX, 1f);
+        Tick(dt: 1f / fps);
+        Assert.Equal(_config.PlayerLateralSpeed / fps, _player.Position.X - before, 4);
+        Event(1, (int)KeyboardKey.LeftShift);
+    }
+
+    [Theory]
+    [InlineData(-1f, 0f)]
+    [InlineData(1f, 0f)]
+    [InlineData(-1f, -0.5f)]
+    [InlineData(1f, 0.5f)]
+    public void SprintFacingTracksMovementThroughReversalAndUpdatedInput(float initial, float updated)
+    {
+        Axis(GamepadAxis.LeftX, initial); Tick();
+        Event(2, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, -initial);
+        CheckStep();
+        Assert.Equal(Math.Sign(initial), Math.Sign(Field<float>(_player, "_effectiveLateral")));
+        Assert.Equal(-initial, _input.GetValue(initial < 0f ? "MoveRight" : "MoveLeft"));
+
+        for (int i = 0; i < 12; i++)
+        {
+            Axis(GamepadAxis.LeftX, updated);
+            CheckStep();
+        }
+        Assert.Equal(updated, Field<float>(_player, "_effectiveLateral"), 4);
+        Assert.Equal(-updated * 30f, VisualYaw, 4);
+        Event(1, (int)KeyboardKey.LeftShift);
+
+        void CheckStep()
+        {
+            float before = _player.Position.X;
+            Tick(dt: 0.05f);
+            float movementSteering = (_player.Position.X - before) / (_config.PlayerLateralSpeed * 0.05f);
+            Assert.Equal(movementSteering * 30f, Field<float>(_player, "_targetRunYaw"), 4);
+            Assert.Equal(-movementSteering * 30f, VisualYaw, 4);
+        }
+    }
+
+    [Fact]
+    public void ReleasingSprintRestoresImmediateSteeringAndFastCuts()
+    {
+        Axis(GamepadAxis.LeftX, -1f); Tick();
+        Event(2, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, 1f); Tick();
+        Assert.True(Field<float>(_player, "_effectiveLateral") < 0f);
+        Event(1, (int)KeyboardKey.LeftShift);
+        float before = _player.Position.X;
+        Axis(GamepadAxis.LeftX, 1f);
+        Tick();
+        Assert.Equal(2, _player.SpeedTier);
+        Assert.Equal(_config.PlayerLateralSpeed * Dt, _player.Position.X - before, 4);
+        Axis(GamepadAxis.LeftX, -1f); Tick();
+        Assert.Equal(-1f, Field<float>(_player, "_effectiveLateral"));
+        Assert.Equal("CutLeft", _player.AnimationName);
+    }
+
+    [Fact]
+    public void SmallSprintCorrectionSettlesQuicklyAndResetClearsSteering()
+    {
+        Axis(GamepadAxis.LeftX, 0.5f); Tick();
+        Event(2, (int)KeyboardKey.LeftShift);
+        Axis(GamepadAxis.LeftX, 0.75f); Tick(dt: 0.1f);
+        Assert.Equal(0.75f, Field<float>(_player, "_effectiveLateral"), 4);
+        _player.Reset();
+        Assert.Equal(0f, Field<float>(_player, "_effectiveLateral"));
         Event(1, (int)KeyboardKey.LeftShift);
     }
 

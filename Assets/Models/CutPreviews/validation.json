@@ -1,0 +1,186 @@
+{
+  "approved_assets_byte_identical": true,
+  "code_and_root_json_unchanged": true,
+  "clips": {
+    "CutRight": {
+      "duration_seconds": 0.36666666666666664,
+      "keyed_frames": [
+        1,
+        23
+      ],
+      "fps": 60,
+      "main_plant_foot": "Foot.L",
+      "locked_plant_frames": [
+        7,
+        13
+      ],
+      "maximum_plant_vertex_drift_m": 0.0011243431792980572,
+      "minimum_foot_height_m": -0.0003495984128676355,
+      "maximum_planted_sole_height_m": 0.0005003268597647548,
+      "plant_knee_flexion_degrees": [
+        39.24914589562843,
+        65.99145043977647
+      ],
+      "source_phases": [
+        19.0,
+        19.5,
+        20.0,
+        20.5,
+        21.0,
+        21.5,
+        22.0,
+        22.5,
+        23.0,
+        23.5,
+        24.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0,
+        8.5,
+        9.0,
+        9.5,
+        10.0
+      ],
+      "entry_pose_error": 0.0,
+      "frames_1_through_13_unchanged": true,
+      "exit_preview_frames": [
+        17,
+        23
+      ],
+      "right_arm_and_finger_pose_data_exact": true,
+      "geometry_weights_rest_skeleton_exact": true,
+      "canonical_joint_count": 24,
+      "no_root_or_horizontal_hips_motion": true,
+      "helmet_head_only_export_vertices": {
+        "Helmet": 1160,
+        "Facemask": 840,
+        "Visor": 200,
+        "ChinStrap": 352
+      },
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.0001628419995540753,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.0030421067494899035,
+          "Index": 0.004800509195774794,
+          "Middle": 0.004800478462129831,
+          "Ring": 0.004800380207598209,
+          "Little": 0.004800210706889629,
+          "Thumb": 0.004800120368599892
+        },
+        "attachment_matrix_error": 3.501772880554199e-07,
+        "ball_chest_relative_excursion_m": 0.0076971549867795586,
+        "loop_all_mesh_vertex_error_m": null
+      },
+      "inside_relationship": {
+        "quarter_frame_samples": 89,
+        "minimum_ball_inward_of_forearm_m": 0.11018046736717224,
+        "ball_center_chest_rest_height_m": [
+          1.3145102262496948,
+          1.3170359134674072
+        ],
+        "football_upward_tilt_degrees": [
+          36.52062976912534,
+          37.60074394423731
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.014629058539867401
+      }
+    },
+    "CutLeft": {
+      "duration_seconds": 0.36666666666666664,
+      "keyed_frames": [
+        1,
+        23
+      ],
+      "fps": 60,
+      "main_plant_foot": "Foot.R",
+      "locked_plant_frames": [
+        7,
+        13
+      ],
+      "maximum_plant_vertex_drift_m": 0.001071234535090086,
+      "minimum_foot_height_m": -0.0003086589276790619,
+      "maximum_planted_sole_height_m": 0.0005001422832719982,
+      "plant_knee_flexion_degrees": [
+        39.43542905995677,
+        65.65346535888756
+      ],
+      "source_phases": [
+        7.0,
+        7.5,
+        8.0,
+        8.5,
+        9.0,
+        9.5,
+        10.0,
+        10.5,
+        11.0,
+        11.5,
+        12.0,
+        13.0,
+        14.0,
+        15.0,
+        16.0,
+        17.0,
+        18.0,
+        19.0,
+        20.0,
+        20.5,
+        21.0,
+        21.5,
+        22.0
+      ],
+      "entry_pose_error": 0.0,
+      "frames_1_through_13_unchanged": true,
+      "exit_preview_frames": [
+        17,
+        23
+      ],
+      "right_arm_and_finger_pose_data_exact": true,
+      "geometry_weights_rest_skeleton_exact": true,
+      "canonical_joint_count": 24,
+      "no_root_or_horizontal_hips_motion": true,
+      "helmet_head_only_export_vertices": {
+        "Helmet": 1160,
+        "Facemask": 840,
+        "Visor": 200,
+        "ChinStrap": 352
+      },
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.00016284185403492302,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.0030421598348766565,
+          "Index": 0.004800525493919849,
+          "Middle": 0.004800494760274887,
+          "Ring": 0.00480041466653347,
+          "Little": 0.004800211638212204,
+          "Thumb": 0.004800144117325544
+        },
+        "attachment_matrix_error": 3.0919909477233887e-07,
+        "ball_chest_relative_excursion_m": 0.0076973127432212645,
+        "loop_all_mesh_vertex_error_m": null
+      },
+      "inside_relationship": {
+        "quarter_frame_samples": 89,
+        "minimum_ball_inward_of_forearm_m": 0.11018054187297821,
+        "ball_center_chest_rest_height_m": [
+          1.3145099878311157,
+          1.3170360326766968
+        ],
+        "football_upward_tilt_degrees": [
+          36.52063525815599,
+          37.60074480009749
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.014629075303673744
+      }
+    }
+  }
+}

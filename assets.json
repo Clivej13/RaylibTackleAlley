@@ -9,6 +9,8 @@
     { "Key": "FootballPlayerCarryJogAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_carry_jog.glb" },
     { "Key": "FootballPlayerCarryRunAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_carry_run.glb" },
     { "Key": "FootballPlayerCarrySprintAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_carry_sprint.glb" },
+    { "Key": "FootballPlayerCutLeftAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_cut_left.glb" },
+    { "Key": "FootballPlayerCutRightAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_cut_right.glb" },
     { "Key": "FootballPlayerAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player.glb" }
   ]
 }

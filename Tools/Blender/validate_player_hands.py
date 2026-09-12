@@ -161,7 +161,7 @@ def mesh_geometry(obj):
                    [(list(p.vertices), p.material_index) for p in obj.data.polygons]))
 
 
-def grip_metrics(rig):
+def grip_metrics(rig, require_loop=True):
     scene = bpy.context.scene
     ball = bpy.data.objects[BALL]
     obj = bpy.data.objects['RightHand']
@@ -225,8 +225,9 @@ def grip_metrics(rig):
         dg = bpy.context.evaluated_depsgraph_get()
         return [o.matrix_world @ v.co for src in scene.objects if src.type == 'MESH'
                 for o in [src.evaluated_get(dg)] for v in o.data.vertices]
-    loop_error = max((a-b).length for a, b in zip(vertices(start), vertices(end)))
-    assert loop_error < 1e-5
+    loop_error = max((a-b).length for a, b in zip(vertices(start), vertices(end))) if require_loop else None
+    if require_loop:
+        assert loop_error < 1e-5
     return {'max_hand_vertex_penetration_m': penetration, 'max_body_vertex_penetration_m': body_penetration,
             'surface_samples': 'vertices, edge midpoints, face centres at quarter frames',
             'maximum_distal_contact_gap_m': gaps, 'attachment_matrix_error': attachment_error,
