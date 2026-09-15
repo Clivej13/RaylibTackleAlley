@@ -3,6 +3,7 @@ from pathlib import Path
 import bpy,json,struct,math
 from mathutils import Matrix
 import sys
+sys.dont_write_bytecode=True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from validate_helmet_skinning import head_relative_vertices
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'Assets/Models'
@@ -23,7 +24,7 @@ def metrics(name, intervals):
   arms.append(r.pose.bones['UpperArm.L'].rotation_quaternion.angle)
  return dict(ankle_fore_aft_excursion=max(feet)-min(feet), knee_height_relative_hip=max(knees), hips_bob=max(hips)-min(hips), upper_arm_rotation_range=max(arms)-min(arms))
 bpy.ops.wm.open_mainfile(filepath=str(OUT/'lowpoly_human_run.blend')); before=signature()
-run_signature=action_signature(bpy.data.actions['Run']); jog_signature=action_signature(bpy.data.actions['Jog']); run_metrics=metrics('Run',24)
+run_signature=action_signature(bpy.data.actions['Run']); jog_signature=action_signature(bpy.data.actions['Jog']); run_metrics=metrics('Run',24); jog_metrics=metrics('Jog',28)
 bpy.ops.wm.open_mainfile(filepath=str(OUT/'lowpoly_human_sprint.blend')); assert signature()==before
 assert action_signature(bpy.data.actions['Run'])==run_signature
 assert action_signature(bpy.data.actions['Jog'])==jog_signature
@@ -67,7 +68,7 @@ targets=[(c['target']['node'],c['target']['path']) for c in clip['channels']]
 assert len(targets)==len(set(targets))
 duration=max(doc['accessors'][p['input']]['max'][0] for p in clip['samplers'])-min(doc['accessors'][p['input']]['min'][0] for p in clip['samplers'])
 assert abs(duration-20/30)<1e-5,duration
-result={'jog_action_unchanged':True,'run_action_unchanged':True,'run_metrics':run_metrics,'sprint_metrics':sprint_metrics,'unchanged_geometry_weights_hierarchy':True,'actions_in_blend':11,'glb_animations':[clip['name']],'duration_seconds':duration,'mirrored_half_cycle_matrix_error':symmetry,'minimum_foot_y':ground,'helmet_rigid_attachment':True,'root_identity_all_frames':True}
+result={'jog_action_unchanged':True,'run_action_unchanged':True,'jog_metrics':jog_metrics,'run_metrics':run_metrics,'sprint_metrics':sprint_metrics,'unchanged_geometry_weights_hierarchy':True,'actions_in_blend':11,'glb_animations':[clip['name']],'duration_seconds':duration,'mirrored_half_cycle_matrix_error':symmetry,'minimum_foot_y':ground,'helmet_rigid_attachment':True,'root_identity_all_frames':True}
 (OUT/'SprintPreviews'/'asset_validation.json').write_text(json.dumps(result,indent=2)); print(json.dumps(result))
 
 # Quarter-frame clearance and pad rigidity check, including interpolated poses.
@@ -94,9 +95,10 @@ def snapshot(frame):
 endpoint_error=max((a-b).length for a,b in zip(snapshot(1),snapshot(21)))
 assert endpoint_error<1e-6
 result['endpoint_mesh_error_m']=endpoint_error
-# Rebuilt blend bytes change with equipment rigging; compare approved content.
-from validate_helmet_preservation import main as validate_preservation
-validate_preservation()
+# Compare against this task's input files, including the approved pursuit Jog/Run.
+import hashlib
+preserved=json.loads((ROOT/'Tools/Blender/sprint_pursuit_preservation.json').read_text())
+assert all(hashlib.sha256((ROOT/p).read_bytes()).hexdigest()==h for p,h in preserved.items())
 result['approved_content_and_csharp_sources_preserved']=True
 (OUT/'SprintPreviews'/'asset_validation.json').write_text(json.dumps(result,indent=2))
 print(json.dumps(result))

@@ -1,0 +1,33 @@
+{
+  "LungeLand": {
+    "duration_seconds": 0.6,
+    "minimum_mesh_y": 0.0008409768342971802,
+    "loop": false,
+    "root_identity": true,
+    "geometry_skeleton_weights_preserved": true,
+    "single_named_glb_action": true
+  },
+  "Down": {
+    "duration_seconds": 1.0,
+    "minimum_mesh_y": 0.003000020980834961,
+    "loop": true,
+    "root_identity": true,
+    "geometry_skeleton_weights_preserved": true,
+    "single_named_glb_action": true
+  },
+  "GetUp": {
+    "duration_seconds": 1.6666666666666667,
+    "minimum_mesh_y": 0.0015855282545089722,
+    "loop": false,
+    "root_identity": true,
+    "geometry_skeleton_weights_preserved": true,
+    "single_named_glb_action": true
+  },
+  "transition_mesh_errors_m": {
+    "lunge_to_land": 0.0,
+    "land_to_down": 0.0,
+    "down_loop": 0.0,
+    "down_to_get_up": 0.0
+  },
+  "status": "PASS"
+}

@@ -1,0 +1,162 @@
+{
+  "JukeLeft": {
+    "rows": [
+      "Front",
+      "Rear",
+      "Side",
+      "ThreeQuarter"
+    ],
+    "columns": [
+      {
+        "phase": "Entry",
+        "frame": 1,
+        "seconds": 0.0
+      },
+      {
+        "phase": "PlantLoad",
+        "frame": 15,
+        "seconds": 0.11666666666666667
+      },
+      {
+        "phase": "Release",
+        "frame": 23,
+        "seconds": 0.18333333333333332
+      },
+      {
+        "phase": "Burst",
+        "frame": 33,
+        "seconds": 0.26666666666666666
+      },
+      {
+        "phase": "RecoveryStep",
+        "frame": 47,
+        "seconds": 0.38333333333333336
+      },
+      {
+        "phase": "RunExit",
+        "frame": 61,
+        "seconds": 0.5
+      }
+    ]
+  },
+  "JukeRight": {
+    "rows": [
+      "Front",
+      "Rear",
+      "Side",
+      "ThreeQuarter"
+    ],
+    "columns": [
+      {
+        "phase": "Entry",
+        "frame": 1,
+        "seconds": 0.0
+      },
+      {
+        "phase": "PlantLoad",
+        "frame": 15,
+        "seconds": 0.11666666666666667
+      },
+      {
+        "phase": "Release",
+        "frame": 23,
+        "seconds": 0.18333333333333332
+      },
+      {
+        "phase": "Burst",
+        "frame": 33,
+        "seconds": 0.26666666666666666
+      },
+      {
+        "phase": "RecoveryStep",
+        "frame": 47,
+        "seconds": 0.38333333333333336
+      },
+      {
+        "phase": "RunExit",
+        "frame": 61,
+        "seconds": 0.5
+      }
+    ]
+  },
+  "SpinLeft": {
+    "rows": [
+      "Front",
+      "Rear",
+      "Side",
+      "ThreeQuarter"
+    ],
+    "columns": [
+      {
+        "phase": "Entry",
+        "frame": 1,
+        "seconds": 0.0
+      },
+      {
+        "phase": "PlantLoad",
+        "frame": 23,
+        "seconds": 0.18333333333333332
+      },
+      {
+        "phase": "Release",
+        "frame": 36,
+        "seconds": 0.2916666666666667
+      },
+      {
+        "phase": "Rotate",
+        "frame": 52,
+        "seconds": 0.425
+      },
+      {
+        "phase": "RecoveryStep",
+        "frame": 75,
+        "seconds": 0.6166666666666667
+      },
+      {
+        "phase": "RunExit",
+        "frame": 97,
+        "seconds": 0.8
+      }
+    ]
+  },
+  "SpinRight": {
+    "rows": [
+      "Front",
+      "Rear",
+      "Side",
+      "ThreeQuarter"
+    ],
+    "columns": [
+      {
+        "phase": "Entry",
+        "frame": 1,
+        "seconds": 0.0
+      },
+      {
+        "phase": "PlantLoad",
+        "frame": 23,
+        "seconds": 0.18333333333333332
+      },
+      {
+        "phase": "Release",
+        "frame": 36,
+        "seconds": 0.2916666666666667
+      },
+      {
+        "phase": "Rotate",
+        "frame": 52,
+        "seconds": 0.425
+      },
+      {
+        "phase": "RecoveryStep",
+        "frame": 75,
+        "seconds": 0.6166666666666667
+      },
+      {
+        "phase": "RunExit",
+        "frame": 97,
+        "seconds": 0.8
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "sample_spacing_frames": 0.25,
+  "collision_scope": "Upper arms versus torso (proximal 8 cm shoulder joint and adjacent pads excluded); forearms/hands versus torso, pads and thighs; opposite legs/feet. Adjacent joint overlaps excluded.",
+  "intersection_events": [],
+  "peak_elbow_height_relative_shoulder_m": -0.10075068473815918,
+  "peak_backward_elbow_drive_m": 0.2509811520576477,
+  "minimum_sole_y_m": 0.00010000169277191162,
+  "foot_track_width_m": [
+    0.20612557977437973,
+    0.2877485305070877
+  ],
+  "hips_height_m": [
+    0.9350000023841858,
+    1.0074108839035034
+  ],
+  "minimum_elbow_lateral_distance_m": 0.2988622486591339,
+  "maximum_hand_outward_flare_m": -0.006486684083938599,
+  "wrist_fore_aft_excursion_m": 0.36462296918034554,
+  "jog_run_other_assets_and_csharp_preserved": true,
+  "ball_free": true
+}

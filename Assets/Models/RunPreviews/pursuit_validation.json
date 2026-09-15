@@ -1,0 +1,19 @@
+{
+  "sample_spacing_frames": 0.25,
+  "collision_scope": "Forearms/hands versus torso, pads and thighs; opposite lower legs/feet. Adjacent joint overlaps excluded.",
+  "intersection_events": [],
+  "minimum_sole_y_m": 9.992346167564392e-05,
+  "foot_track_width_m": [
+    0.21352742612361908,
+    0.26432162523269653
+  ],
+  "hips_height_m": [
+    0.8912943601608276,
+    1.0273360013961792
+  ],
+  "minimum_elbow_lateral_distance_m": 0.28366103768348694,
+  "maximum_hand_outward_flare_m": -0.011785656213760376,
+  "wrist_fore_aft_excursion_m": 0.31681226938962936,
+  "other_model_files_including_sprint_preserved": true,
+  "ball_free": true
+}

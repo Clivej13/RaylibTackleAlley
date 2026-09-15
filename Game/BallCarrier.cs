@@ -25,15 +25,8 @@ public sealed class BallCarrier
          0.70197102f, 0.71219947f, -0.00293202f, 0f,
         -0.12157734f, 0.02833468f, -0.00747214f, 1f);
 
-    private Vector3 RenderPosition
-    {
-        get
-        {
-            float hop = _jukeRemaining > 0f && _config.PlayerJukeDuration > 0f
-                ? 0.35f * MathF.Sin(MathF.PI * (1f - _jukeRemaining / _config.PlayerJukeDuration)) : 0f;
-            return Position + new Vector3(0f, _groundOffset + hop, 0f);
-        }
-    }
+    // Vertical motion comes from the authored pose, with only static ground alignment.
+    private Vector3 RenderPosition => Position + new Vector3(0f, _groundOffset, 0f);
 
     private Matrix4x4 PlayerWorldTransform =>
         (_model?.Model.Transform ?? Matrix4x4.Identity) *
@@ -47,7 +40,7 @@ public sealed class BallCarrier
         if (_animation is null || !_animation.TryGetBoneTransform(CarryHandBone, out Matrix4x4 hand))
             throw new InvalidDataException("Carry animation must expose the current animated Hand.R transform.");
         // AnimationPlayer.Update/Seek applies the pose before this query. World state
-        // (position, yaw, spin and hop) has also finished updating for this frame.
+        // (position, yaw and spin) has also finished updating for this frame.
         _footballWorldTransform = FootballGripLocal * hand * PlayerWorldTransform;
     }
     private readonly Dictionary<string, AnimationPlayer> _animations = new();
@@ -64,15 +57,9 @@ public sealed class BallCarrier
 
     // Input yaw is left-negative/right-positive. Around world +Y, authored -Z
     // needs the opposite sign to face the corresponding world X direction.
-    private float VisualYawDegrees => -_currentRunYaw + (_spinRemaining > 0f
+    private float VisualYawDegrees => -_currentRunYaw + (_spinRemaining > 0f &&
+        !(_animation is not null && _animations.TryGetValue(EvadeAnimationName ?? "", out var evade) && evade == _animation)
         ? _spinDirection * 360f * (1f - _spinRemaining / SpinDuration) : 0f);
-
-    // Retain the existing lean/input state, but never apply it to the model.
-    private const float HeadLeanDistance = 0.6f;
-    private const float BodyLeanFraction = 0.5f;
-    private const float LeanResponse = 14f;
-    private Vector3 _headOffset;
-    private Vector3 _bodyOffset;
 
     public Vector3 Position { get; private set; }
     private float _jukeRemaining;
@@ -108,8 +95,12 @@ public sealed class BallCarrier
         _ => _config.PlayerForwardSpeed
     };
 
+    // Juke assets use rig labels: Left moves +X, Right moves -X (opposite rear-screen input).
+    private string? EvadeAnimationName => _spinRemaining > 0f ? (_spinDirection < 0 ? "SpinLeft" : "SpinRight")
+        : _jukeRemaining > 0f ? (_jukeDirection < 0 ? "JukeRight" : "JukeLeft") : null;
+
     // Tier 0 remains reserved; no stationary clip is selected.
-    public string AnimationName => _cutName ?? (SpeedTier switch
+    public string AnimationName => _cutName ?? EvadeAnimationName ?? (SpeedTier switch
     {
         1 => "CarryJog",
         2 => "CarryRun",
@@ -125,7 +116,9 @@ public sealed class BallCarrier
 
         var clips = new Dictionary<string, ModelAnimation>();
         foreach (string key in new[] { "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
-            "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations" })
+            "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
+            "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
+            "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations" })
             foreach (ModelAnimation clip in assets.GetModelAnimations(key))
                 clips[new string(clip.Name)] = clip;
 
@@ -133,14 +126,14 @@ public sealed class BallCarrier
         try
         {
             // Construct the initial CarryRun player last so its starting pose is applied last.
-            foreach (string name in new[] { "CutLeft", "CutRight", "CarryJog", "CarrySprint", "CarryRun" })
+            foreach (string name in new[] { "CutLeft", "CutRight", "JukeLeft", "JukeRight", "SpinLeft", "SpinRight", "CarryJog", "CarrySprint", "CarryRun" })
             {
                 if (!clips.TryGetValue(name, out ModelAnimation clip) || clip.KeyFrameCount <= 0 ||
                     !Raylib.IsModelAnimationValid(model.Model, clip))
                     throw new InvalidDataException($"{name} must be nonempty and compatible with FootballPlayer.");
                 // BallCarrier owns its playback clocks and deformable model instance.
                 // Raylib resamples glTF animation at 60 Hz independently of Blender FPS.
-                _animations.Add(name, new AnimationPlayer(model, clip, loop: name != "CutLeft" && name != "CutRight"));
+                _animations.Add(name, new AnimationPlayer(model, clip, loop: name.StartsWith("Carry", StringComparison.Ordinal)));
             }
             BoundingBox bounds = Raylib.GetModelBoundingBox(model.Model);
             float height = bounds.Max.Y - bounds.Min.Y;
@@ -170,7 +163,8 @@ public sealed class BallCarrier
             ReferenceEquals(next, _animation))
             return;
         float phase = 0f;
-        if (_cutName is null && _animation is { } previous)
+        if (_cutName is null && EvadeAnimationName is null && _animation is { } previous &&
+            (_animations["CarryJog"] == previous || _animations["CarryRun"] == previous || _animations["CarrySprint"] == previous))
         {
             float duration = previous.FrameCount / previous.FramesPerSecond;
             if (float.IsFinite(duration) && duration > 0f &&
@@ -179,7 +173,11 @@ public sealed class BallCarrier
         }
         // Preserve the gait cycle across clips with different durations.
         _animation = next;
-        _animation.SeekPhase(float.IsFinite(phase) ? phase : 0f);
+        // Another player has deformed this shared instance since this clock last ran.
+        // Visit a different frame so a cached destination still reapplies its pose.
+        phase = float.IsFinite(phase) ? phase : 0f;
+        _animation.SeekPhase(phase < 0.5f ? 0.75f : 0f);
+        _animation.SeekPhase(phase);
     }
 
     public BallCarrier(TackleAlleyConfig config)
@@ -197,8 +195,6 @@ public sealed class BallCarrier
         _effectiveLateral = 0f;
         _currentRunYaw = 0f;
         _targetRunYaw = 0f;
-        _headOffset = Vector3.Zero;
-        _bodyOffset = Vector3.Zero;
         _cutName = null;
         _cutRemaining = 0f;
         _wasSprinting = false;
@@ -206,8 +202,6 @@ public sealed class BallCarrier
         _cutReversalRemaining = 0f;
         SpeedTier = 2;
         CurrentForwardSpeed = TargetForwardSpeed;
-        SelectAnimation();
-        _animation?.SeekTime(0f);
         _jukeRemaining = 0f;
         _jukeDirection = 0;
         _jukeReady = true;
@@ -216,6 +210,8 @@ public sealed class BallCarrier
         _spinGestureConsumed = false;
         _spinRemaining = 0f;
         _spinDirection = 0;
+        SelectAnimation();
+        _animation?.SeekTime(0f);
         UpdateFootballAttachment();
     }
 
@@ -225,9 +221,8 @@ public sealed class BallCarrier
     {
         float lateral = GetDirectionalValue(input.GetValue("MoveLeft"), input.GetValue("MoveRight"));
         deltaTime = Math.Max(0f, deltaTime);
-        // Forward/back input controls lean; backward also selects the slow running tier.
+        // Backward input selects the slow running tier.
         float backwardInput = input.GetValue("MoveBackward");
-        float longitudinalLean = GetDirectionalValue(input.GetValue("MoveForward"), backwardInput);
         bool sprinting = input.GetValue("Sprint") > 0.5f;
         SpeedTier = sprinting ? 3 : Math.Abs(backwardInput) > 0.35f ? 1 : 2;
 
@@ -247,7 +242,9 @@ public sealed class BallCarrier
                 UpdateRunYaw(lateral, deltaTime);
         }
 
-        AdvanceAnimation(deltaTime);
+        // Keep Cut advancement and heading handoff at their existing point in the frame.
+        bool cutAdvanced = _cutName is not null;
+        if (cutAdvanced) AdvanceAnimation(deltaTime);
 
         var rightStick = _rightStick.Read(input);
         float juke = rightStick.Direction.X;
@@ -278,49 +275,48 @@ public sealed class BallCarrier
             {
                 _jukeDirection = Math.Sign(juke);
                 _jukeRemaining = _config.PlayerJukeDuration;
+                CurrentForwardSpeed = TargetForwardSpeed * 0.50f;
             }
             // Holding the stick must not repeat or queue a juke.
             _jukeReady = false;
         }
 
+        string? evadeName = EvadeAnimationName;
+        float evadeRemaining = _spinRemaining > 0f ? _spinRemaining : _jukeRemaining;
         float jukeTime = Math.Min(deltaTime, Math.Max(0f, _jukeRemaining));
         _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
         float spinTime = Math.Min(deltaTime, _spinRemaining);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
-        Vector3 bodyLeanDirection = _spinRemaining > 0f
-            ? Vector3.Zero : new Vector3(lateral, 0f, longitudinalLean);
-        if (_jukeRemaining > 0f)
-        {
-            _headOffset = new Vector3(_jukeDirection * HeadLeanDistance, 0f, -ForwardLean);
-            _bodyOffset = _headOffset * BodyLeanFraction;
-        }
-        else
-        {
-            // Head fakes never feed right-stick input into the torso's movement lean.
-            Vector3 headDirection = headFake && (Math.Abs(spinX) > 0.25f || Math.Abs(headZ) > 0.25f)
-                ? new Vector3(spinX, 0f, headZ) : bodyLeanDirection;
-            UpdateLean(bodyLeanDirection, headDirection, deltaTime);
-        }
         Vector3 position = Position;
         // A move owns sideways movement until its animation ends.
         position.X += _jukeDirection * _config.PlayerJukeSpeed * jukeTime
             + _spinDirection * SpinSpeed * spinTime
             + _effectiveLateral * _config.PlayerLateralSpeed * Math.Max(0f, deltaTime - jukeTime - spinTime);
-        // Forward travel is automatic, independent of the forward/back lean input.
-        position.Z -= AdvanceForwardSpeed(deltaTime);
+        // Forward travel is automatic, independent of forward/back input.
+        const float FullSteeringForwardRetention = 0.75f;
+        float lateralAmount = Math.Abs(_effectiveLateral);
+        float forwardRetention = 1f + (FullSteeringForwardRetention - 1f) * lateralAmount;
+        // Recover momentum during either evade, but pause forward travel until it ends.
+        // Split at the move boundary so long frames resume only after the animation.
+        float evadeTime = jukeTime + spinTime;
+        if (evadeTime > 0f) AdvanceForwardSpeed(evadeTime);
+        position.Z -= AdvanceForwardSpeed(Math.Max(0f, deltaTime - evadeTime)) * forwardRetention;
         Position = field.ClampToOuterBoundary(position, 0.7f);
+        if (!cutAdvanced) AdvanceEvadeAnimation(deltaTime, evadeName, evadeRemaining);
         UpdateFootballAttachment();
     }
 
     public void RunIntoEndZone(float deltaTime, float stopZ)
     {
         deltaTime = Math.Max(0f, deltaTime);
+        string? evadeName = EvadeAnimationName;
+        float evadeRemaining = _spinRemaining > 0f ? _spinRemaining : _jukeRemaining;
         _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
         if (_cutName is null)
             UpdateRunYaw(0f, deltaTime);
-        AdvanceAnimation(deltaTime);
-        UpdateLean(Vector3.Zero, Vector3.Zero, deltaTime);
+        if (_cutName is not null) AdvanceAnimation(deltaTime);
+        else AdvanceEvadeAnimation(deltaTime, evadeName, evadeRemaining);
         Position = new Vector3(Position.X, Position.Y,
             Math.Max(stopZ, Position.Z - AdvanceForwardSpeed(deltaTime)));
         UpdateFootballAttachment();
@@ -362,6 +358,34 @@ public sealed class BallCarrier
         // Only a Sprint session supplies a direction for the next release.
         if (!sprinting || pressedSprint) _lastCutSide = 0;
         if (sprinting && side != 0) _lastCutSide = side;
+    }
+
+    // Playback follows the existing movement timer; it never extends or owns the action.
+    private void AdvanceEvadeAnimation(float deltaTime, string? name, float remaining)
+    {
+        if (name is null)
+        {
+            AdvanceAnimation(deltaTime);
+            return;
+        }
+
+        bool spin = name.StartsWith("Spin", StringComparison.Ordinal);
+        float duration = spin ? SpinDuration : _config.PlayerJukeDuration;
+        if (_animations.TryGetValue(name, out var clip))
+        {
+            bool changed = !ReferenceEquals(_animation, clip);
+            _animation = clip;
+            float progress = Math.Clamp(1f - Math.Max(0f, remaining - deltaTime) / duration, 0f, 1f);
+            // Include the last authored pose without looping, regardless of export duration.
+            if (changed) clip.SeekTime((progress < 0.5f ? clip.FrameCount - 1 : 0) / clip.FramesPerSecond);
+            clip.SeekTime(progress * (clip.FrameCount - 1) / clip.FramesPerSecond);
+        }
+        if (remaining > deltaTime) return;
+
+        SelectAnimation();
+        // Authored exits: JukeLeft/SpinRight phase 1; JukeRight/SpinLeft phase 13.
+        _animation?.SeekPhase(name is "JukeRight" or "SpinLeft" ? 0.5f : 0f);
+        _animation?.Update(deltaTime - remaining);
     }
 
     private void AdvanceAnimation(float deltaTime)
@@ -426,6 +450,7 @@ public sealed class BallCarrier
         {
             _spinDirection = Math.Sign(side);
             _spinRemaining = SpinDuration;
+            CurrentForwardSpeed = TargetForwardSpeed * 0.30f;
             _spinGestureRemaining = 0f;
             _jukeReady = false;
         }
@@ -439,16 +464,6 @@ public sealed class BallCarrier
         return Math.Clamp(value, -1f, 1f);
     }
 
-    // Tier 0 is reserved for the future stationary movement mode.
-    private float ForwardLean => SpeedTier switch
-    {
-        0 => 0f,
-        1 => 0.15f,
-        2 => 0.3f,
-        3 => 0.45f,
-        _ => 0f
-    };
-
     private void UpdateRunYaw(float lateral, float deltaTime)
     {
         _targetRunYaw = lateral * MaxRunYawDegrees;
@@ -456,26 +471,11 @@ public sealed class BallCarrier
         _currentRunYaw += (_targetRunYaw - _currentRunYaw) * blend;
     }
 
-    private void UpdateLean(Vector3 bodyLeanDirection, Vector3 headDirection, float deltaTime)
-    {
-        float blend = 1f - MathF.Exp(-LeanResponse * deltaTime);
-        _bodyOffset = Vector3.Lerp(_bodyOffset, GetLeanTarget(bodyLeanDirection) * BodyLeanFraction, blend);
-        _headOffset = Vector3.Lerp(_headOffset, GetLeanTarget(headDirection), blend);
-    }
-
-    private Vector3 GetLeanTarget(Vector3 direction)
-    {
-        // Keep diagonal lean within the same reach as a full cardinal input.
-        if (direction.LengthSquared() > 1f)
-            direction = Vector3.Normalize(direction);
-        return direction * HeadLeanDistance - Vector3.UnitZ * ForwardLean;
-    }
-
     public void Draw()
     {
         if (_model is null)
             throw new InvalidOperationException("Initialize player visuals after loading assets.");
-        // Spin remains an independent temporary rotation over the smoothed running yaw.
+        // Authored spin clips supply the turn; VisualYawDegrees retains the procedural fallback.
         Raylib.DrawModelEx(_model.Model, RenderPosition,
             Vector3.UnitY, VisualYawDegrees, new Vector3(_visualScale), Color.White);
         if (_football is not { } football)

@@ -1,0 +1,234 @@
+[
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football.blend",
+        "Hash":  "3F12C646EC23E7DC852777FF4AF1B102B8BFA21B7086ACDA268AB9794B1C775F"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football.glb",
+        "Hash":  "CC453F09AABEBEB49C7AED5D0C76DF61376D8C43C98D164A12455A52350D75F9"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_field.glb",
+        "Hash":  "C982506656314D4AA4837ACA735CAD3A0D16BD844D8A4A71ED2575804C2CEA35"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player.glb",
+        "Hash":  "BB5CD6123D8DEFE9192F730C46011C3BB15D330DB7885A20C49B40F382542C51"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_carry_jog.blend",
+        "Hash":  "DAF80E9EC89A1FB951D8ECC11402EE8F33E9E3266BCFB03F0388C69D71233448"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_carry_jog.glb",
+        "Hash":  "8A42999AC02563407DFE37F818A0011EB6D8A52174E3B8910AF520F9B4229A15"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_carry_run.blend",
+        "Hash":  "D92FBCCCCEF6E2B302E9FF58FE7571BEFA6B1BE6ADDA7B0963AC6AD54C0C644D"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_carry_run.glb",
+        "Hash":  "7181CCE24A814DC4715189DA6EC0B3C348561ECC1FCFA922B99169C461D740B5"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_carry_sprint.blend",
+        "Hash":  "398429688B5B03E24B3A69C67DC2CD992688EFA39D1BA6848CA6F14F06B0C9AE"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_carry_sprint.glb",
+        "Hash":  "3E4D2D2069EB086FECB87D2C037E3DE4AFB445D3A287CC1D251EA688D69C5B62"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_cut_left.blend",
+        "Hash":  "61E53EA61FAC92C478303A949C5174419945E80A8C4A4DFF3A23BE21ACB4F771"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_cut_left.glb",
+        "Hash":  "29C90B01877A6362DED461C194CA441FDBE7DC72ABF36E4A0B7DA4F944649FBE"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_cut_right.blend",
+        "Hash":  "C1F3579BA9737C1D184FDE72948F2ADFB7A06183100CC1227BF2C2DB58BBF9E0"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\football_player_cut_right.glb",
+        "Hash":  "2F07A4E96219FD74D4C11BC8AFBFF6BA5EEB6995605C5631B561D38032B9B38F"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\helmet_skinning_validation.json",
+        "Hash":  "A6C39983A8B3158870E18EEA8AAC08E981F5B788FC2F6BA8A05DD823377E56AC"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_rigged.blend",
+        "Hash":  "AD18003B4A2BAACD65271DAB620CB6F1316D0CCC665EC734DC2429040FD4FB77"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_rigged.blend1",
+        "Hash":  "D5BD7E7DE13C3E8761EB053DFD9B204DB9061622722C48700720FFA4849BE286"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_sprint.blend",
+        "Hash":  "4DB76C26E05488CE1606B0FCAA0DF8E54394039A7DE462F6B3191EDAF50782BA"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_sprint.blend1",
+        "Hash":  "82D5543E0A6803F8122C1087A61CB69DE4351757FE27B9BE763CFD6AEAB646E7"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_sprint_validation.glb",
+        "Hash":  "DEB5DD51FD74B24EE99A8D09BE306EC5E10D75CC371F88DDD31541FFDBC11F57"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage1.blend",
+        "Hash":  "4FFFA8D4786253D55A3EF7771003BAB718D81A57E6975A3338078C055FBB2759"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage1.blend1",
+        "Hash":  "00A779543C83ED2E90C01D469D8D2DD8AB90557AA8355538A9A17622B9A727AB"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage1_front.png",
+        "Hash":  "E75FC0BDC33F973E944D18F286EF4F0137E6A4049A9E79E1255613F51A5556D2"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage1_frontthreequarter.png",
+        "Hash":  "F02F81349B425C72497B4A92722CD7D3C4A52FC62A92CF0A946C451BD0957841"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage1_preview.png",
+        "Hash":  "7D3B5630121D57426C3BF504796A1D664969F54DA4878B516DFB2D064933A89A"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage1_side.png",
+        "Hash":  "D7C338F9AE45387FEBCC198D4F4D19780CE038937042A638F4291628C1C7BA0A"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage2.blend",
+        "Hash":  "520F8F77EFB5A7ECCCFDEA2C66610ABCC7D8BE643E928A0D450A7B148F439AE5"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage2_back.png",
+        "Hash":  "ADE023B7232D02FA9793DD5B2B58281EB27D6DD095F2942FE5C7B93281E4F18F"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage2_front.png",
+        "Hash":  "D24F4CBFCBD27610B47B7612CACA60D37E737FCBDC549B5F7B94422806A6D5B7"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage2_frontthreequarter.png",
+        "Hash":  "13A6EE1260A5FAEEAB55618229C8D14B5D60D69A19933F4113215F970B7F4948"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage2_side.png",
+        "Hash":  "4802DFEF46BEFF440025BB5821E2F69BE7F186A66336008FEE2BB0AF99343BD5"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage3.blend",
+        "Hash":  "FA915A94B6FC02B02AF260C39131F0FF333966440426115303AFCE13C467D920"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage3_back.png",
+        "Hash":  "5D3243329B61DC59F595CC42A6B1870DFDA246AE6D682D583D33819E7985FEB7"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage3_front.png",
+        "Hash":  "A069CF9BCECA1ACF54A0D7E09C80ED52A52B2C09DBE2C7DC9562F11A72C8630F"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage3_frontthreequarter.png",
+        "Hash":  "41B75C338DB0E2287ECE99680863C89B4F0318833329204CD6AA3DBBC1B1D22B"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage3_side.png",
+        "Hash":  "3D752A261EC410D83FBF322A243811F44345EC780B26B6537D112229D6BC424A"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage4.blend",
+        "Hash":  "8A03EB87FD30137F1D13E85F72C777CE436722D703DAA5961D1E7DE472BAB0D0"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage4.blend1",
+        "Hash":  "D379E95382D13595C52CA7860EEDDD5EA39D3DDD105AE8757353752CB3F2FEF6"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage4.glb",
+        "Hash":  "ED14CE23E8C2877D074FD17798A7AED0FB9CA5863D9B836984DB0AF6F71FD0C4"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage4_back.png",
+        "Hash":  "2C3FD2BFEF47A7F7422B1C177EDC3971E9B480E97150FF0003A55622D38FF01A"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage4_front.png",
+        "Hash":  "CE67D529AE782615C6E6B301897CF349F6A9ECDA1A80C4C2395FB83D330122D3"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage4_frontthreequarter.png",
+        "Hash":  "EE9AA4F8F4AAA7FAE0D043E33FE55B33467A01F8B46B0DE304DA25B18D6B3CF4"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage4_side.png",
+        "Hash":  "8C112D57BE1F6EF76C527A16E366596279F71E0E2815D4AC307BBE96B016B5AD"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5.blend",
+        "Hash":  "A8D20F92B24FE552509045DB419204004051502BBF1F69593FC203F8DF9FC73B"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5.blend1",
+        "Hash":  "2DC433E7C54DDC07A6E0276022988AAB7CBA62A6CFD897D7FD7D694AC0A9CC77"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5.glb",
+        "Hash":  "5E55C34E9A86974F74937FA29E4E91FD62AC7913C2AC2CC09567CD9D3150CBFD"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5_back.png",
+        "Hash":  "E40FD24EF520F0F237B012B36552BB889ADE46A994F79F081297F870EC363134"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5_front.png",
+        "Hash":  "460AB6A8F65E6E7654A5A31CDF7D6745FF872CF8ADC4D2DE3652B6FE323D6F0F"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5_frontthreequarter.png",
+        "Hash":  "C89902BFE8440CE6CA5E2728072041F3A55475BF70FE063CA17CDB42FB914BA5"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5_helmet_closeup.png",
+        "Hash":  "0811CB122C51769C60937DC6F3CDCD80B71DB9C49DF6199DC1922B4A6CEB0FF9"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage5_side.png",
+        "Hash":  "0CD374F49C7492101E1EB58172E3547B7E559E3D4F1290A0365998CF4D7F5FCB"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage6.blend",
+        "Hash":  "5BEF11511113BFBCCFD465230A5E3C3F740463D1715F254054C39D07C7FF3830"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage6.blend1",
+        "Hash":  "45F1A9971F2C2B5975BDDBF9C93A4DEF623B0C4A2FAA082D6DB0D28C4ED1BE93"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage6_back.png",
+        "Hash":  "A60C834646D74E7E86CE4F0ED065CC9AF818828F3CE31DDB968EBA517ABEE2C5"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage6_front.png",
+        "Hash":  "9E61173AFF337CD2DEF4512BBC65CF92BF796D5E2C90CFEE0C52AD0565D46F1A"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage6_frontthreequarter.png",
+        "Hash":  "437B6DCE6F0FD158A175E95D3E09B18F12D7D819F645E5EF4D60D497A5632B31"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\lowpoly_human_stage6_side.png",
+        "Hash":  "7F12912921F2F0B45E1D73D2D913214D980FEFC2392F30F06F86919ACEB258B9"
+    },
+    {
+        "Path":  "C:\\Users\\James\\RaylibProjects\\RaylibTackleAlley\\Assets\\Models\\stadium.glb",
+        "Hash":  "85DD953ECD693616336F8F93215238D0CBD4027E04323927A2F4C2AA02DB6B4B"
+    }
+]

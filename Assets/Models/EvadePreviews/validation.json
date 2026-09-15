@@ -1,0 +1,335 @@
+{
+  "preserved_assets_byte_identical": true,
+  "code_unchanged": true,
+  "clips": {
+    "JukeLeft": {
+      "duration_seconds": 0.5,
+      "fps": 120,
+      "frames": 61,
+      "plant_bone": "Foot.R",
+      "plant_knee_degrees": {
+        "0": [
+          58.34745106034587,
+          68.7853119990135
+        ],
+        "1": [
+          33.207064933186764,
+          59.1447048912156
+        ]
+      },
+      "contact_drift_m": {
+        "0": 0.00014796581525726473,
+        "1": 0.0006017754394189722
+      },
+      "minimum_foot_height_m": -6.565425428561866e-05,
+      "maximum_contact_sole_height_m": {
+        "0": 0.0005001061945222318,
+        "1": 0.0005001945537514985
+      },
+      "lateral_hips_range_m": [
+        -0.054999999701976776,
+        0.20993413031101227
+      ],
+      "unwrapped_pelvis_yaw_degrees": [
+        -0.0,
+        -13.89127166878311,
+        4.414502420568448,
+        2.999996816232004
+      ],
+      "root_identity": true,
+      "entry_exit_matrix_error": 0,
+      "right_arm_local_matrix_error": 0,
+      "geometry_weights_skeleton_original_actions_exact": true,
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.00016287079779431224,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.003042186377570033,
+          "Index": 0.0048005846329033375,
+          "Middle": 0.004800510127097368,
+          "Ring": 0.00480043375864625,
+          "Little": 0.004800228867679834,
+          "Thumb": 0.004800135735422373
+        },
+        "attachment_matrix_error": 3.2782554626464844e-07,
+        "ball_chest_relative_excursion_m": 0.007697137964818476,
+        "loop_all_mesh_vertex_error_m": null
+      },
+      "inside_carry": {
+        "quarter_frame_samples": 241,
+        "minimum_ball_inward_of_forearm_m": 0.11018043756484985,
+        "ball_center_chest_rest_height_m": [
+          1.3145102262496948,
+          1.3170360326766968
+        ],
+        "football_upward_tilt_degrees": [
+          36.52063296005804,
+          37.600748078009296
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.01462906040251255
+      },
+      "export_helmet": {
+        "Helmet": 1160,
+        "Facemask": 840,
+        "Visor": 200,
+        "ChinStrap": 352
+      },
+      "export_skeleton_exact": true,
+      "carryrun_entry_exit_phases": [
+        7.0,
+        1.0
+      ]
+    },
+    "JukeRight": {
+      "duration_seconds": 0.5,
+      "fps": 120,
+      "frames": 61,
+      "plant_bone": "Foot.L",
+      "plant_knee_degrees": {
+        "0": [
+          58.3474442301567,
+          68.78528467825682
+        ],
+        "1": [
+          33.2070581029976,
+          59.1447048912156
+        ]
+      },
+      "contact_drift_m": {
+        "0": 0.00014786797442405166,
+        "1": 0.0006017384787830202
+      },
+      "minimum_foot_height_m": -6.558437598869205e-05,
+      "maximum_contact_sole_height_m": {
+        "0": 0.0005001287790946662,
+        "1": 0.0005002449033781886
+      },
+      "lateral_hips_range_m": [
+        -0.20993413031101227,
+        0.054999999701976776
+      ],
+      "unwrapped_pelvis_yaw_degrees": [
+        -0.0,
+        -4.414502420568448,
+        13.89127166878311,
+        -2.999996816232004
+      ],
+      "root_identity": true,
+      "entry_exit_matrix_error": 0,
+      "right_arm_local_matrix_error": 0,
+      "geometry_weights_skeleton_original_actions_exact": true,
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.0001629024773137644,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.003042148891836405,
+          "Index": 0.004800569731742144,
+          "Middle": 0.004800538066774607,
+          "Ring": 0.004800405818969011,
+          "Little": 0.004800237249583006,
+          "Thumb": 0.004800159018486738
+        },
+        "attachment_matrix_error": 3.427267074584961e-07,
+        "ball_chest_relative_excursion_m": 0.007697242929055582,
+        "loop_all_mesh_vertex_error_m": null
+      },
+      "inside_carry": {
+        "quarter_frame_samples": 241,
+        "minimum_ball_inward_of_forearm_m": 0.11018043756484985,
+        "ball_center_chest_rest_height_m": [
+          1.3145101070404053,
+          1.3170360326766968
+        ],
+        "football_upward_tilt_degrees": [
+          36.52062806276594,
+          37.6007431715821
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.014629070647060871
+      },
+      "export_helmet": {
+        "Helmet": 1160,
+        "Facemask": 840,
+        "Visor": 200,
+        "ChinStrap": 352
+      },
+      "export_skeleton_exact": true,
+      "carryrun_entry_exit_phases": [
+        19.0,
+        13.0
+      ]
+    },
+    "SpinLeft": {
+      "duration_seconds": 0.8,
+      "fps": 120,
+      "frames": 97,
+      "plant_bone": "Foot.R",
+      "plant_knee_degrees": {
+        "0": [
+          65.51191651852821,
+          69.12936911807455
+        ],
+        "1": [
+          39.6500267734894,
+          69.57830379184115
+        ],
+        "2": [
+          36.743248526893716,
+          65.91889334022342
+        ]
+      },
+      "contact_drift_m": {
+        "0": 0.0001784194043509338,
+        "1": 0.0007772327017024586,
+        "2": 0.000471215293297989
+      },
+      "minimum_foot_height_m": 4.186903970548883e-05,
+      "maximum_contact_sole_height_m": {
+        "0": 0.0005000887322239578,
+        "1": 0.0005002880934625864,
+        "2": 0.0005001261597499251
+      },
+      "lateral_hips_range_m": [
+        -0.03498868644237518,
+        0.04500000178813934
+      ],
+      "unwrapped_pelvis_yaw_degrees": [
+        -0.0,
+        -362.999996816232,
+        -0.0,
+        -362.999996816232
+      ],
+      "root_identity": true,
+      "entry_exit_matrix_error": 0,
+      "right_arm_local_matrix_error": 0,
+      "geometry_weights_skeleton_original_actions_exact": true,
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.00016287900507450104,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.0030421544797718525,
+          "Index": 0.00480055995285511,
+          "Middle": 0.0048005287535488605,
+          "Ring": 0.004800443537533283,
+          "Little": 0.004800235386937857,
+          "Thumb": 0.0048001850955188274
+        },
+        "attachment_matrix_error": 2.980232238769531e-07,
+        "ball_chest_relative_excursion_m": 0.007664760887440719,
+        "loop_all_mesh_vertex_error_m": null
+      },
+      "inside_carry": {
+        "quarter_frame_samples": 385,
+        "minimum_ball_inward_of_forearm_m": 0.11018049716949463,
+        "ball_center_chest_rest_height_m": [
+          1.3145102262496948,
+          1.3170256614685059
+        ],
+        "football_upward_tilt_degrees": [
+          36.52063746345277,
+          37.59632373479768
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.014629065059125423
+      },
+      "export_helmet": {
+        "Helmet": 1160,
+        "Facemask": 840,
+        "Visor": 200,
+        "ChinStrap": 352
+      },
+      "export_skeleton_exact": true,
+      "carryrun_entry_exit_phases": [
+        7.0,
+        13.0
+      ]
+    },
+    "SpinRight": {
+      "duration_seconds": 0.8,
+      "fps": 120,
+      "frames": 97,
+      "plant_bone": "Foot.L",
+      "plant_knee_degrees": {
+        "0": [
+          65.51191651852821,
+          69.12937594826373
+        ],
+        "1": [
+          39.650101905570274,
+          69.57829013146281
+        ],
+        "2": [
+          36.74323828160996,
+          65.91894798173678
+        ]
+      },
+      "contact_drift_m": {
+        "0": 0.00017839904052794245,
+        "1": 0.0007773029544612507,
+        "2": 0.00047120191361127764
+      },
+      "minimum_foot_height_m": 4.1954870539484546e-05,
+      "maximum_contact_sole_height_m": {
+        "0": 0.0005000854143872857,
+        "1": 0.0005002088728360832,
+        "2": 0.0005001978715881705
+      },
+      "lateral_hips_range_m": [
+        -0.04500000178813934,
+        0.03498868644237518
+      ],
+      "unwrapped_pelvis_yaw_degrees": [
+        -0.0,
+        -0.0,
+        362.9999829958429,
+        362.9999829958429
+      ],
+      "root_identity": true,
+      "entry_exit_matrix_error": 2.682209014892578e-07,
+      "right_arm_local_matrix_error": 0,
+      "geometry_weights_skeleton_original_actions_exact": true,
+      "grip": {
+        "max_hand_vertex_penetration_m": 0.0001629241305636242,
+        "max_body_vertex_penetration_m": 0.0,
+        "surface_samples": "vertices, edge midpoints, face centres at quarter frames",
+        "maximum_distal_contact_gap_m": {
+          "Palm": 0.0030421249102801085,
+          "Index": 0.004800578113645315,
+          "Middle": 0.0048005832359194756,
+          "Ring": 0.004800436086952686,
+          "Little": 0.004800258204340935,
+          "Thumb": 0.004800193477421999
+        },
+        "attachment_matrix_error": 2.980232238769531e-07,
+        "ball_chest_relative_excursion_m": 0.007664721118588968,
+        "loop_all_mesh_vertex_error_m": null
+      },
+      "inside_carry": {
+        "quarter_frame_samples": 385,
+        "minimum_ball_inward_of_forearm_m": 0.11018043756484985,
+        "ball_center_chest_rest_height_m": [
+          1.3145103454589844,
+          1.3170255422592163
+        ],
+        "football_upward_tilt_degrees": [
+          36.520649713694205,
+          37.59633263914665
+        ],
+        "maximum_torso_pad_surface_gap_m": 0.014629079960286617
+      },
+      "export_helmet": {
+        "Helmet": 1160,
+        "Facemask": 840,
+        "Visor": 200,
+        "ChinStrap": 352
+      },
+      "export_skeleton_exact": true,
+      "carryrun_entry_exit_phases": [
+        19.0,
+        1.0
+      ]
+    }
+  },
+  "result": "PASS"
+}

@@ -1,0 +1,82 @@
+{
+  "JukeLeft": {
+    "rows": [
+      "Front",
+      "Rear",
+      "Side",
+      "ThreeQuarter"
+    ],
+    "columns": [
+      {
+        "phase": "Entry",
+        "frame": 1,
+        "seconds": 0.0
+      },
+      {
+        "phase": "BrakeLow",
+        "frame": 12,
+        "seconds": 0.09166666666666666
+      },
+      {
+        "phase": "PushSideways",
+        "frame": 18,
+        "seconds": 0.14166666666666666
+      },
+      {
+        "phase": "LandLow",
+        "frame": 25,
+        "seconds": 0.2
+      },
+      {
+        "phase": "PushForward",
+        "frame": 33,
+        "seconds": 0.26666666666666666
+      },
+      {
+        "phase": "RunExit",
+        "frame": 43,
+        "seconds": 0.35
+      }
+    ]
+  },
+  "JukeRight": {
+    "rows": [
+      "Front",
+      "Rear",
+      "Side",
+      "ThreeQuarter"
+    ],
+    "columns": [
+      {
+        "phase": "Entry",
+        "frame": 1,
+        "seconds": 0.0
+      },
+      {
+        "phase": "BrakeLow",
+        "frame": 12,
+        "seconds": 0.09166666666666666
+      },
+      {
+        "phase": "PushSideways",
+        "frame": 18,
+        "seconds": 0.14166666666666666
+      },
+      {
+        "phase": "LandLow",
+        "frame": 25,
+        "seconds": 0.2
+      },
+      {
+        "phase": "PushForward",
+        "frame": 33,
+        "seconds": 0.26666666666666666
+      },
+      {
+        "phase": "RunExit",
+        "frame": 43,
+        "seconds": 0.35
+      }
+    ]
+  }
+}

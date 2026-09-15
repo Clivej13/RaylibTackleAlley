@@ -1,0 +1,300 @@
+{
+  "existing_assets_and_csharp_preserved": true,
+  "clips": {
+    "TackleReady": {
+      "knee_width_m": [
+        0.5083005428314209,
+        0.5210044980049133
+      ],
+      "knee_forward_of_hip_m": [
+        0.23372100666165352,
+        0.2684003412723541
+      ],
+      "torso_pitch_degrees": [
+        -16.999998661735184,
+        -14.000001982585141
+      ],
+      "head_pitch_degrees": [
+        2.999993509074702,
+        3.00001518162695
+      ],
+      "shoulder_joint_width_m": 0.442,
+      "duration_seconds": 0.7999999999999999,
+      "sample_spacing_frames": 0.25,
+      "hips_height_m": [
+        0.6469999551773071,
+        0.6829999685287476
+      ],
+      "ankle_base_width_m": [
+        0.5400004386901855,
+        0.5400045812129974
+      ],
+      "minimum_sole_y_m": 0.000782777089625597,
+      "maximum_lower_sole_y_m": 0.0008001288515515625,
+      "maximum_heading_error_degrees": 0.0,
+      "endpoint_mesh_error_m": 1.3877787807814457e-17,
+      "helmet_relative_mesh_error_m": 4.174985207951635e-07,
+      "intersection_events": [],
+      "collision_scope": "Distal upper arms versus torso, excluding proximal 8 cm shoulder joint; forearms/hands versus torso/pads/thighs/knees; all opposite leg parts. Adjacent anatomical joints excluded.",
+      "root_identity": true,
+      "geometry_weights_skeleton_preserved": true,
+      "ball_free": true,
+      "source_actions_preserved": true,
+      "travel_direction_xz": [
+        0,
+        0
+      ],
+      "support_travel_speed_mps": 0.0,
+      "hips_excursion_xyz_m": [
+        0.10000000149011612,
+        0.03600001335144043,
+        0.035999998450279236
+      ],
+      "knee_bend_degrees": [
+        88.05337127026785,
+        99.18883357981474
+      ],
+      "validation": "PASS"
+    },
+    "TackleReadyForward": {
+      "knee_width_m": [
+        0.5073290020227432,
+        0.5405585765838623
+      ],
+      "knee_forward_of_hip_m": [
+        -0.08559408038854599,
+        0.31054115295410156
+      ],
+      "torso_pitch_degrees": [
+        -16.909539009383547,
+        -14.000001982585141
+      ],
+      "head_pitch_degrees": [
+        2.999991308727718,
+        3.0000015399703734
+      ],
+      "shoulder_joint_width_m": 0.442,
+      "duration_seconds": 0.6,
+      "sample_spacing_frames": 0.25,
+      "hips_height_m": [
+        0.6309046149253845,
+        0.7019953727722168
+      ],
+      "ankle_base_width_m": [
+        0.5400004684925079,
+        0.5403294563293457
+      ],
+      "minimum_sole_y_m": -0.00013549585128203034,
+      "maximum_lower_sole_y_m": 0.0008001492242328823,
+      "maximum_heading_error_degrees": 0.0,
+      "endpoint_mesh_error_m": 0.0,
+      "helmet_relative_mesh_error_m": 3.57802449023324e-07,
+      "intersection_events": [],
+      "collision_scope": "Distal upper arms versus torso, excluding proximal 8 cm shoulder joint; forearms/hands versus torso/pads/thighs/knees; all opposite leg parts. Adjacent anatomical joints excluded.",
+      "root_identity": true,
+      "geometry_weights_skeleton_preserved": true,
+      "ball_free": true,
+      "source_actions_preserved": true,
+      "travel_direction_xz": [
+        0,
+        -1
+      ],
+      "support_travel_speed_mps": 0.6333333333333334,
+      "hips_excursion_xyz_m": [
+        0.0,
+        0.07109077274799347,
+        0.24957771599292755
+      ],
+      "directional_hips_excursion_m": 0.24957771599292755,
+      "virtual_step_distance_m": 0.38,
+      "lead_bone": "L",
+      "push_bone": "R",
+      "push_world_anchor_drift_m": 0.0010128965183253394,
+      "knee_bend_degrees": [
+        54.53136289935721,
+        102.05231525726171
+      ],
+      "validation": "PASS"
+    },
+    "TackleReadyBackward": {
+      "knee_width_m": [
+        0.49108582735061646,
+        0.5310963988304138
+      ],
+      "knee_forward_of_hip_m": [
+        0.18251211941242218,
+        0.3398340046405792
+      ],
+      "torso_pitch_degrees": [
+        -16.909539009383547,
+        -14.000001982585141
+      ],
+      "head_pitch_degrees": [
+        2.999991308727718,
+        3.0000015399703734
+      ],
+      "shoulder_joint_width_m": 0.442,
+      "duration_seconds": 0.6,
+      "sample_spacing_frames": 0.25,
+      "hips_height_m": [
+        0.6309046149253845,
+        0.7019953727722168
+      ],
+      "ankle_base_width_m": [
+        0.5400003492832184,
+        0.5401529669761658
+      ],
+      "minimum_sole_y_m": 0.00014824364916421473,
+      "maximum_lower_sole_y_m": 0.0008001739042811096,
+      "maximum_heading_error_degrees": 0.0,
+      "endpoint_mesh_error_m": 0.0,
+      "helmet_relative_mesh_error_m": 3.2858665393590845e-07,
+      "intersection_events": [],
+      "collision_scope": "Distal upper arms versus torso, excluding proximal 8 cm shoulder joint; forearms/hands versus torso/pads/thighs/knees; all opposite leg parts. Adjacent anatomical joints excluded.",
+      "root_identity": true,
+      "geometry_weights_skeleton_preserved": true,
+      "ball_free": true,
+      "source_actions_preserved": true,
+      "travel_direction_xz": [
+        0,
+        1
+      ],
+      "support_travel_speed_mps": 0.5666666666666668,
+      "hips_excursion_xyz_m": [
+        0.0,
+        0.07109077274799347,
+        0.2267933413386345
+      ],
+      "directional_hips_excursion_m": 0.2267933413386345,
+      "virtual_step_distance_m": 0.34,
+      "lead_bone": "R",
+      "push_bone": "L",
+      "push_world_anchor_drift_m": 0.0006882740566338866,
+      "knee_bend_degrees": [
+        75.45768964825311,
+        101.8982125292079
+      ],
+      "validation": "PASS"
+    },
+    "TackleReadyLeft": {
+      "knee_width_m": [
+        0.5143344104290009,
+        0.6276156157255173
+      ],
+      "knee_forward_of_hip_m": [
+        0.16202727891504765,
+        0.2700738999992609
+      ],
+      "torso_pitch_degrees": [
+        -16.909539009383547,
+        -14.000001982585141
+      ],
+      "head_pitch_degrees": [
+        2.999991308727718,
+        3.0000015399703734
+      ],
+      "shoulder_joint_width_m": 0.442,
+      "duration_seconds": 0.6,
+      "sample_spacing_frames": 0.25,
+      "hips_height_m": [
+        0.6309046149253845,
+        0.7019953727722168
+      ],
+      "ankle_base_width_m": [
+        0.5400004833936691,
+        0.8800012171268463
+      ],
+      "minimum_sole_y_m": -1.6317386325681582e-05,
+      "maximum_lower_sole_y_m": 0.0008001220412552357,
+      "maximum_heading_error_degrees": 0.0,
+      "endpoint_mesh_error_m": 0.0,
+      "helmet_relative_mesh_error_m": 3.0701455143148476e-07,
+      "intersection_events": [],
+      "collision_scope": "Distal upper arms versus torso, excluding proximal 8 cm shoulder joint; forearms/hands versus torso/pads/thighs/knees; all opposite leg parts. Adjacent anatomical joints excluded.",
+      "root_identity": true,
+      "geometry_weights_skeleton_preserved": true,
+      "ball_free": true,
+      "source_actions_preserved": true,
+      "travel_direction_xz": [
+        -1,
+        0
+      ],
+      "support_travel_speed_mps": 0.5666666666666668,
+      "hips_excursion_xyz_m": [
+        0.2267933413386345,
+        0.07109077274799347,
+        0.0
+      ],
+      "directional_hips_excursion_m": 0.2267933413386345,
+      "virtual_step_distance_m": 0.34,
+      "lead_bone": "R",
+      "push_bone": "L",
+      "push_world_anchor_drift_m": 0.000777627917435877,
+      "knee_bend_degrees": [
+        58.13966987560491,
+        103.4917776248419
+      ],
+      "validation": "PASS"
+    },
+    "TackleReadyRight": {
+      "knee_width_m": [
+        0.5143344104290009,
+        0.6276156157255173
+      ],
+      "knee_forward_of_hip_m": [
+        0.16202727891504765,
+        0.2700738999992609
+      ],
+      "torso_pitch_degrees": [
+        -16.909539009383547,
+        -14.000001982585141
+      ],
+      "head_pitch_degrees": [
+        2.999991308727718,
+        3.0000015399703734
+      ],
+      "shoulder_joint_width_m": 0.442,
+      "duration_seconds": 0.6,
+      "sample_spacing_frames": 0.25,
+      "hips_height_m": [
+        0.6309046149253845,
+        0.7019953727722168
+      ],
+      "ankle_base_width_m": [
+        0.5400004833936691,
+        0.8800012171268463
+      ],
+      "minimum_sole_y_m": -1.6317386325681582e-05,
+      "maximum_lower_sole_y_m": 0.0008001220412552357,
+      "maximum_heading_error_degrees": 0.0,
+      "endpoint_mesh_error_m": 0.0,
+      "helmet_relative_mesh_error_m": 3.0701455143148476e-07,
+      "intersection_events": [],
+      "collision_scope": "Distal upper arms versus torso, excluding proximal 8 cm shoulder joint; forearms/hands versus torso/pads/thighs/knees; all opposite leg parts. Adjacent anatomical joints excluded.",
+      "root_identity": true,
+      "geometry_weights_skeleton_preserved": true,
+      "ball_free": true,
+      "source_actions_preserved": true,
+      "travel_direction_xz": [
+        1,
+        0
+      ],
+      "support_travel_speed_mps": 0.5666666666666668,
+      "hips_excursion_xyz_m": [
+        0.2267933413386345,
+        0.07109077274799347,
+        0.0
+      ],
+      "directional_hips_excursion_m": 0.2267933413386345,
+      "virtual_step_distance_m": 0.34,
+      "lead_bone": "L",
+      "push_bone": "R",
+      "push_world_anchor_drift_m": 0.000777627917435877,
+      "knee_bend_degrees": [
+        58.13966987560491,
+        103.4917776248419
+      ],
+      "validation": "PASS"
+    }
+  }
+}

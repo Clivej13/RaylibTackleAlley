@@ -11,6 +11,24 @@
     { "Key": "FootballPlayerCarrySprintAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_carry_sprint.glb" },
     { "Key": "FootballPlayerCutLeftAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_cut_left.glb" },
     { "Key": "FootballPlayerCutRightAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_cut_right.glb" },
-    { "Key": "FootballPlayerAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player.glb" }
+    { "Key": "FootballPlayerJukeLeftAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_juke_left.glb" },
+    { "Key": "FootballPlayerJukeRightAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_juke_right.glb" },
+    { "Key": "FootballPlayerSpinLeftAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_spin_left.glb" },
+    { "Key": "FootballPlayerSpinRightAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_spin_right.glb" },
+    { "Key": "FootballPlayerAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player.glb" },
+    { "Key": "FootballPlayerTackleReadyAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_tackle_ready.glb" },
+    { "Key": "FootballPlayerTackleReadyForwardAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_tackle_ready_forward.glb" },
+    { "Key": "FootballPlayerTackleReadyBackwardAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_tackle_ready_backward.glb" },
+    { "Key": "FootballPlayerTackleReadyLeftAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_tackle_ready_left.glb" },
+    { "Key": "FootballPlayerTackleReadyRightAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_tackle_ready_right.glb" },
+    { "Key": "FootballPlayerLungeTackleForwardAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_lunge_tackle_forward.glb" },
+    { "Key": "FootballPlayerLungeTackleLeftAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_lunge_tackle_left.glb" },
+    { "Key": "FootballPlayerLungeTackleRightAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_lunge_tackle_right.glb" },
+    { "Key": "FootballPlayerLungeLandAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_lunge_land.glb" },
+    { "Key": "FootballPlayerDownAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_down.glb" },
+    { "Key": "FootballPlayerGetUpAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_get_up.glb" },
+    { "Key": "FootballPlayerSetWrapForwardAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_set_wrap_forward.glb" },
+    { "Key": "FootballPlayerSetWrapLeftAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_set_wrap_left.glb" },
+    { "Key": "FootballPlayerSetWrapRightAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_set_wrap_right.glb" }
   ]
 }
