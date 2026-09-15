@@ -6,8 +6,10 @@ from pathlib import Path
 import bpy, math, json, hashlib, struct
 from mathutils import Vector, Quaternion
 import sys
+sys.dont_write_bytecode=True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from player_hand_rig import key_hand_poses
+from pursuit_pose import arms
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'Assets/Models'
 PRE=OUT/'JogPreviews'; PRE.mkdir(exist_ok=True)
 SOURCE=OUT/'lowpoly_human_rigged.blend'
@@ -37,23 +39,21 @@ for frame in range(1,30):
  for p in rig.pose.bones:
   p.rotation_mode='QUATERNION'; p.rotation_quaternion=(1,0,0,0); p.location=(0,0,0); p.scale=(1,1,1)
  rotate('Hips',(0,1,0),2*math.cos(phase))
- rotate('Spine',(1,0,0),-5)
+ rotate('Spine',(1,0,0),-2)
  rotate('Chest',(0,1,0),-4*math.cos(phase))
  rotate('Head',(0,1,0),2*math.cos(phase))
- rotate('Head',(1,0,0),5)
+ rotate('Head',(1,0,0),2)
  for side,offset,sign in [('L',0,1),('R',.5,-1)]:
   u=(t+offset)%1
   hip=curve(u,[23,8,-12,-20,0,26])
-  knee=curve(u,[-24,-30,-20,-48,-65,-43])
+  knee=curve(u,[-16,-18,-12,-48,-65,-36])
   # Flat planted foot, then heel lift and relaxed swing dorsiflexion.
   pitch=curve(u,[-7,0,-50,-15,-30,-10])
+  rotate('UpperLeg.'+side,(0,0,1),-sign*4)
   rotate('UpperLeg.'+side,(1,0,0),hip)
   rotate('LowerLeg.'+side,(1,0,0),knee)
   rotate('Foot.'+side,(1,0,0),pitch-hip-knee)
-  # Narrow the approved A-pose through bone rotation only, leaving pad clearance.
-  rotate('UpperArm.'+side,(0,0,1),-sign*19)
-  rotate('UpperArm.'+side,(1,0,0),-16*math.cos(2*math.pi*u))
-  rotate('LowerArm.'+side,(1,0,0),66+5*math.cos(2*math.pi*u))
+  arms(rig, side, sign, 2*math.pi*u, False)
  bpy.context.view_layer.update()
  dg=bpy.context.evaluated_depsgraph_get()
  lows=[]
@@ -68,12 +68,32 @@ for frame in range(1,30):
 for fc in action.fcurves:
  for k in fc.keyframe_points:k.interpolation='LINEAR'
  fc.modifiers.new('CYCLES')
+# Conservative per-interval clearance correction for linear runtime interpolation.
+# Only Hips Y changes; adjacent frames cover each measured between-key sole dip.
+clearance=[0.0]*28
+for i in range(28):
+ for sub in (0.125,0.25,0.375,0.5,0.625,0.75,0.875):
+  scene.frame_set(i+1,subframe=sub); dg=bpy.context.evaluated_depsgraph_get()
+  low=min((o.matrix_world@v.co).y for name in ['LeftFoot','RightFoot'] for o in [bpy.data.objects[name].evaluated_get(dg)] for v in o.data.vertices)
+  lift=max(0.0,-low+0.0001)
+  clearance[i]=max(clearance[i],lift)
+  clearance[(i+1)%28]=max(clearance[(i+1)%28],lift)
+# Enforce exact half-cycle equality despite floating-point grounding noise.
+for i in range(14): clearance[i]=clearance[i+14]=max(clearance[i],clearance[i+14])
+fc=next(f for f in action.fcurves if f.data_path=='pose.bones["Hips"].location' and f.array_index==1)
+for k in fc.keyframe_points: k.co.y+=clearance[(int(k.co.x)-1)%28]
+for sample in samples:
+ lift=clearance[(sample['frame']-1)%28]
+ sample['hips_y']+=lift; sample['sole_y']=[v+lift for v in sample['sole_y']]
 for f,label in [(1,'Left contact'),(5,'Left passing'),(10,'Left push-off / right knee forward'),(15,'Right contact'),(19,'Right passing'),(24,'Right push-off / left knee forward'),(29,'Loop closure')]:
  scene.timeline_markers.new(label,frame=f)
+key_hand_poses(rig)
 scene.render.engine='BLENDER_EEVEE'; scene.eevee.taa_render_samples=48
 scene.render.resolution_x=640; scene.render.resolution_y=720; scene.render.resolution_percentage=100
 scene.render.image_settings.file_format='PNG'
-for frame,label,view in [(1,'LeftContact','Front'),(5,'LeftPassing','Side'),(10,'LeftPushOff','Side'),(15,'RightContact','Front'),(19,'RightPassing','FrontThreeQuarter'),(24,'RightPushOff','FrontThreeQuarter'),(1,'Stride','FrontThreeQuarter')]:
+for camera_name in ('Front','Back','Side','FrontThreeQuarter'):
+ bpy.data.objects[camera_name].data.ortho_scale=2.3
+for frame,label,view in [(1,'LeftContact','Front'),(5,'LeftPassing','Side'),(10,'LeftPushOff','Side'),(15,'RightContact','Front'),(19,'RightPassing','FrontThreeQuarter'),(24,'RightPushOff','FrontThreeQuarter'),(1,'Stride','FrontThreeQuarter'),(1,'Stride','Back')]:
  scene.frame_set(frame); scene.camera=bpy.data.objects[view]
  scene.render.filepath=str(PRE/('Jog_'+label+'_'+view+'.png')); bpy.ops.render.render(write_still=True)
 # Evaluate full loop and endpoint geometry, not only animation channel values.
@@ -95,6 +115,7 @@ assert hashlib.sha256(SOURCE.read_bytes()).hexdigest()==source_hash
 scene.frame_set(1); scene.camera=bpy.data.objects['FrontThreeQuarter']
 scene['stage_notes']='Approved Stage 6 rig plus in-place Jog. Geometry, weights, skeleton and equipment parenting unchanged.'
 key_hand_poses(rig)
+bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'lowpoly_human_jog.blend'))
 # Export only Jog; inspection actions remain retained in the .blend.
 for other in list(bpy.data.actions):

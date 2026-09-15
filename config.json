@@ -10,7 +10,7 @@
   "PlayerSlowSpeed": 6.5,
   "PlayerSprintSpeed": 11.5,
   "PlayerJukeSpeed": 8.0,
-  "PlayerJukeDuration": 0.15,
+  "PlayerJukeDuration": 0.35,
   "MouseGestureSensitivity": 0.05,
   "ForwardAcceleration": 8.333333,
   "ForwardDeceleration": 12.5,

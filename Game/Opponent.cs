@@ -7,11 +7,12 @@ namespace RaylibTackleAlley.Game;
 
 public enum OpponentPace { Jog, Run, Sprint }
 
-public sealed class Opponent
+public sealed partial class Opponent
 {
     private readonly Vector3 _spawnPosition;
     private readonly TackleAlleyConfig _config;
     private Vector3 _position;
+    private Vector3 _movementDirection;
     private const float VisualHeight = 2f;
     private ModelInstance? _model;
     private readonly Dictionary<string, AnimationPlayer> _animations = new();
@@ -24,20 +25,21 @@ public sealed class Opponent
     public Vector3 Position => _position;
     public float CurrentSpeed { get; private set; }
     public float TargetSpeed => MovementSpeed;
-    public float MovementSpeed => Pace switch
+    public float MovementSpeed => State is DefenderState.LungeTackle or DefenderState.LungeLand ? CurrentSpeed : IsTackleCommitted ? 0f :
+        State == DefenderState.TackleReady ? TackleReadySpeed : Pace switch
     {
         OpponentPace.Jog => _config.OpponentJogSpeed,
         OpponentPace.Run => _config.OpponentRunSpeed,
         _ => _config.OpponentSprintSpeed
     };
 
-    public string AnimationName => Pace switch
+    public string AnimationName => _tackleAnimation ?? (Pace switch
     {
         OpponentPace.Jog => "Jog",
         OpponentPace.Run => "Run",
         OpponentPace.Sprint => "Sprint",
         _ => throw new InvalidOperationException("Unknown opponent pace.")
-    };
+    });
 
     // AssetManager owns instances and borrowed clips; instances are released first.
     public unsafe void InitializeVisual(AssetManager assets)
@@ -46,21 +48,21 @@ public sealed class Opponent
             return;
 
         var clips = new Dictionary<string, ModelAnimation>();
-        foreach (string key in new[] { "FootballPlayerAnimations", "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations" })
+        foreach (string key in AnimationAssetKeys)
             foreach (ModelAnimation clip in assets.GetModelAnimations(key))
                 clips[new string(clip.Name)] = clip;
 
         ModelInstance model = assets.CreateModelInstance("FootballPlayer");
         try
         {
-            foreach (string name in new[] { "Jog", "Run", "Sprint" })
+            foreach (string name in TackleAnimationNames.Concat(new[] { "Jog", "Run", "Sprint" }))
             {
                 if (!clips.TryGetValue(name, out ModelAnimation clip) || clip.KeyFrameCount <= 0 ||
                     !Raylib.IsModelAnimationValid(model.Model, clip))
                     throw new InvalidDataException($"{name} must be nonempty and compatible with FootballPlayer.");
                 // Each opponent owns its playback clocks and deformable model instance.
                 // Raylib resamples glTF animation at 60 Hz independently of Blender FPS.
-                _animations.Add(name, new AnimationPlayer(model, clip, loop: true));
+                _animations.Add(name, new AnimationPlayer(model, clip, loop: !name.StartsWith("SetWrap") && !name.StartsWith("LungeTackle") && name != "LungeLand" && name != "GetUp"));
             }
             BoundingBox bounds = Raylib.GetModelBoundingBox(model.Model);
             float height = bounds.Max.Y - bounds.Min.Y;
@@ -90,6 +92,12 @@ public sealed class Opponent
     public void Reset()
     {
         _position = _spawnPosition;
+        _movementDirection = Vector3.Zero;
+        State = DefenderState.Locomotion;
+        _tackleAnimation = null;
+        _tackleRemaining = 0f;
+        VerticalVelocity = 0f;
+        foreach (var animation in _animations.Values) animation.SeekTime(0f);
         Pace = OpponentPace.Jog;
         CurrentSpeed = TargetSpeed;
         _yawDegrees = 180f;
@@ -103,7 +111,7 @@ public sealed class Opponent
             ReferenceEquals(next, _animation))
             return;
         float phase = 0f;
-        if (_animation is { } previous)
+        if (State == DefenderState.Locomotion && _animation is { } previous)
         {
             float duration = previous.FrameCount / previous.FramesPerSecond;
             if (float.IsFinite(duration) && duration > 0f &&
@@ -127,7 +135,7 @@ public sealed class Opponent
         return distance <= runExit ? OpponentPace.Run : OpponentPace.Jog;
     }
 
-    public void Update(Vector3 playerPosition, float deltaTime)
+    private void UpdatePursuit(Vector3 playerPosition, float deltaTime, Vector3? pursuitTarget = null)
     {
         OpponentPace next = SelectPace(Vector3.Distance(_position, playerPosition));
         if (next != Pace)
@@ -140,11 +148,12 @@ public sealed class Opponent
         var step = SpeedRamp.Advance(CurrentSpeed, TargetSpeed,
             _config.ForwardAcceleration, _config.ForwardDeceleration, deltaTime);
         CurrentSpeed = step.Speed;
-        Vector3 direction = playerPosition - _position;
+        Vector3 direction = (pursuitTarget ?? playerPosition) - _position;
         direction.Y = 0;
         if (direction.LengthSquared() > 0.001f)
         {
-            _position += Vector3.Normalize(direction) * step.Distance;
+            _movementDirection = Vector3.Normalize(direction);
+            _position += _movementDirection * step.Distance;
             // Rotate authored -Z forward to actual movement; clips never move the world position.
             if (MovementSpeed > 0f && deltaTime > 0f)
                 _yawDegrees = MathF.Atan2(-direction.X, -direction.Z) * (180f / MathF.PI);

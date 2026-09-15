@@ -49,7 +49,10 @@ public sealed class BallCarrierAnimationTests
             assets.RequireAssets("Football", "FootballPlayer", "FootballPlayerAnimations",
                 "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations",
                 "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
-                "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations");
+                "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
+                "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
+                "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations");
+            assets.RequireAssets(Opponent.AnimationAssetKeys);
             while (!assets.ProcessNext()) { }
             var config = new TackleAlleyConfig();
             var input = new InputController(InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json")));
@@ -84,13 +87,11 @@ public sealed class BallCarrierAnimationTests
                 Assert.True(active.TryGetBoneTransform("Hand.R", out var hand));
                 float yaw = (float)typeof(BallCarrier).GetProperty("VisualYawDegrees",
                     BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(player)!;
-                float juke = Field<float>(player, "_jukeRemaining");
-                float hop = juke > 0f ? 0.35f * MathF.Sin(MathF.PI * (1f - juke / config.PlayerJukeDuration)) : 0f;
                 var world = model.Model.Transform *
                     Matrix4x4.CreateScale(Field<float>(player, "_visualScale")) *
                     Matrix4x4.CreateRotationY(yaw * MathF.PI / 180f) *
                     Matrix4x4.CreateTranslation(player.Position +
-                        new Vector3(0f, Field<float>(player, "_groundOffset") + hop, 0f));
+                        new Vector3(0f, Field<float>(player, "_groundOffset"), 0f));
                 Assert.Equal(grip * hand * world, Field<Matrix4x4>(player, "_footballWorldTransform"));
             }
             CheckAttachment();
@@ -103,6 +104,9 @@ public sealed class BallCarrierAnimationTests
                 player.Update(input, dt, field);
                 baseline.Update(input, dt, field);
                 Assert.Equal(baseline.Position, player.Position);
+                Assert.Equal(baseline.CurrentForwardSpeed, player.CurrentForwardSpeed);
+                Assert.Equal(Field<float>(baseline, "_jukeRemaining"), Field<float>(player, "_jukeRemaining"));
+                Assert.Equal(Field<float>(baseline, "_spinRemaining"), Field<float>(player, "_spinRemaining"));
                 // Before Draw: attachment must already use this update's pose and world state.
                 CheckAttachment();
                 Raylib.BeginDrawing();
@@ -176,6 +180,112 @@ public sealed class BallCarrierAnimationTests
                 Assert.Equal(expectedTime, clocks["CarrySprint"].CurrentTime, 5);
                 Assert.Equal(otherPose, Vertices(opponent));
                 Key(to, false); Key(KeyboardKey.LeftShift, false);
+            }
+            player.Reset(); baseline.Reset();
+
+            // Exercise every evade using the real input triggers and clips. The action
+            // timer, not the longer authored clip, owns movement and visual completion.
+            input.ApplyRebind(new InputRebindResult("RightStickLeft", "Keyboard", "R"));
+            input.ApplyRebind(new InputRebindResult("RightStickRight", "Keyboard", "E"));
+            input.ApplyRebind(new InputRebindResult("RightStickBack", "Keyboard", "Q"));
+            foreach (bool spin in new[] { false, true })
+            foreach (bool left in new[] { false, true })
+            foreach (bool slowExit in new[] { false, true })
+            {
+                player.Reset(); baseline.Reset();
+                Key(KeyboardKey.S, false);
+                Key(KeyboardKey.A, false); Key(KeyboardKey.D, false);
+                Key(KeyboardKey.R, false); Key(KeyboardKey.E, false);
+                Key(KeyboardKey.Q, false);
+                Tick(0f);
+                if (spin)
+                {
+                    Key(KeyboardKey.Q, true); Tick(0f);
+                    Key(KeyboardKey.Q, false);
+                }
+                var side = left ? KeyboardKey.R : KeyboardKey.E;
+                // Juke rig labels are opposite screen direction; movement must still follow input.
+                string name = spin ? (left ? "SpinLeft" : "SpinRight")
+                    : (left ? "JukeRight" : "JukeLeft");
+                float duration = spin ? 0.45f : config.PlayerJukeDuration;
+                Key(side, true); Tick(0f);
+                Assert.Equal(name, player.AnimationName);
+                Assert.Same(clocks[name], Field<AnimationPlayer>(player, "_animation"));
+                Assert.Equal(0f, clocks[name].CurrentTime);
+                Assert.Equal(player.TargetForwardSpeed * (spin ? 0.30f : 0.50f),
+                    player.CurrentForwardSpeed, 5);
+                float[] entry = Vertices(player);
+                Vector3 before = player.Position;
+                Key(KeyboardKey.D, true); // Normal steering cannot take action travel.
+                Tick(duration * 0.25f);
+                Assert.Equal((left ? -1f : 1f) * (spin ? 10f : config.PlayerJukeSpeed) *
+                    duration * 0.25f, player.Position.X - before.X, 5);
+                Assert.Equal(before.Z, player.Position.Z);
+                Assert.Contains(Vertices(player).Zip(entry), p => MathF.Abs(p.First - p.Second) > 0.001f);
+                if (spin)
+                {
+                    float yaw = (float)typeof(BallCarrier).GetProperty("VisualYawDegrees",
+                        BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(player)!;
+                    Assert.Equal(-Field<float>(player, "_currentRunYaw"), yaw);
+                }
+                Key(KeyboardKey.S, true); Tick(duration * 0.25f);
+                Assert.Equal(name, player.AnimationName);
+                Assert.Same(clocks[name], Field<AnimationPlayer>(player, "_animation"));
+                Assert.Equal(0.5f * (clocks[name].FrameCount - 1) / clocks[name].FramesPerSecond,
+                    clocks[name].CurrentTime, 5);
+                Key(KeyboardKey.S, slowExit);
+                Tick(duration * 0.25f);
+                Assert.Equal(name, player.AnimationName);
+                float remaining = Field<float>(player, spin ? "_spinRemaining" : "_jukeRemaining");
+                Tick(remaining + 0.01f);
+                string carry = slowExit ? "CarryJog" : "CarryRun";
+                Assert.Equal(carry, player.AnimationName);
+                Assert.Same(clocks[carry], Field<AnimationPlayer>(player, "_animation"));
+                float exitPhase = name is "JukeRight" or "SpinLeft" ? 0.5f : 0f;
+                Assert.Equal(exitPhase * clocks[carry].FrameCount / clocks[carry].FramesPerSecond + 0.01f,
+                    clocks[carry].CurrentTime, 5);
+                float completedTime = clocks[name].CurrentTime;
+                Tick(0.02f); // A held gesture cannot loop or restart the clip.
+                Assert.Equal(carry, player.AnimationName);
+                Assert.Equal(completedTime, clocks[name].CurrentTime);
+                Key(side, false); Key(KeyboardKey.S, false); Key(KeyboardKey.D, false);
+
+                // Existing sprint cancellation must select CarrySprint in the same frame.
+                player.Reset(); baseline.Reset(); Tick(0f);
+                if (spin) { Key(KeyboardKey.Q, true); Tick(0f); Key(KeyboardKey.Q, false); }
+                Key(side, true); Tick(duration * 0.25f);
+                Key(KeyboardKey.LeftShift, true); Tick(0.01f);
+                Assert.Equal("CarrySprint", player.AnimationName);
+                Assert.Same(clocks["CarrySprint"], Field<AnimationPlayer>(player, "_animation"));
+                Assert.Equal(0f, Field<float>(player, "_jukeRemaining"));
+                Assert.Equal(0f, Field<float>(player, "_spinRemaining"));
+                Key(side, false); Key(KeyboardKey.LeftShift, false);
+
+                // Reset during an active move must clear its pose as well as its timers.
+                player.Reset(); baseline.Reset(); Tick(0f);
+                if (spin) { Key(KeyboardKey.Q, true); Tick(0f); Key(KeyboardKey.Q, false); }
+                Key(side, true); Tick(duration * 0.25f);
+                player.Reset(); baseline.Reset();
+                Assert.Same(clocks["CarryRun"], Field<AnimationPlayer>(player, "_animation"));
+                Assert.Equal(startPose, Vertices(player));
+                CheckAttachment();
+                Key(side, false);
+
+                // Touchdown advancement uses the same remaining action time.
+                Tick(0f);
+                if (spin) { Key(KeyboardKey.Q, true); Tick(0f); Key(KeyboardKey.Q, false); }
+                Key(side, true); Tick(0f);
+                player.RunIntoEndZone(duration * 0.5f, -100f);
+                Assert.Equal(name, player.AnimationName);
+                CheckAttachment();
+                player.RunIntoEndZone(duration * 0.5f + 0.01f, -100f);
+                Assert.Equal("CarryRun", player.AnimationName);
+                Assert.Same(clocks["CarryRun"], Field<AnimationPlayer>(player, "_animation"));
+                CheckAttachment();
+                // The underlying action players are non-looping as well as timer-driven.
+                clocks[name].Update(10f);
+                Assert.Equal(clocks[name].FrameCount - 1f, clocks[name].CurrentFrame, 4);
+                Key(side, false);
             }
             player.Reset(); baseline.Reset();
 

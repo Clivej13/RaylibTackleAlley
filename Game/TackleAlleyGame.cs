@@ -11,6 +11,7 @@ public sealed class TackleAlleyGame
     private readonly Opponent[] _opponents;
     private readonly ThirdPersonCamera _camera;
     private readonly InputController _input;
+    private readonly CarrierPursuitPrediction _pursuitPrediction = new();
 
     public bool Touchdown { get; private set; }
     public bool GameOver { get; private set; }
@@ -44,6 +45,7 @@ public sealed class TackleAlleyGame
     public void ResetRun()
     {
         _player.Reset();
+        _pursuitPrediction.Reset(_player.Position);
         foreach (Opponent opponent in _opponents)
             opponent.Reset();
         _camera.Reset(_player.Position, _player.CurrentForwardSpeed);
@@ -78,8 +80,9 @@ public sealed class TackleAlleyGame
             _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
             return;
         }
+        var predictedTarget = _pursuitPrediction.Observe(_player.Position, _player.SpeedTier, deltaTime);
         foreach (Opponent opponent in _opponents)
-            opponent.Update(_player.Position, deltaTime);
+            opponent.Update(_player.Position, deltaTime, predictedTarget);
         _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
 
         foreach (Opponent opponent in _opponents)

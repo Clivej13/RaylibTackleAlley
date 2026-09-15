@@ -1,17 +1,23 @@
 {
   "jog_action_unchanged": true,
   "run_action_unchanged": true,
+  "jog_metrics": {
+    "ankle_fore_aft_excursion": 0.7015567272901535,
+    "knee_height_relative_hip": -0.3158072233200073,
+    "hips_bob": 0.1098922397941351,
+    "upper_arm_rotation_range": 0.16246095299720764
+  },
   "run_metrics": {
-    "ankle_fore_aft_excursion": 0.7903914451599121,
-    "knee_height_relative_hip": -0.27639269828796387,
-    "hips_bob": 0.11172260716557503,
-    "upper_arm_rotation_range": 0.20112648606300354
+    "ankle_fore_aft_excursion": 0.8501121699810028,
+    "knee_height_relative_hip": -0.2783967852592468,
+    "hips_bob": 0.1360415704548359,
+    "upper_arm_rotation_range": 0.26453956961631775
   },
   "sprint_metrics": {
-    "ankle_fore_aft_excursion": 0.9284680187702179,
-    "knee_height_relative_hip": -0.22106480598449707,
-    "hips_bob": 0.14257166348397732,
-    "upper_arm_rotation_range": 0.3762737214565277
+    "ankle_fore_aft_excursion": 1.0907357931137085,
+    "knee_height_relative_hip": -0.12343543767929077,
+    "hips_bob": 0.07241092342883348,
+    "upper_arm_rotation_range": 1.0090640783309937
   },
   "unchanged_geometry_weights_hierarchy": true,
   "actions_in_blend": 11,
@@ -20,11 +26,11 @@
   ],
   "duration_seconds": 0.6666666666666666,
   "mirrored_half_cycle_matrix_error": 0,
-  "minimum_foot_y": 0.0013141296803951263,
+  "minimum_foot_y": 0.008262928575277328,
   "helmet_rigid_attachment": true,
   "root_identity_all_frames": true,
   "subframe_minimum_sole_y": 0,
-  "pads_chest_relative_vertex_error": 5.923094425902304e-07,
+  "pads_chest_relative_vertex_error": 6.908988759574907e-07,
   "endpoint_mesh_error_m": 0.0,
   "approved_content_and_csharp_sources_preserved": true
 }

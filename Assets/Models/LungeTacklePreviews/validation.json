@@ -1,0 +1,116 @@
+{
+  "LungeTackleForward": {
+    "duration_seconds": 0.6,
+    "entry_mesh_error_m": 2.5288109106536417e-07,
+    "head_pitch_degrees": [
+      0.0006024180979709594,
+      2.9999979508240635
+    ],
+    "chest_pitch_degrees": [
+      -67.99999624354002,
+      -8.987872773625904
+    ],
+    "minimum_sole_y_m": -1.6369282093364745e-05,
+    "plant_bone": "L",
+    "plant_drift_m": 0.0008445794474578538,
+    "push_extension_gain_m": 0.04450708636437428,
+    "contact_wrist_span_m": 1.0698799729128483,
+    "wrap_wrist_span_m": 0.3464441844737591,
+    "helmet_relative_error_m": 5.674052213006602e-07,
+    "intersection_events": [],
+    "collision_scope": "Nonadjacent arms/torso/legs, opposite legs and arms, hands/forearms versus helmet; proximal shoulder joints excluded. Quarter-frame samples.",
+    "root_identity": true,
+    "bounded_hips_transfer_m": 0.5400000214576721,
+    "preserved_geometry_skeleton_weights_actions_and_source_files": true,
+    "ball_free": true,
+    "angle_reference": "180 upright, 90 horizontal; inclination measured in 3D, independent of diagonal yaw",
+    "peak_torso_angle_degrees": 112.00000266118705,
+    "peak_pelvis_to_shoulders_angle_degrees": 114.3907327952316,
+    "peak_pelvis_angle_degrees": 122.00000066273267,
+    "airborne_sampled_frames": [
+      12.75,
+      36.5
+    ],
+    "plant_interval_frames": [
+      7,
+      11
+    ],
+    "automated_validation": "PASS"
+  },
+  "LungeTackleLeft": {
+    "duration_seconds": 0.6,
+    "entry_mesh_error_m": 2.5288109106536417e-07,
+    "head_pitch_degrees": [
+      0.0006024180979709594,
+      2.9999979508240635
+    ],
+    "chest_pitch_degrees": [
+      -66.14202200024737,
+      -8.987872773625904
+    ],
+    "minimum_sole_y_m": -0.0004318300634622574,
+    "plant_bone": "L",
+    "plant_drift_m": 0.0013976635401650906,
+    "push_extension_gain_m": 0.05699859672096663,
+    "contact_wrist_span_m": 1.06987984859562,
+    "wrap_wrist_span_m": 0.34644402477590025,
+    "helmet_relative_error_m": 5.568031785349065e-07,
+    "intersection_events": [],
+    "collision_scope": "Nonadjacent arms/torso/legs, opposite legs and arms, hands/forearms versus helmet; proximal shoulder joints excluded. Quarter-frame samples.",
+    "root_identity": true,
+    "bounded_hips_transfer_m": 0.5400000798045018,
+    "preserved_geometry_skeleton_weights_actions_and_source_files": true,
+    "ball_free": true,
+    "angle_reference": "180 upright, 90 horizontal; inclination measured in 3D, independent of diagonal yaw",
+    "peak_torso_angle_degrees": 112.00000266118705,
+    "peak_pelvis_to_shoulders_angle_degrees": 114.39076694617745,
+    "peak_pelvis_angle_degrees": 122.00000066273267,
+    "airborne_sampled_frames": [
+      13.0,
+      36.5
+    ],
+    "plant_interval_frames": [
+      7,
+      11
+    ],
+    "automated_validation": "PASS"
+  },
+  "LungeTackleRight": {
+    "duration_seconds": 0.6,
+    "entry_mesh_error_m": 2.5288109106536417e-07,
+    "head_pitch_degrees": [
+      0.0006024180979709594,
+      2.9999979508240635
+    ],
+    "chest_pitch_degrees": [
+      -66.14202200024737,
+      -8.987872773625904
+    ],
+    "minimum_sole_y_m": -0.0004318300634622574,
+    "plant_bone": "R",
+    "plant_drift_m": 0.0013976635401650906,
+    "push_extension_gain_m": 0.05699859672096663,
+    "contact_wrist_span_m": 1.06987984859562,
+    "wrap_wrist_span_m": 0.34644402477590025,
+    "helmet_relative_error_m": 5.568031785349065e-07,
+    "intersection_events": [],
+    "collision_scope": "Nonadjacent arms/torso/legs, opposite legs and arms, hands/forearms versus helmet; proximal shoulder joints excluded. Quarter-frame samples.",
+    "root_identity": true,
+    "bounded_hips_transfer_m": 0.5400000798045018,
+    "preserved_geometry_skeleton_weights_actions_and_source_files": true,
+    "ball_free": true,
+    "angle_reference": "180 upright, 90 horizontal; inclination measured in 3D, independent of diagonal yaw",
+    "peak_torso_angle_degrees": 112.00000266118705,
+    "peak_pelvis_to_shoulders_angle_degrees": 114.39076694617745,
+    "peak_pelvis_angle_degrees": 122.00000066273267,
+    "airborne_sampled_frames": [
+      13.0,
+      36.5
+    ],
+    "plant_interval_frames": [
+      7,
+      11
+    ],
+    "automated_validation": "PASS"
+  }
+}

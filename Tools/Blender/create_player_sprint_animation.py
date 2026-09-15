@@ -7,6 +7,7 @@ from pathlib import Path
 import bpy, math, json, hashlib, struct
 from mathutils import Vector, Quaternion
 import sys
+sys.dont_write_bytecode=True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from player_hand_rig import key_hand_poses
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'Assets/Models'
@@ -32,33 +33,47 @@ def curve(t,values):
  a,b=values[i%n],values[(i+1)%n]
  m0=(b-values[(i-1)%n])*.5; m1=(values[(i+2)%n]-a)*.5
  return (2*f**3-3*f*f+1)*a+(f**3-2*f*f+f)*m0+(-2*f**3+3*f*f)*b+(f**3-f*f)*m1
+def sprint_arms(rig, side, sign, phase):
+ bpy.context.view_layer.update()
+ chest=rig.pose.bones['Chest'].matrix @ rig.data.bones['Chest'].matrix_local.inverted()
+ swing=20-60*math.cos(phase)
+ bend=85+12*math.cos(phase)
+ def aim(name,direction):
+  p=rig.pose.bones[name+'.'+side]; rest=p.bone
+  turn=(rest.tail_local-rest.head_local).rotation_difference(Vector(direction))
+  m=(chest.to_3x3() @ turn.to_matrix() @ rest.matrix_local.to_3x3()).to_4x4()
+  m.translation=p.head; p.matrix=m
+  bpy.context.view_layer.update()
+ a=math.radians(swing); b=math.radians(swing+bend)
+ aim('UpperArm',(sign*.29,-math.cos(a),-math.sin(a)))
+ aim('LowerArm',(-sign*.025,-math.cos(b),-math.sin(b)))
+ aim('Hand',(-sign*.025,-math.cos(b),-math.sin(b)))
+
 samples=[]
 for frame in range(1,22):
  t=(frame-1)/20; phase=2*math.pi*t
  for p in rig.pose.bones:
   p.rotation_mode='QUATERNION'; p.rotation_quaternion=(1,0,0,0); p.location=(0,0,0); p.scale=(1,1,1)
  rotate('Hips',(0,1,0),4*math.cos(phase))
- rotate('Spine',(1,0,0),-16)
+ rotate('Spine',(1,0,0),-27)
  rotate('Chest',(0,1,0),-8*math.cos(phase))
  rotate('Head',(0,1,0),4*math.cos(phase))
- rotate('Head',(1,0,0),16)
+ rotate('Head',(1,0,0),22)
  for side,offset,sign in [('L',0,1),('R',.5,-1)]:
   u=(t+offset)%1
   # Advance stance/push-off slightly; periodic warp retains half-cycle symmetry.
   v=u+0.04*math.sin(2*math.pi*u)
-  hip=curve(v,[40,12,-24,-34,5,48])
-  knee=curve(v,[-33,-43,-26,-72,-100,-61])
+  hip=curve(v,[48,10,-32,-42,22,68])
+  knee=curve(v,[-24,-22,-16,-94,-122,-82])
   # Preserve the saved Run toe-down propulsion, using explicit six-phase values.
   # At extension: shank -50 deg, foot -92 deg => 42 deg plantarflexion.
   # Recovery returns toward neutral; no inverted push-off direction.
-  pitch=curve(v,[-7,0,-92,-80,-18,-7])
+  pitch=curve(v,[-8,-5,-68,-65,-25,-8])
+  rotate('UpperLeg.'+side,(0,0,1),-sign*4)
   rotate('UpperLeg.'+side,(1,0,0),hip)
   rotate('LowerLeg.'+side,(1,0,0),knee)
   rotate('Foot.'+side,(1,0,0),pitch-hip-knee)
-  # Narrow the approved A-pose through bone rotation only, leaving pad clearance.
-  rotate('UpperArm.'+side,(0,0,1),-sign*19)
-  rotate('UpperArm.'+side,(1,0,0),-36*math.cos(2*math.pi*u))
-  rotate('LowerArm.'+side,(1,0,0),80+10*math.cos(2*math.pi*u))
+  sprint_arms(rig, side, sign, 2*math.pi*u)
  bpy.context.view_layer.update()
  dg=bpy.context.evaluated_depsgraph_get()
  lows=[]
@@ -66,10 +81,11 @@ for frame in range(1,22):
   o=bpy.data.objects[name].evaluated_get(dg)
   lows.append(min((o.matrix_world@v.co).y for v in o.data.vertices))
  # Ground the lower sole; body bob comes entirely from Hips. No X/Z travel.
- rig.pose.bones['Hips'].location.y=-min(lows)
+ # Permit flight during folded recovery instead of dropping into a squat.
+ rig.pose.bones['Hips'].location.y=max(-0.005,-min(lows))
  for p in rig.pose.bones:
   for prop in ('rotation_quaternion','location','scale'):p.keyframe_insert(data_path=prop,frame=frame,group=p.name)
- samples.append({'frame':frame,'hips_y':-min(lows),'sole_y':[v-min(lows) for v in lows]})
+ samples.append({'frame':frame,'hips_y':rig.pose.bones['Hips'].location.y,'sole_y':[v+rig.pose.bones['Hips'].location.y for v in lows]})
 for fc in action.fcurves:
  for k in fc.keyframe_points:k.interpolation='LINEAR'
  fc.modifiers.new('CYCLES')
@@ -93,10 +109,11 @@ for sample in samples:
 scene.timeline_markers.clear()
 for f,label in [(1,'Left contact'),(4,'Left passing'),(7,'Left push-off / right knee forward'),(11,'Right contact'),(14,'Right passing'),(17,'Right push-off / left knee forward'),(21,'Loop closure')]:
  scene.timeline_markers.new(label,frame=f)
+key_hand_poses(rig)
 scene.render.engine='BLENDER_EEVEE'; scene.eevee.taa_render_samples=48
 scene.render.resolution_x=640; scene.render.resolution_y=720; scene.render.resolution_percentage=100
 scene.render.image_settings.file_format='PNG'
-for frame,label,view in [(1,'LeftContact','Front'),(4,'LeftPassing','Side'),(7,'LeftPushOff','Side'),(11,'RightContact','Front'),(14,'RightPassing','FrontThreeQuarter'),(17,'RightPushOff','FrontThreeQuarter'),(1,'Stride','FrontThreeQuarter')]:
+for frame,label,view in [(1,'LeftContact','Front'),(4,'LeftPassing','Side'),(7,'LeftPushOff','Side'),(11,'RightContact','Front'),(14,'RightPassing','FrontThreeQuarter'),(17,'RightPushOff','FrontThreeQuarter'),(1,'Stride','FrontThreeQuarter'),(1,'Stride','Back'),(18,'HighKnee','Side'),(18,'HighKnee','Front')]:
  scene.frame_set(frame); scene.camera=bpy.data.objects[view]
  scene.render.filepath=str(PRE/('Sprint_'+label+'_'+view+'.png')); bpy.ops.render.render(write_still=True)
 # Evaluate full loop and endpoint geometry, not only animation channel values.
@@ -118,6 +135,7 @@ assert hashlib.sha256(SOURCE.read_bytes()).hexdigest()==source_hash
 scene.frame_set(1); scene.camera=bpy.data.objects['FrontThreeQuarter']
 scene['stage_notes']='Approved Stage 6 rig plus in-place Sprint. Geometry, weights, skeleton and equipment parenting unchanged.'
 key_hand_poses(rig)
+bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'lowpoly_human_sprint.blend'))
 # Export only Sprint; inspection actions remain retained in the .blend.
 for other in list(bpy.data.actions):

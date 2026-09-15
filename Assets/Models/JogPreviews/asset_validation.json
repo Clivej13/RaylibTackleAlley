@@ -6,7 +6,7 @@
   ],
   "duration_seconds": 0.9333333333333333,
   "mirrored_half_cycle_matrix_error": 0,
-  "minimum_foot_y": -6.705522537231445e-08,
+  "minimum_foot_y": 0.00021016597747802734,
   "helmet_rigid_attachment": true,
   "root_identity_all_frames": true
 }

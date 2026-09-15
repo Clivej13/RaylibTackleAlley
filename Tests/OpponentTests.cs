@@ -17,7 +17,7 @@ public sealed class OpponentTests
     public void DistanceSelectsPaceAndGameDrivenSpeed(float distance, OpponentPace pace, float speed)
     {
         var opponent = new Opponent(Vector3.Zero, new());
-        opponent.Update(new(0, 0, -distance), 0.1f);
+        opponent.UpdateLocomotionForTest(new(0, 0, -distance), 0.1f);
         Assert.Equal(pace, opponent.Pace);
         Assert.Equal(speed, opponent.MovementSpeed);
         Assert.Equal(-(4f + opponent.CurrentSpeed) * 0.05f, opponent.Position.Z, 5);
@@ -28,14 +28,14 @@ public sealed class OpponentTests
     public void SeparationSlowsDownWithSmallHysteresisAndResetRestoresSpawn()
     {
         var opponent = new Opponent(Vector3.Zero, new());
-        void At(float distance) => opponent.Update(new(0, 0, -distance), 0f);
+        void At(float distance) => opponent.UpdateLocomotionForTest(new(0, 0, -distance), 0f);
         At(8); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
         At(8.5f); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
         At(8.51f); Assert.Equal(OpponentPace.Run, opponent.Pace);
         At(20.5f); Assert.Equal(OpponentPace.Run, opponent.Pace);
         At(20.51f); Assert.Equal(OpponentPace.Jog, opponent.Pace);
         At(20.1f); Assert.Equal(OpponentPace.Jog, opponent.Pace);
-        opponent.Update(new(0, 0, -5), 0.1f);
+        opponent.UpdateLocomotionForTest(new(0, 0, -5), 0.1f);
         opponent.Reset();
         Assert.Equal(Vector3.Zero, opponent.Position);
         Assert.Equal(OpponentPace.Jog, opponent.Pace);
@@ -48,7 +48,7 @@ public sealed class OpponentTests
     public void PaceSelectsApprovedAnimation(float distance, string clip)
     {
         var opponent = new Opponent(Vector3.Zero, new());
-        opponent.Update(new(0, 0, -distance), 0);
+        opponent.UpdateLocomotionForTest(new(0, 0, -distance), 0);
         Assert.Equal(clip, opponent.AnimationName);
     }
 
@@ -57,7 +57,7 @@ public sealed class OpponentTests
     {
         var opponent = new Opponent(Vector3.Zero, new());
         void Tick(float distance, float dt) =>
-            opponent.Update(opponent.Position + new Vector3(0, 0, -distance), dt);
+            opponent.UpdateLocomotionForTest(opponent.Position + new Vector3(0, 0, -distance), dt);
         Tick(12f, 0.1f);
         Assert.Equal(OpponentPace.Run, opponent.Pace);
         Assert.InRange(opponent.CurrentSpeed, 4.1f, 6.4f);
@@ -115,9 +115,9 @@ public sealed class OpponentTests
         foreach (var (distance, speed) in new[] { (15f, 1f), (7f, 2f), (2f, 3f) })
         {
             var opponent = new Opponent(Vector3.Zero, config);
-            opponent.Update(new(distance, 0, 0), 0f);
+            opponent.UpdateLocomotionForTest(new(distance, 0, 0), 0f);
             Assert.Equal(speed, opponent.TargetSpeed);
-            opponent.Update(new(distance, 0, 0), 0.05f);
+            opponent.UpdateLocomotionForTest(new(distance, 0, 0), 0.05f);
             Assert.Equal((1f + opponent.CurrentSpeed) * 0.025f, opponent.Position.X, 5);
         }
     }
@@ -141,7 +141,7 @@ public sealed class OpponentTests
         Assert.Equal(1.4f, json.RootElement.GetProperty("TackleDistance").GetSingle());
         foreach (float distance in new[] { 30f, 12f, 3f })
         {
-            opponent.Update(new(0, 0, -distance), 0);
+            opponent.UpdateLocomotionForTest(new(0, 0, -distance), 0);
             Assert.True(opponent.IsTouching(new(1.4f, 0, 0)));
             Assert.False(opponent.IsTouching(new(1.401f, 0, 0)));
         }
@@ -175,12 +175,12 @@ public sealed class OpponentTests
         var assets = new AssetManager(AssetConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "assets.json")));
         try
         {
-            assets.RequireAssets("FootballPlayerAnimations", "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations");
+            assets.RequireAssets(Opponent.AnimationAssetKeys);
             while (!assets.ProcessNext()) { }
             var opponents = Enumerable.Range(0, 4).Select(_ => new Opponent(Vector3.Zero, new())).ToArray();
             foreach (var opponent in opponents) opponent.InitializeVisual(assets);
             for (int i = 0; i < opponents.Length; i++)
-                opponents[i].Update(new(0, 0, -(i == 0 ? 3 : i == 1 ? 12 : 30)), 0);
+                opponents[i].UpdateLocomotionForTest(new(0, 0, -(i == 0 ? 3 : i == 1 ? 12 : 30)), 0);
             Assert.Equal(new[] { OpponentPace.Sprint, OpponentPace.Run, OpponentPace.Jog, OpponentPace.Jog },
                 opponents.Select(o => o.Pace));
             Assert.Equal(new[] { "Sprint", "Run", "Jog", "Jog" }, opponents.Select(o => o.AnimationName));
@@ -191,12 +191,12 @@ public sealed class OpponentTests
             {
                 var a = opponents[0]; var b = opponents[1];
                 a.Reset(); b.Reset();
-                a.Update(new(0, 0, -distance), 0);
-                b.Update(new(0, 0, -distance), 0);
+                a.UpdateLocomotionForTest(new(0, 0, -distance), 0);
+                b.UpdateLocomotionForTest(new(0, 0, -distance), 0);
                 var untouched = Vertices(b);
-                for (int i = 0; i < 6; i++) a.Update(a.Position + new Vector3(0, 0, -distance), 0.025f);
+                for (int i = 0; i < 6; i++) a.UpdateLocomotionForTest(a.Position + new Vector3(0, 0, -distance), 0.025f);
                 Assert.Equal(untouched, Vertices(b));
-                b.Update(new(0, 0, -distance), 0.15f);
+                b.UpdateLocomotionForTest(new(0, 0, -distance), 0.15f);
                 var actual = Vertices(a); var expected = Vertices(b);
                 Assert.True(actual.Zip(expected).All(pair => MathF.Abs(pair.First - pair.Second) < 0.0001f));
                 Assert.Contains(actual.Zip(untouched), pair => MathF.Abs(pair.First - pair.Second) > 0.001f);
@@ -211,7 +211,7 @@ public sealed class OpponentTests
             var reference = opponents[3];
             var model = Field<ModelInstance>(runner, "_model");
             Assert.Equal(0f, Field<AnimationPlayer>(runner, "_animation").CurrentTime);
-            runner.Update(new(0, 0, -30), 0.23f);
+            runner.UpdateLocomotionForTest(new(0, 0, -30), 0.23f);
             foreach (var (distance, name) in new[] {
                 (12f, "Run"), (3f, "Sprint"), (8.51f, "Run"), (20.51f, "Jog") })
             {
@@ -221,7 +221,7 @@ public sealed class OpponentTests
                 var otherAnimation = Field<AnimationPlayer>(opponents[1], "_animation");
                 float otherTime = otherAnimation.CurrentTime;
                 var otherPose = Vertices(opponents[1]);
-                runner.Update(runner.Position + new Vector3(0, 0, -distance), 0);
+                runner.UpdateLocomotionForTest(runner.Position + new Vector3(0, 0, -distance), 0);
                 Assert.Equal(name, runner.AnimationName);
                 Assert.NotSame(previous, Field<AnimationPlayer>(runner, "_animation"));
                 Assert.Same(model, Field<ModelInstance>(runner, "_model"));
@@ -231,10 +231,10 @@ public sealed class OpponentTests
                 Assert.Equal(phase, selected.CurrentTime / (selected.FrameCount / selected.FramesPerSecond), 5);
 
                 reference.Reset();
-                reference.Update(new(0, 0, -distance), 0);
+                reference.UpdateLocomotionForTest(new(0, 0, -distance), 0);
                 Field<AnimationPlayer>(reference, "_animation").SeekPhase(phase);
-                runner.Update(runner.Position + new Vector3(0, 0, -distance), 0.15f);
-                reference.Update(reference.Position + new Vector3(0, 0, -distance), 0.15f);
+                runner.UpdateLocomotionForTest(runner.Position + new Vector3(0, 0, -distance), 0.15f);
+                reference.UpdateLocomotionForTest(reference.Position + new Vector3(0, 0, -distance), 0.15f);
                 Assert.Equal(Vertices(reference), Vertices(runner));
 
                 reference.Reset();
@@ -249,4 +249,11 @@ public sealed class OpponentTests
             Raylib.CloseWindow();
         }
     }
+}
+
+internal static class OpponentTestUpdates
+{
+    // Exercise pursuit independently of AI proximity policy.
+    public static void UpdateLocomotionForTest(this Opponent opponent, Vector3 target, float dt) =>
+        opponent.Update(target, dt, false, Vector2.Zero, false);
 }

@@ -52,7 +52,10 @@ public sealed class GameApplication
         {
             _assets.RequireAssets("FootballField", "Stadium", "Football", "FootballPlayer", "FootballPlayerAnimations", "FootballPlayerRunAnimations", "FootballPlayerSprintAnimations",
                 "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
-                "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations");
+                "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
+                "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
+                "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations");
+            _assets.RequireAssets(Opponent.AnimationAssetKeys);
             while (!_assets.ProcessNext())
             {
                 // Models must be loaded after the graphics context is initialized.
