@@ -7,6 +7,14 @@ namespace RaylibTackleAlley.Game;
 public sealed partial class BallCarrier
 {
     public Ragdoll Ragdoll { get; } = new();
+    private readonly Ragdoll _contactPose = new();
+    internal Ragdoll? ContactPose()
+    {
+        if (Ragdoll.IsActive) return Ragdoll;
+        if (_model is null || _animation is null || IsRecovering) return null;
+        RagdollPose.RefreshContactPose(_animation, PlayerWorldTransform, _contactPose);
+        return _contactPose;
+    }
     private RagdollSkeleton? _ragdollSkeleton;
     private RagdollRecovery? _recovery;
     private AnimationPlayer? _downAnimation, _getUpAnimation;

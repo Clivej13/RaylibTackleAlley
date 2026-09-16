@@ -64,6 +64,24 @@ public sealed class TackleAlleyGame
     public void Update(float deltaTime)
     {
         RagdollDebugControls.Update(_opponents, _player.Position);
+        // Tighter capsules need short motion steps to catch fast head-on contact.
+        if (!TacklePendingGroundImpact && !GameOver && !Touchdown && deltaTime > Ragdoll.FixedStep &&
+            _opponents.Any(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position) < 36f))
+        {
+            float remaining = Math.Min(deltaTime, .25f);
+            while (remaining > 0)
+            {
+                float step = Math.Min(remaining, Ragdoll.FixedStep);
+                UpdateStep(step);
+                remaining = Math.Max(0, remaining - step);
+            }
+            return;
+        }
+        UpdateStep(deltaTime);
+    }
+
+    private void UpdateStep(float deltaTime)
+    {
         if (TacklePendingGroundImpact)
         {
             UpdateOutcomePhysics(deltaTime);
@@ -104,11 +122,11 @@ public sealed class TackleAlleyGame
         bool touching = false;
         foreach (Opponent opponent in _opponents)
         {
-            // Keep the existing distance outcome on the final controlled lunge update,
-            // even if that update hands ownership to physics. Existing ragdolls remain excluded.
+            // Test the animated capsules, including the final lunge handoff pose.
+            // Existing ragdolls remain excluded from starting another tackle.
             bool controlledAtStart = !opponent.Ragdoll.IsActive && !opponent.IsRecovering;
-            opponent.Update(_player.Position, deltaTime, predictedTarget);
-            if (controlledAtStart && opponent.IsTouching(_player.Position))
+            opponent.Update(_player.Position, deltaTime, predictedTarget, _player.Velocity);
+            if (controlledAtStart && opponent.HasBodyContact(_player))
             {
                 if (opponent.State == DefenderState.LungeTackle && LungeTackleOutcome.Confirm(opponent, _player))
                 {

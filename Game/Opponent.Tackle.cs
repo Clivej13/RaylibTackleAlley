@@ -46,14 +46,17 @@ public sealed partial class Opponent
     public const float WrapCommitDistance = 1f;
     public const float WrapContainmentAngleDegrees = 45f;
     public const float WrapSpeedTolerance = 0.25f;
-    public const float LungeReachDistance = 2.25f;
+    public const float LungeReachDistance = 2.75f;
+    public const float LungeAnimationLeadSeconds = .28f;
+    public const float MaximumLungeReachDistance = 4.5f;
     public const float LungeReachAngleDegrees = 45f;
     public const float TackleForwardAngleDegrees = 15f;
     public const float BreakdownReactionSeconds = 0.15f;
     private const float ReadyTurnDegreesPerSecond = 360f;
 
     // AI supplies intent to the same state update a future defender controller can use.
-    public void Update(Vector3 playerPosition, float deltaTime, Vector3? pursuitTarget = null)
+    public void Update(Vector3 playerPosition, float deltaTime, Vector3? pursuitTarget = null,
+        Vector3? carrierVelocity = null)
     {
         if (UpdatePhysicsAndRecovery(deltaTime)) return;
         Vector3 offset = playerPosition - _position;
@@ -74,14 +77,22 @@ public sealed partial class Opponent
         bool contained = distance <= WrapCommitDistance &&
             angle <= WrapContainmentAngleDegrees &&
             CurrentSpeed <= TackleReadySpeed + WrapSpeedTolerance;
-        bool reachable = distance <= LungeReachDistance && angle <= LungeReachAngleDegrees;
+        Vector3 relativeVelocity = Velocity - (carrierVelocity ?? Vector3.Zero);
+        relativeVelocity.Y = 0;
+        float closingSpeed = distance > .0001f ? Math.Max(0, Vector3.Dot(relativeVelocity, offset / distance)) : 0;
+        float launchDistance = Math.Clamp(.5f + closingSpeed * LungeAnimationLeadSeconds,
+            LungeReachDistance, MaximumLungeReachDistance);
+        bool reachable = distance <= launchDistance && angle <= LungeReachAngleDegrees;
+        bool imminentContact = carrierVelocity.HasValue && distance <= .5f + closingSpeed * LungeAnimationLeadSeconds;
         if (!IsTackleCommitted)
         {
             if (State == DefenderState.TackleReady && contained)
                 CommitTackle(playerPosition, DefenderState.SetWrap);
             else if (reachable && (State == DefenderState.TackleReady
-                         ? distance > WrapCommitDistance : !canBreakDown))
-                CommitTackle(playerPosition, DefenderState.LungeTackle);
+                         ? distance > WrapCommitDistance : !canBreakDown || imminentContact))
+                CommitTackle(LungeInterception.Target(_position, playerPosition,
+                    carrierVelocity ?? Vector3.Zero, Math.Max(CurrentSpeed, _config.OpponentJogSpeed)),
+                    DefenderState.LungeTackle);
         }
         float yaw = ReadyYaw(playerPosition, Math.Max(0f, deltaTime));
         Vector3 targetOffset = (pursuitTarget ?? playerPosition) - _position;

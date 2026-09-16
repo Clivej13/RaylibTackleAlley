@@ -50,6 +50,71 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         Position(_carrier, _defender.Position + new Vector3(0, 0, -.3f));
     }
 
+    [Theory]
+    [InlineData(-5.5f, 1f / 60)]
+    [InlineData(5.5f, 1f / 60)]
+    [InlineData(-5.5f, 1f / 30)]
+    public void StraightRunWithoutInputIsInterceptedFromEitherSide(float side, float dt)
+    {
+        var defender = new Opponent(new(side, 0, -18), _config);
+        defender.InitializeVisual(_assets);
+        Field<Opponent[]>(_game, "_opponents")[0] = defender;
+        _game.ResetRun();
+        bool sawDive = false;
+        for (int i = 0; i < 600 && !_game.GameOver && !_game.TacklePendingGroundImpact; i++)
+        {
+            _game.Update(dt);
+            sawDive |= defender.State == DefenderState.LungeTackle;
+        }
+        Assert.True(sawDive);
+        Assert.True(_game.TacklePendingGroundImpact || _carrier.HasTackleGroundImpact,
+            $"Missed straight runner: defender {defender.Position}, carrier {_carrier.Position}, state {defender.State}");
+        Assert.False(_game.Touchdown);
+    }
+
+    [Theory]
+    [InlineData(1f / 30)]
+    [InlineData(.1f)]
+    public void FastHeadOnDiveGetsAnimationLeadBeforeCapsuleContact(float frameTime)
+    {
+        _config.PlayerForwardSpeed = 9;
+        _carrier.Reset();
+        typeof(Opponent).GetField("_position", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .SetValue(_defender, new Vector3(0, 0, -4.4f));
+        typeof(Opponent).GetField("_movementDirection", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .SetValue(_defender, Vector3.UnitZ);
+        typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(_defender, 9f);
+        bool sawDiveBeforeContact = false;
+        for (int i = 0; i < 30 && !_game.TacklePendingGroundImpact && !_game.GameOver; i++)
+        {
+            _game.Update(frameTime);
+            sawDiveBeforeContact |= _defender.State == DefenderState.LungeTackle && !_carrier.Ragdoll.IsActive;
+        }
+        Assert.True(sawDiveBeforeContact);
+        Assert.True(_game.TacklePendingGroundImpact || _carrier.HasTackleGroundImpact);
+        Assert.True(_carrier.Ragdoll.IsActive);
+        Assert.True(Field<AnimationPlayer>(_defender, "_animation").CurrentTime >= .12f);
+    }
+
+    [Fact]
+    public void NearbyOriginsDoNotTackleUntilAnimatedCapsulesTouch()
+    {
+        Launch();
+        Position(_carrier, _defender.Position + new Vector3(1.25f, 0, 0));
+        Assert.True(_defender.IsTouching(_carrier.Position)); // inside the former proximity gate
+        Assert.False(_defender.HasBodyContact(_carrier));
+        Assert.False(LungeTackleOutcome.Confirm(_defender, _carrier));
+        _game.Update(0);
+        Assert.False(_game.GameOver);
+        Assert.False(_game.TacklePendingGroundImpact);
+        Assert.False(_carrier.Ragdoll.IsActive);
+        Position(_carrier, _defender.Position + new Vector3(0, 0, -.3f));
+        Assert.True(_defender.HasBodyContact(_carrier));
+        _game.Update(0);
+        Assert.True(_game.TacklePendingGroundImpact);
+        Assert.True(_carrier.Ragdoll.IsActive);
+    }
+
     [Fact]
     public void ContactPreservesAnimationHandoffAndAppliesEqualOppositeGeometricImpulse()
     {

@@ -57,6 +57,20 @@ public static class RagdollPose
         };
     }
 
+    // Read-only animation sampling for contact detection before physics takes ownership.
+    // Reuse the ragdoll layout so detection and post-impact collision use identical shapes.
+    public static void RefreshContactPose(AnimationPlayer animation, Matrix4x4 world, Ragdoll probe)
+    {
+        var pose = new Dictionary<string, Matrix4x4>();
+        foreach (string bone in Ragdoll.RequiredBones)
+        {
+            if (!animation.TryGetBoneTransform(bone, out var transform))
+                throw new InvalidDataException($"Missing contact bone: {bone}");
+            pose.Add(bone, transform * world);
+        }
+        probe.Activate(pose, pose, Vector3.Zero);
+    }
+
     public static unsafe RagdollSkeleton Activate(Model model, AnimationPlayer animation, Matrix4x4 world,
         Ragdoll ragdoll, Vector3 velocity, RagdollImpulse? impulse, float ground)
     {
