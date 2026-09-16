@@ -30,9 +30,20 @@ public sealed class RagdollContactTests
     private static float Energy(Ragdoll doll) => doll.Bodies.Sum(b => .5f * b.Mass * b.LinearVelocity.LengthSquared());
 
     [Fact]
+    public void TightCapsulesRejectEmptySpaceInsideTheFormerTorsoSpheres()
+    {
+        var a = Create(new(0, 3, -.65f), Vector3.Zero);
+        var b = Create(new(0, 3, 0), Vector3.Zero);
+        Assert.False(RagdollContact.Overlaps(a, b));
+        Assert.Null(RagdollContact.Resolve(a, b));
+        a = Create(new(0, 3, -.46f), Vector3.Zero);
+        Assert.True(RagdollContact.Overlaps(a, b));
+    }
+
+    [Fact]
     public void HeadOnPushesCarrierBackwardAndBothCharactersReceiveOppositeMomentum()
     {
-        var defender = Create(new(0, 3, -.65f), new(0, 0, 6));
+        var defender = Create(new(0, 3, -.46f), new(0, 0, 6));
         var carrier = Create(new(0, 3, 0), new(0, 0, -2));
         Vector3 beforeD = Momentum(defender), beforeC = Momentum(carrier);
         RagdollContact.Resolve(defender, carrier);
@@ -50,7 +61,7 @@ public sealed class RagdollContactTests
     public void SideAndAngledHitsFollowContactGeometry(float side)
     {
         // Same forward velocity for both sides: the normal must choose the lateral reaction.
-        var defender = Create(new(side * .4f, 3, -.5f), new(0, 0, 6));
+        var defender = Create(new(side * .28f, 3, -.36f), new(0, 0, 6));
         var carrier = Create(new(0, 3, 0), Vector3.Zero);
         RagdollContact.Resolve(defender, carrier);
         Vector3 push = Momentum(carrier);
@@ -76,7 +87,7 @@ public sealed class RagdollContactTests
     {
         float Push(float speed)
         {
-            var defender = Create(new(0, 3, -.65f), new(0, 0, speed));
+            var defender = Create(new(0, 3, -.46f), new(0, 0, speed));
             var carrier = Create(new(0, 3, 0), Vector3.Zero);
             RagdollContact.Resolve(defender, carrier);
             return Momentum(carrier).Z;
@@ -92,7 +103,7 @@ public sealed class RagdollContactTests
     {
         Vector3 Spin(float side)
         {
-            var defender = Create(new(side * .4f, 3, -.5f), new(0, 0, 6));
+            var defender = Create(new(side * .28f, 3, -.36f), new(0, 0, 6));
             var carrier = Create(new(0, 3, 0), Vector3.Zero);
             RagdollContact.Resolve(defender, carrier);
             Assert.True(carrier.Bodies[0].AngularVelocity.Length() > .01f);

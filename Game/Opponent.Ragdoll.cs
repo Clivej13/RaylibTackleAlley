@@ -6,6 +6,27 @@ namespace RaylibTackleAlley.Game;
 public sealed partial class Opponent
 {
     public Ragdoll Ragdoll { get; } = new();
+    private readonly Ragdoll _contactPose = new();
+
+    public bool HasBodyContact(BallCarrier carrier)
+    {
+        // SetWrap retains its established controlled capture range.
+        if (State == DefenderState.SetWrap) return IsTouching(carrier.Position);
+        if (IsRecovering || carrier.IsRecovering) return false;
+        // Only a broad-phase rejection; distance alone never confirms body contact.
+        if (Vector3.DistanceSquared(_position, carrier.Position) > 25f) return false;
+        Ragdoll defenderPose = Ragdoll;
+        if (!Ragdoll.IsActive)
+        {
+            if (_model is null || _animation is null) return false;
+            var world = Matrix4x4.Transpose(_model.Model.Transform) * Matrix4x4.CreateScale(_visualScale) *
+                Matrix4x4.CreateRotationY(_yawDegrees * MathF.PI / 180f) *
+                Matrix4x4.CreateTranslation(_position + Vector3.UnitY * _groundOffset);
+            RagdollPose.RefreshContactPose(_animation, world, _contactPose);
+            defenderPose = _contactPose;
+        }
+        return carrier.ContactPose() is { } playerPose && RagdollContact.Overlaps(defenderPose, playerPose);
+    }
     private RagdollSkeleton? _ragdollSkeleton;
     private RagdollRecovery? _recovery;
     public bool IsRecovering => _recovery is not null;

@@ -107,7 +107,7 @@ public sealed class AiTackleSelectionTests
     }
 
     [Theory]
-    [InlineData(2.26f, 0f)]
+    [InlineData(2.76f, 0f)]
     [InlineData(1.8f, 46f)]
     [InlineData(1.8f, 180f)]
     public void ReadyKeepsClosingOutsideLaunchReach(float distance, float degrees)
@@ -117,6 +117,39 @@ public sealed class AiTackleSelectionTests
         float radians = degrees * MathF.PI / 180f;
         defender.Update(defender.Position + new Vector3(MathF.Sin(radians), 0, -MathF.Cos(radians)) * distance, 0);
         Assert.Equal(DefenderState.TackleReady, defender.State);
+    }
+
+    [Fact]
+    public void FastHeadOnApproachStartsDiveBeforeTheOldRange()
+    {
+        var defender = Running(9);
+        var target = defender.Position + new Vector3(0, 0, -3.8f);
+        defender.Update(target, 0, null, new Vector3(0, 0, 9));
+        Assert.Equal(DefenderState.LungeTackle, defender.State);
+        Assert.True(Vector3.Distance(defender.Position, target) > Opponent.LungeReachDistance);
+        Assert.True(defender.VerticalVelocity > 0);
+    }
+
+    [Theory]
+    [InlineData(3.8f, 0f, -9f)] // matching direction: no head-on closing speed
+    [InlineData(5f, 0f, 9f)] // never exceed maximum launch range
+    [InlineData(3.8f, 60f, 9f)] // preserve facing limits
+    public void EarlierDiveStillRequiresClosingRangeAndFacing(float distance, float angle, float playerZSpeed)
+    {
+        var defender = Running(9);
+        float radians = angle * MathF.PI / 180;
+        var target = defender.Position + new Vector3(MathF.Sin(radians), 0, -MathF.Cos(radians)) * distance;
+        defender.Update(target, 0, null, new Vector3(0, 0, playerZSpeed));
+        Assert.NotEqual(DefenderState.LungeTackle, defender.State);
+    }
+
+    [Fact]
+    public void ReadyDiveStartsAtWiderBaseRange()
+    {
+        var defender = Running(4);
+        defender.Update(defender.Position + new Vector3(0, 0, -4), 0);
+        defender.Update(defender.Position + new Vector3(0, 0, -2.6f), 0);
+        Assert.Equal(DefenderState.LungeTackle, defender.State);
     }
 
     [Fact]

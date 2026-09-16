@@ -5,7 +5,8 @@ public static class LungeTackleOutcome
     public static bool Confirm(Opponent defender, BallCarrier carrier)
     {
         if (defender.State != DefenderState.LungeTackle || !carrier.CanActivateRagdoll ||
-            (!defender.Ragdoll.IsActive && !defender.CanActivateRagdoll)) return false;
+            (!defender.Ragdoll.IsActive && !defender.CanActivateRagdoll) ||
+            !defender.HasBodyContact(carrier)) return false;
         // Capture current poses and actual velocities before resolving geometric contact.
         carrier.ActivateRagdoll();
         if (!defender.Ragdoll.IsActive) defender.ActivateRagdoll();

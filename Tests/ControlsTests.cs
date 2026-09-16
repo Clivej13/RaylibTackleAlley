@@ -840,7 +840,7 @@ public sealed class ControlsTests : IDisposable
     }
 
     [Fact]
-    public void AiDefendersPrepareAndOriginalProximityStillEndsRun()
+    public void AiDefendersPrepareButMissingVisualPoseCannotInventContact()
     {
         var game = new TackleAlleyGame(_config, _input, new AssetManager(new AssetConfig()));
         var defender = Field<Opponent[]>(game, "_opponents")[0];
@@ -856,7 +856,7 @@ public sealed class ControlsTests : IDisposable
         Assert.False(game.GameOver);
         position.SetValue(defender, runner.Position);
         game.Update(0);
-        Assert.True(game.GameOver);
+        Assert.False(game.GameOver); // Contact requires real body capsules, not only coincident origins.
         Assert.False(game.Touchdown);
     }
 

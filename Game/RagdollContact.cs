@@ -4,7 +4,7 @@ namespace RaylibTackleAlley.Game;
 
 public readonly record struct RagdollHit(int DefenderBody, int CarrierBody, Vector3 Point, Vector3 Normal);
 
-/// <summary>Two-character torso spheres and arm/leg capsules, without self collision.</summary>
+/// <summary>Bone-aligned torso and limb capsules, without self collision.</summary>
 public static class RagdollContact
 {
     public const float Restitution = .05f;
@@ -14,8 +14,8 @@ public static class RagdollContact
     // Full-character momentum transfer at confirmed tackle only (not each collision tick).
     public const float MaximumTackleImpulse = 1200f;
     public const float TackleAngularEnergyShare = .2f;
-    public const float TorsoRadius = .34f;
-    public const float PelvisRadius = .28f;
+    public const float TorsoRadius = .24f;
+    public const float PelvisRadius = .19f;
     public const float ChestShare = .6f;
     public const float PenetrationSlop = .005f;
     public const int SeparationIterations = 8;
@@ -29,6 +29,15 @@ public static class RagdollContact
         _ => body.Radius * LimbRadiusScale
     };
 
+    public static bool Overlaps(Ragdoll a, Ragdoll b)
+    {
+        if (!a.IsActive || !b.IsActive) return false;
+        foreach (int ai in CollisionBodies)
+        foreach (int bi in CollisionBodies)
+            if (SurfaceGap(a.Bodies[ai], b.Bodies[bi]) <= PenetrationSlop) return true;
+        return false;
+    }
+
     public static float SurfaceGap(RagdollBody a, RagdollBody b)
     {
         ClosestPoints(a, b, out var pa, out var pb);
@@ -37,11 +46,10 @@ public static class RagdollContact
 
     private static void ClosestPoints(RagdollBody a, RagdollBody b, out Vector3 pa, out Vector3 pb)
     {
-        bool torsoA = a.Bone is "Chest" or "Hips", torsoB = b.Bone is "Chest" or "Hips";
-        Vector3 p = torsoA ? a.Position : a.SegmentStart;
-        Vector3 q = torsoB ? b.Position : b.SegmentStart;
-        Vector3 u = torsoA ? Vector3.Zero : a.SegmentEnd - p;
-        Vector3 v = torsoB ? Vector3.Zero : b.SegmentEnd - q;
+        Vector3 p = a.SegmentStart;
+        Vector3 q = b.SegmentStart;
+        Vector3 u = a.SegmentEnd - p;
+        Vector3 v = b.SegmentEnd - q;
         Vector3 r = p - q;
         float aa = Vector3.Dot(u, u), bb = Vector3.Dot(u, v), cc = Vector3.Dot(v, v);
         float d = Vector3.Dot(u, r), e = Vector3.Dot(v, r);
@@ -66,8 +74,8 @@ public static class RagdollContact
         return (normal, (pa + normal * Radius(a) + pb - normal * Radius(b)) * .5f);
     }
 
-    // The existing gameplay distance test can confirm before these simplified proxies touch.
-    // Use the closest approaching surface pair at handoff; later contacts require overlap.
+    // Gameplay validates animated capsule overlap before confirming a tackle.
+    // The explicit confirmedContact flag also supports isolated handoff simulations.
     public static RagdollHit? Resolve(Ragdoll defender, Ragdoll carrier, bool confirmedContact = false)
     {
         if (!defender.IsActive || !carrier.IsActive || ReferenceEquals(defender, carrier)) return null;
