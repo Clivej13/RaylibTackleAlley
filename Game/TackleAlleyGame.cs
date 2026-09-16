@@ -13,6 +13,7 @@ public sealed class TackleAlleyGame
     private readonly InputController _input;
     private readonly CarrierPursuitPrediction _pursuitPrediction = new();
 
+    public bool TacklePendingGroundImpact { get; private set; }
     public bool Touchdown { get; private set; }
     public bool GameOver { get; private set; }
     public bool OutOfBounds { get; private set; }
@@ -49,6 +50,7 @@ public sealed class TackleAlleyGame
         foreach (Opponent opponent in _opponents)
             opponent.Reset();
         _camera.Reset(_player.Position, _player.CurrentForwardSpeed);
+        TacklePendingGroundImpact = false;
         Touchdown = false;
         GameOver = false;
         OutOfBounds = false;
@@ -59,6 +61,23 @@ public sealed class TackleAlleyGame
 
     public void Update(float deltaTime)
     {
+        RagdollDebugControls.Update(_opponents, _player.Position);
+        if (TacklePendingGroundImpact)
+        {
+            _player.UpdatePhysicsAndRecovery(deltaTime);
+            foreach (var defender in _opponents) defender.UpdateLungeAfterOutcome(deltaTime);
+            _camera.Update(_player.Position, 0, deltaTime);
+            if (_player.HasTackleGroundImpact)
+            {
+                TacklePendingGroundImpact = false;
+                GameOver = true; EndStateElapsed = 0;
+            }
+            return;
+        }
+        if (GameOver) _player.UpdatePhysicsAndRecovery(deltaTime);
+        if (Touchdown || GameOver)
+            foreach (var defender in _opponents)
+                defender.UpdateLungeAfterOutcome(deltaTime);
         if (Touchdown || GameOver)
         {
             EndStateElapsed += Math.Max(0, deltaTime);
@@ -81,18 +100,32 @@ public sealed class TackleAlleyGame
             return;
         }
         var predictedTarget = _pursuitPrediction.Observe(_player.Position, _player.SpeedTier, deltaTime);
-        foreach (Opponent opponent in _opponents)
-            opponent.Update(_player.Position, deltaTime, predictedTarget);
-        _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
-
+        bool touching = false;
         foreach (Opponent opponent in _opponents)
         {
-            if (opponent.IsTouching(_player.Position))
+            // Keep the existing distance outcome on the final controlled lunge update,
+            // even if that update hands ownership to physics. Existing ragdolls remain excluded.
+            bool controlledAtStart = !opponent.Ragdoll.IsActive && !opponent.IsRecovering;
+            opponent.Update(_player.Position, deltaTime, predictedTarget);
+            if (controlledAtStart && opponent.IsTouching(_player.Position))
             {
-                GameOver = true;
-                EndStateElapsed = 0;
-                return;
+                if (opponent.State == DefenderState.LungeTackle && LungeTackleOutcome.Confirm(opponent, _player))
+                {
+                    TacklePendingGroundImpact = true;
+                    break;
+                }
+                touching = true;
+                break;
             }
+        }
+        _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
+
+        if (TacklePendingGroundImpact) return;
+        if (touching)
+        {
+            GameOver = true;
+            EndStateElapsed = 0;
+            return;
         }
 
         if (_player.Position.Z <= _field.GoalLineZ)
@@ -111,6 +144,7 @@ public sealed class TackleAlleyGame
             opponent.Draw();
         _field.DrawOutOfBounds();
         Raylib.EndMode3D();
+        RagdollDebugControls.Draw(_opponents);
 
         Raylib.DrawRectangle(18, 18, 360, 70, new Color(0, 0, 0, 180));
         Raylib.DrawText($"RUNS {SuccessfulRuns}   SPEED {_player.SpeedTier}", 32, 32, 20, Color.White);

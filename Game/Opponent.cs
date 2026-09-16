@@ -72,6 +72,9 @@ public sealed partial class Opponent
             _groundOffset = -bounds.Min.Y * _visualScale;
             _model = model;
             SelectAnimation();
+            // A completed headless lunge waits for a real pose rather than fabricating one.
+            if (State == DefenderState.LungeTackle && _tackleRemaining <= 0f && _animation is { } lunge)
+                lunge.SeekTime((lunge.FrameCount - 1) / lunge.FramesPerSecond);
         }
         catch
         {
@@ -84,6 +87,7 @@ public sealed partial class Opponent
     public Opponent(Vector3 spawnPosition, TackleAlleyConfig config)
     {
         config.ValidateOpponentLocomotion();
+        config.ValidateRagdollRecovery();
         _spawnPosition = spawnPosition;
         _config = config;
         Reset();
@@ -91,6 +95,8 @@ public sealed partial class Opponent
 
     public void Reset()
     {
+        Ragdoll.Deactivate();
+        _recovery = null;
         _position = _spawnPosition;
         _movementDirection = Vector3.Zero;
         State = DefenderState.Locomotion;
@@ -103,6 +109,9 @@ public sealed partial class Opponent
         _yawDegrees = 180f;
         SelectAnimation();
         _animation?.SeekTime(0f);
+        RestoreAnimatedOwnership();
+        if (_model is not null && _animation is not null)
+            Raylib.UpdateModelAnimation(_model.Model, _animation.Animation, _animation.CurrentFrame);
     }
 
     private void SelectAnimation()
@@ -165,6 +174,9 @@ public sealed partial class Opponent
 
     public void Draw()
     {
+        if (Ragdoll.IsActive) { DrawRagdoll(); return; }
+        if (_recovery is not null) { _recovery.Draw(); return; }
+        RestoreAnimatedOwnership();
         if (_model is null)
             throw new InvalidOperationException("Initialize opponent visuals after loading assets.");
         Raylib.DrawModelEx(_model.Model, _position + new Vector3(0, _groundOffset, 0),

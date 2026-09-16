@@ -303,37 +303,13 @@ public sealed class TackleReadyTests
                 Assert.Equal(DefenderState.LungeTackle, defender.State);
                 Assert.Equal(facing, defender.FacingYawDegrees);
                 defender.Update(defender.Position + new Vector3(0, 0, 4), duration / 2);
-                Assert.Equal(DefenderState.LungeLand, defender.State);
-                animation = (AnimationPlayer)field.GetValue(defender)!;
-                Assert.Equal(0f, animation.CurrentTime);
-                duration = (animation.FrameCount - 1) / animation.FramesPerSecond;
-                defender.Update(new(30, 0, 30), duration / 2, true, Vector2.One, true);
-                Assert.Equal(DefenderState.LungeLand, defender.State);
-                Assert.True(defender.IsGrounded);
-                Vector3 landed = defender.Position;
-                defender.Update(new(30, 0, 30), duration / 2, true, Vector2.One, true);
-                Assert.Equal(DefenderState.Down, defender.State);
-                Assert.Equal("Down", defender.AnimationName);
-                animation = (AnimationPlayer)field.GetValue(defender)!;
-                float loopDuration = animation.FrameCount / animation.FramesPerSecond;
-                defender.Update(new(30, 0, 30), loopDuration + 0.1f, true, Vector2.One, true);
-                Assert.Equal(DefenderState.Down, defender.State);
-                Assert.InRange(animation.CurrentTime, 0.09f, 0.11f);
-                Assert.Equal(landed, defender.Position);
-                defender.Update(new(30, 0, 30),
-                    Opponent.DefenderDownDurationSeconds - loopDuration - 0.1f, true, Vector2.One, true);
-                Assert.Equal(DefenderState.GetUp, defender.State);
-                animation = (AnimationPlayer)field.GetValue(defender)!;
-                Assert.Equal(0f, animation.CurrentTime);
-                duration = (animation.FrameCount - 1) / animation.FramesPerSecond;
-                defender.Update(new(30, 0, 30), duration - 0.01f, true, Vector2.One, true);
-                Assert.Equal(DefenderState.GetUp, defender.State);
-                Assert.Equal(landed, defender.Position);
+                Assert.True(defender.Ragdoll.IsActive);
+                Assert.Same(animation, field.GetValue(defender));
+                Assert.Equal(duration, animation.CurrentTime, 5);
+                defender.Update(new(30, 0, 30), .2f, true, Vector2.One, true);
+                Assert.True(defender.Ragdoll.IsActive);
                 Assert.Equal(facing, defender.FacingYawDegrees);
-                defender.Update(new(30, 0, 30), 0.01f, true, Vector2.One, true);
-                Assert.Equal(DefenderState.Locomotion, defender.State);
-                Assert.Equal(landed, defender.Position);
-                Assert.Equal(0f, ((AnimationPlayer)field.GetValue(defender)!).CurrentTime);
+                Assert.Equal(duration, animation.CurrentTime, 5);
             }
             foreach (float elapsed in new[] { 0.1f, 0.7f, 1.3f, 3.3f })
             {
@@ -353,9 +329,9 @@ public sealed class TackleReadyTests
             defender.Update(defender.Position + new Vector3(0, 0, -4), 0f);
             defender.Update(defender.Position + new Vector3(0, 0, -1.8f), 0f);
             defender.Update(new(30, 0, 30), 100f, true, Vector2.One, true);
-            Assert.Equal(DefenderState.Locomotion, defender.State);
-            Assert.True(defender.IsGrounded);
-            Assert.Equal(0f, defender.Position.Y);
+            Assert.True(defender.Ragdoll.IsActive);
+            Assert.Equal(DefenderState.LungeTackle, defender.State);
+            Assert.NotEqual("GetUp", defender.AnimationName);
         }
         finally { assets.UnloadAll(); Raylib.CloseWindow(); }
     }

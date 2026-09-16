@@ -54,7 +54,8 @@ public sealed class AiTackleSelectionTests
             Assert.True(defender.IsTouching(defender.Position + Vector3.UnitX * 1.399f));
             Assert.False(defender.IsTouching(defender.Position + Vector3.UnitX * 1.401f));
             defender.Update(start + new Vector3(0, 0, 30), 0.5f);
-            Assert.Equal(lunge ? DefenderState.LungeLand : DefenderState.Locomotion, defender.State);
+            // Without a visual pose, the completed lunge waits rather than fabricating a ragdoll.
+            Assert.Equal(lunge ? DefenderState.LungeTackle : DefenderState.Locomotion, defender.State);
         }
     }
 
