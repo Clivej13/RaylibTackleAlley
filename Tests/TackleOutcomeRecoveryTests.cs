@@ -51,31 +51,39 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
     }
 
     [Fact]
-    public void ContactPreservesPosesAndVelocitiesThenAddsEqualOppositeCommittedImpulse()
+    public void ContactPreservesAnimationHandoffAndAppliesEqualOppositeGeometricImpulse()
     {
         Launch();
         var dc = Field<AnimationPlayer>(_defender, "_animation");
         var cc = Field<AnimationPlayer>(_carrier, "_animation");
         var dp = RagdollPose.Snapshot(Field<ModelInstance>(_defender, "_model").Model, dc);
         var cp = RagdollPose.Snapshot(Field<ModelInstance>(_carrier, "_model").Model, cc);
-        Vector3 dv = _defender.Velocity, cv = _carrier.Velocity, j = LungeTackleOutcome.Impulse(dv);
+        Vector3 dv = _defender.Velocity, cv = _carrier.Velocity;
         _game.Update(0);
         Assert.True(_game.TacklePendingGroundImpact);
         Assert.False(_game.GameOver);
         Assert.True(_defender.Ragdoll.IsActive); Assert.True(_carrier.Ragdoll.IsActive);
-        Assert.True(j.X > 0 && j.Z < 0); Assert.Equal(0, j.Y);
         Vector3 totalChange = Vector3.Zero;
         for (int i = 0; i < 11; i++)
         {
-            float fraction = i == 1 ? .6f : i == 0 ? .4f : 0;
             var d = _defender.Ragdoll.Bodies[i]; var c = _carrier.Ragdoll.Bodies[i];
-            Assert.True(Vector3.Distance(dv - j * fraction / d.Mass, d.LinearVelocity) < .0001f);
-            Assert.True(Vector3.Distance(cv + j * fraction / c.Mass, c.LinearVelocity) < .0001f);
+            Vector3 expected = (dv + cv) * .5f; // The loaded characters have equal total mass.
+            Assert.True(Vector3.Distance(expected, d.LinearVelocity) < .001f, $"Body {i}: expected {expected}, defender {d.LinearVelocity}, incoming {dv}/{cv}");
+            Assert.True(Vector3.Distance(expected, c.LinearVelocity) < .001f);
             totalChange += (d.LinearVelocity - dv) * d.Mass + (c.LinearVelocity - cv) * c.Mass;
         }
         Assert.True(totalChange.Length() < .001f);
+        Vector3 chestImpulse = (_carrier.Ragdoll.Bodies[1].LinearVelocity - cv) * _carrier.Ragdoll.Bodies[1].Mass;
+        Vector3 pelvisImpulse = (_carrier.Ragdoll.Bodies[0].LinearVelocity - cv) * _carrier.Ragdoll.Bodies[0].Mass;
+        Assert.True(chestImpulse.Length() > .01f);
+        Assert.True((chestImpulse / _carrier.Ragdoll.Bodies[1].Mass -
+            pelvisImpulse / _carrier.Ragdoll.Bodies[0].Mass).Length() < .001f);
         CheckPose(dp, Field<RagdollSkeleton>(_defender, "_ragdollSkeleton").ModelPose);
-        CheckPose(cp, Field<RagdollSkeleton>(_carrier, "_ragdollSkeleton").ModelPose);
+        var carrierPose = Field<RagdollSkeleton>(_carrier, "_ragdollSkeleton").ModelPose;
+        // Contact correction may translate the entire pose, but must not deform the handoff.
+        Vector3 shift = carrierPose[0].Translation - cp[0].Translation;
+        CheckPose(cp.Select(p => p * Matrix4x4.CreateTranslation(shift)).ToArray(), carrierPose);
+        Assert.Equal(_carrier.Ragdoll.Bodies[0].Position, _carrier.Position);
         Assert.False(LungeTackleOutcome.Confirm(_defender, _carrier)); // no duplicate impulse
     }
 
@@ -112,6 +120,38 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         Assert.True(_game.TacklePendingGroundImpact);
         _game.ResetRun();
         Assert.False(_game.TacklePendingGroundImpact); Assert.False(_game.GameOver);
+    }
+
+    [Fact]
+    public void ConfirmedContactStartsRegionalDriveUsingExistingGaitWithoutAdvancingAnimationClock()
+    {
+        Launch(); _game.Update(0);
+        Assert.True(_carrier.Ragdoll.IsActivelyDriven);
+        Assert.True(_defender.Ragdoll.IsActivelyDriven);
+        Assert.NotNull(_carrier.Ragdoll.LastHitBody);
+        Assert.NotNull(_defender.Ragdoll.LastHitBody);
+        var gait = Field<Dictionary<string, AnimationPlayer>>(_carrier, "_animations")["CarryRun"];
+        float time = gait.CurrentTime;
+        var model = Field<ModelInstance>(_carrier, "_model").Model;
+        var sample = RagdollPose.StruggleTargets(model, gait, _carrier.Ragdoll);
+        var first = sample(0).ToArray(); var next = sample(.12f).ToArray();
+        Assert.Contains(Enumerable.Range(0, first.Length), i =>
+            _carrier.Ragdoll.Joints[i].Child >= 7 && Math.Abs(Quaternion.Dot(first[i], next[i])) < .999f);
+        for (int i = 0; i < first.Length; i++)
+            if (_carrier.Ragdoll.Joints[i].Child < 7)
+                Assert.True(Math.Abs(Quaternion.Dot(first[i], next[i])) > .99999f);
+        Assert.Equal(time, gait.CurrentTime);
+        float activity = 0;
+        for (int i = 0; i < 24; i++)
+        {
+            _game.Update(Ragdoll.FixedStep);
+            activity = Math.Max(activity, _carrier.Ragdoll.ActiveDriveWeight);
+        }
+        Assert.True(activity > .1f);
+        Assert.Equal(time, gait.CurrentTime);
+        _game.ResetRun();
+        Assert.False(_carrier.Ragdoll.IsActivelyDriven);
+        Assert.False(_defender.Ragdoll.IsActivelyDriven);
     }
 
     [Fact]

@@ -34,7 +34,7 @@ public sealed record RagdollJoint(int Parent, int Child, Vector3 ParentAnchor,
 
 /// <summary>Small position-based articulated capsule solver; metres, kilograms, seconds.
 /// No animation, rendering, character collision or recovery dependencies.</summary>
-public sealed class Ragdoll
+public sealed partial class Ragdoll
 {
     public const float FixedStep = 1f / 120f;
     public const int SolverIterations = 24;
@@ -118,6 +118,7 @@ public sealed class Ragdoll
                 Vector3.Transform(anchor - centre, Quaternion.Inverse(rotation)),
                 Quaternion.Normalize(Quaternion.Inverse(parentReference) * childReference), min, max));
         }
+        StopActiveDrive();
         _bodies = bodies; _joints = joints.ToArray();
         _previousPositions = new Vector3[bodies.Length]; _previousRotations = new Quaternion[bodies.Length];
         _incomingVertical = new float[bodies.Length];
@@ -156,6 +157,7 @@ public sealed class Ragdoll
 
     public void Deactivate()
     {
+        StopActiveDrive();
         State = RagdollState.Inactive; _accumulator = _quietTime = _torsoContactTime = 0f;
         HasMeaningfulGroundContact = false;
         foreach (var b in _bodies) b.LinearVelocity = b.AngularVelocity = Vector3.Zero;
@@ -175,6 +177,7 @@ public sealed class Ragdoll
 
     private void Step()
     {
+        UpdateActiveDrive();
         for (int i = 0; i < _bodies.Length; i++)
         {
             var b = _bodies[i];
@@ -187,8 +190,10 @@ public sealed class Ragdoll
         }
         for (int iteration = 0; iteration < SolverIterations; iteration++)
         {
-            foreach (var joint in _joints)
+            for (int jointIndex = 0; jointIndex < _joints.Length; jointIndex++)
             {
+                var joint = _joints[jointIndex];
+                SolveActiveMotor(jointIndex);
                 var a = _bodies[joint.Parent]; var b = _bodies[joint.Child];
                 // Project angular limits before attachment constraints.
                 Quaternion relative = Quaternion.Inverse(a.Orientation) * b.Orientation;
@@ -258,6 +263,7 @@ public sealed class Ragdoll
             (_bodies[1].Bottom <= GroundHeight + GroundContactTolerance && _incomingVertical[1] <= -GroundImpactMinimumSpeed);
         _torsoContactTime = torsoContact ? _torsoContactTime + FixedStep : 0f;
         HasMeaningfulGroundContact |= torsoContact && (impact || _torsoContactTime >= GroundContactHoldSeconds);
+        if (HasMeaningfulGroundContact) StopActiveDrive();
         _quietTime = quiet && grounded ? _quietTime + FixedStep : 0f;
         State = _quietTime >= SettleDuration ? RagdollState.Settled :
             _quietTime > 0f ? RagdollState.Settling : RagdollState.Active;

@@ -22,6 +22,12 @@ public sealed partial class Opponent
         return true;
     }
 
+    public void BeginTackleStruggle(int? hitBody = null)
+    {
+        if (_model is not null && _animations.TryGetValue("Run", out var gait))
+            Ragdoll.StartActiveDrive(RagdollPose.StruggleTargets(_model.Model, gait, Ragdoll), hitBody);
+    }
+
     private bool UpdatePhysicsAndRecovery(float dt)
     {
         if (Ragdoll.IsActive)

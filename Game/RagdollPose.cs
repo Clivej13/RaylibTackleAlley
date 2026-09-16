@@ -21,6 +21,42 @@ public static class RagdollPose
                 throw new InvalidDataException("Missing animated bone.");
         return result;
     }
+    // Copy only joint rotations from the borrowed clip. Physics owns every world position,
+    // and sampling never advances the locomotion clock or skins over the physics pose.
+    public static unsafe Func<float, IReadOnlyList<Quaternion>> StruggleTargets(
+        Model model, AnimationPlayer gait, Ragdoll ragdoll)
+    {
+        var names = new Dictionary<string, int>();
+        for (int i = 0; i < model.Skeleton.BoneCount; i++) names[new string(model.Skeleton.Bones[i].Name)] = i;
+        int count = Math.Max(1, gait.FrameCount - 1);
+        var frames = new Quaternion[count][];
+        for (int f = 0; f < count; f++)
+        {
+            frames[f] = new Quaternion[ragdoll.Joints.Count];
+            for (int j = 0; j < ragdoll.Joints.Count; j++)
+            {
+                var joint = ragdoll.Joints[j];
+                var parent = ragdoll.Bodies[joint.Parent]; var child = ragdoll.Bodies[joint.Child];
+                // Legs keep stepping; upper body keeps its captured carry/wrap brace.
+                frames[f][j] = joint.Child >= 7
+                    ? Quaternion.Normalize(Quaternion.Inverse(gait.Animation.KeyframePoses[f][names[parent.Bone]].Rotation) *
+                        gait.Animation.KeyframePoses[f][names[child.Bone]].Rotation)
+                    : Quaternion.Normalize(Quaternion.Inverse(parent.Orientation) * child.Orientation);
+            }
+        }
+        float start = gait.CurrentTime * gait.FramesPerSecond;
+        float rate = gait.FramesPerSecond * .8f;
+        var result = new Quaternion[ragdoll.Joints.Count];
+        return seconds =>
+        {
+            float frame = (start + seconds * rate) % count;
+            int a = (int)frame, b = (a + 1) % count;
+            for (int j = 0; j < result.Length; j++)
+                result[j] = Quaternion.Slerp(frames[a][j], frames[b][j], frame - a);
+            return result;
+        };
+    }
+
     public static unsafe RagdollSkeleton Activate(Model model, AnimationPlayer animation, Matrix4x4 world,
         Ragdoll ragdoll, Vector3 velocity, RagdollImpulse? impulse, float ground)
     {
