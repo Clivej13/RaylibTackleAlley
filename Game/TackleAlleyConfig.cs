@@ -49,6 +49,14 @@ public sealed class TackleAlleyConfig
             !float.IsFinite(OpponentSprintSpeed) || OpponentSprintSpeed < 0f)
             throw new ArgumentException("Opponent locomotion speeds must be finite and nonnegative.");
     }
+    public float RagdollDownDuration { get; set; } = 2f;
+    public float RagdollDownBlendDuration { get; set; } = .6f;
+    public void ValidateRagdollRecovery()
+    {
+        if (!float.IsFinite(RagdollDownDuration) || !float.IsFinite(RagdollDownBlendDuration) ||
+            RagdollDownBlendDuration <= 0 || RagdollDownDuration < RagdollDownBlendDuration)
+            throw new ArgumentException("Down duration must be finite and at least the positive recovery blend duration.");
+    }
     public float TackleDistance { get; set; } = 1.4f;
     public bool DrawGameplayDebug { get; set; }
 }

@@ -55,6 +55,7 @@ public sealed partial class Opponent
     // AI supplies intent to the same state update a future defender controller can use.
     public void Update(Vector3 playerPosition, float deltaTime, Vector3? pursuitTarget = null)
     {
+        if (UpdatePhysicsAndRecovery(deltaTime)) return;
         Vector3 offset = playerPosition - _position;
         offset.Y = 0f;
         float distance = offset.Length();
@@ -109,6 +110,7 @@ public sealed partial class Opponent
     public void Update(Vector3 playerPosition, float deltaTime, bool readyHeld,
         Vector2 movement, bool tacklePressed, Vector3? pursuitTarget = null)
     {
+        if (UpdatePhysicsAndRecovery(deltaTime)) return;
         float dt = Math.Max(0f, deltaTime);
         if (IsTackleCommitted)
         {
@@ -224,8 +226,13 @@ public sealed partial class Opponent
             switch (State)
             {
                 case DefenderState.LungeTackle:
-                    EnterRecovery(DefenderState.LungeLand);
-                    break;
+                    // Apply the final authored pose above before handing off. Velocity still
+                    // contains the locked launch direction, actual speed and vertical fall speed.
+                    // No additional impulse is needed: the simulation inherits that momentum.
+                    if (ActivateRagdoll()) Ragdoll.Update(dt);
+                    // A headless defender has no pose to capture. Hold the completed commitment
+                    // until visuals exist; never invent a default pose or resume pursuit.
+                    return;
                 case DefenderState.LungeLand:
                     EnterRecovery(DefenderState.Down);
                     break;
@@ -243,6 +250,15 @@ public sealed partial class Opponent
             }
             if (dt <= 0f) return;
         }
+    }
+
+    // End-of-run continuation: finish only an already committed lunge or owned physics.
+    // This cannot select an action, steer, advance SetWrap, or move the carrier.
+    public void UpdateLungeAfterOutcome(float deltaTime)
+    {
+        float dt = Math.Max(0f, deltaTime);
+        if (UpdatePhysicsAndRecovery(dt)) return;
+        if (State == DefenderState.LungeTackle) UpdateCommitted(dt, false);
     }
 
     private static string SelectReadyAnimation(Vector2 movement)

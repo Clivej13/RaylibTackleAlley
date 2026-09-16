@@ -6,7 +6,7 @@ using RaylibGameFramework.ThreeD;
 
 namespace RaylibTackleAlley.Game;
 
-public sealed class BallCarrier
+public sealed partial class BallCarrier
 {
     private readonly TackleAlleyConfig _config;
     private readonly RightStickInput _rightStick;
@@ -29,7 +29,7 @@ public sealed class BallCarrier
     private Vector3 RenderPosition => Position + new Vector3(0f, _groundOffset, 0f);
 
     private Matrix4x4 PlayerWorldTransform =>
-        (_model?.Model.Transform ?? Matrix4x4.Identity) *
+        Matrix4x4.Transpose(_model?.Model.Transform ?? Matrix4x4.Identity) *
         Matrix4x4.CreateScale(_visualScale) *
         Matrix4x4.CreateRotationY(VisualYawDegrees * MathF.PI / 180f) *
         Matrix4x4.CreateTranslation(RenderPosition);
@@ -100,7 +100,7 @@ public sealed class BallCarrier
         : _jukeRemaining > 0f ? (_jukeDirection < 0 ? "JukeRight" : "JukeLeft") : null;
 
     // Tier 0 remains reserved; no stationary clip is selected.
-    public string AnimationName => _cutName ?? EvadeAnimationName ?? (SpeedTier switch
+    public string AnimationName => _recovery is not null ? (_recovery.Phase == RecoveryPhase.Down ? "Down" : "GetUp") : _cutName ?? EvadeAnimationName ?? (SpeedTier switch
     {
         1 => "CarryJog",
         2 => "CarryRun",
@@ -143,6 +143,7 @@ public sealed class BallCarrier
             _groundOffset = -bounds.Min.Y * _visualScale;
             _football = assets.GetModel("Football");
             _model = model;
+            _visualAssets = assets;
             SelectAnimation();
             UpdateFootballAttachment();
         }
@@ -182,6 +183,7 @@ public sealed class BallCarrier
 
     public BallCarrier(TackleAlleyConfig config)
     {
+        config.ValidateRagdollRecovery();
         _config = config;
         _rightStick = new RightStickInput(config);
         Reset();
@@ -189,6 +191,8 @@ public sealed class BallCarrier
 
     public void Reset()
     {
+        Ragdoll.Deactivate(); _ragdollSkeleton = null; _recovery = null;
+        HasTackleGroundImpact = false; Velocity = Vector3.Zero;
         _rightStick.IgnoreNextMouseDelta();
         _mouseSpinGesture = false;
         Position = Vector3.Zero;
@@ -212,6 +216,8 @@ public sealed class BallCarrier
         _spinDirection = 0;
         SelectAnimation();
         _animation?.SeekTime(0f);
+        if (_model is not null && _animation is not null)
+            Raylib.UpdateModelAnimation(_model.Model, _animation.Animation, _animation.CurrentFrame);
         UpdateFootballAttachment();
     }
 
@@ -219,6 +225,8 @@ public sealed class BallCarrier
 
     public void Update(InputController input, float deltaTime, FootballField field)
     {
+        if (UpdatePhysicsAndRecovery(deltaTime)) return;
+        Vector3 previousPosition = Position;
         float lateral = GetDirectionalValue(input.GetValue("MoveLeft"), input.GetValue("MoveRight"));
         deltaTime = Math.Max(0f, deltaTime);
         // Backward input selects the slow running tier.
@@ -302,12 +310,14 @@ public sealed class BallCarrier
         if (evadeTime > 0f) AdvanceForwardSpeed(evadeTime);
         position.Z -= AdvanceForwardSpeed(Math.Max(0f, deltaTime - evadeTime)) * forwardRetention;
         Position = field.ClampToOuterBoundary(position, 0.7f);
+        if (deltaTime > 0f) Velocity = (Position - previousPosition) / deltaTime;
         if (!cutAdvanced) AdvanceEvadeAnimation(deltaTime, evadeName, evadeRemaining);
         UpdateFootballAttachment();
     }
 
     public void RunIntoEndZone(float deltaTime, float stopZ)
     {
+        if (UpdatePhysicsAndRecovery(deltaTime)) return;
         deltaTime = Math.Max(0f, deltaTime);
         string? evadeName = EvadeAnimationName;
         float evadeRemaining = _spinRemaining > 0f ? _spinRemaining : _jukeRemaining;
@@ -475,8 +485,13 @@ public sealed class BallCarrier
     {
         if (_model is null)
             throw new InvalidOperationException("Initialize player visuals after loading assets.");
-        // Authored spin clips supply the turn; VisualYawDegrees retains the procedural fallback.
-        Raylib.DrawModelEx(_model.Model, RenderPosition,
+        if (Ragdoll.IsActive && _ragdollSkeleton is not null)
+        {
+            _ragdollSkeleton.Apply(_model.Model, Ragdoll);
+            _ragdollSkeleton.Draw(_model.Model);
+        }
+        else if (_recovery is not null) _recovery.Draw();
+        else Raylib.DrawModelEx(_model.Model, RenderPosition,
             Vector3.UnitY, VisualYawDegrees, new Vector3(_visualScale), Color.White);
         if (_football is not { } football)
             throw new InvalidOperationException("Initialize the standalone football asset.");

@@ -1,122 +1,168 @@
 using System.Numerics;
 using System.Reflection;
+using Raylib_cs;
+using RaylibGameFramework.Assets;
+using RaylibGameFramework.Input;
+using RaylibGameFramework.ThreeD;
 using RaylibTackleAlley.Game;
 using Xunit;
 
-public sealed class DefenderRecoveryTests
+// Part 3 replaces the former automatic lunge recovery with persistent physics ownership.
+public sealed class DefenderRecoveryTests : IDisposable
 {
-    private static Opponent Lunge()
+    private readonly AssetManager _assets;
+    public DefenderRecoveryTests()
     {
-        var defender = new Opponent(Vector3.Zero, new());
-        defender.Update(new(0, 0, -30), 0.01f);
-        defender.Update(defender.Position + new Vector3(0, 0, -4), 0f);
-        defender.Update(defender.Position + new Vector3(0, 0, -1.8f), 0f);
-        Assert.Equal(DefenderState.LungeTackle, defender.State);
-        return defender;
+        Raylib.SetTraceLogLevel(TraceLogLevel.Warning);
+        Raylib.SetConfigFlags(ConfigFlags.HiddenWindow);
+        Raylib.InitWindow(640, 480, "Lunge ragdoll transition");
+        _assets = new AssetManager(AssetConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "assets.json")));
+        _assets.RequireAssets(Opponent.AnimationAssetKeys);
+        while (!_assets.ProcessNext()) { }
     }
+    public void Dispose() { _assets.UnloadAll(); Raylib.CloseWindow(); }
+    private static T Field<T>(object target, string name) =>
+        (T)target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target)!;
+    private static AnimationPlayer Animation(Opponent d) => Field<AnimationPlayer>(d, "_animation");
+    private static float Duration(Opponent d) => (Animation(d).FrameCount - 1) / Animation(d).FramesPerSecond;
 
-    private static void Advance(Opponent defender, float dt) =>
-        defender.Update(new(30, 0, 30), dt, true, Vector2.One, true);
-
-    [Fact]
-    public void FallLandsExactlyAndRecoveryIgnoresAllMovementIntent()
+    private Opponent Lunge(float side = 0, float speed = 6.5f, bool visual = true)
     {
-        var defender = Lunge();
-        float yaw = defender.FacingYawDegrees;
-        Vector3 start = defender.Position;
-        Advance(defender, 0.6f);
-        Assert.Equal(DefenderState.LungeLand, defender.State);
-        Assert.True(defender.Position.Y > 0f);
-        Assert.True(defender.VerticalVelocity < 0f);
-        Assert.Equal(start.X, defender.Position.X);
-        Advance(defender, 0.3f);
-        Assert.True(defender.IsGrounded);
-        Assert.Equal(0f, defender.Position.Y);
-        Assert.Equal(0f, defender.VerticalVelocity);
-        Assert.Equal(0f, defender.CurrentSpeed);
-        Vector3 landed = defender.Position;
-        Advance(defender, 0.3f);
-        Assert.Equal(DefenderState.Down, defender.State);
-        Advance(defender, Opponent.DefenderDownDurationSeconds - 0.01f);
-        Assert.Equal(DefenderState.Down, defender.State);
-        Assert.Equal(landed, defender.Position);
-        Advance(defender, 0.01f);
-        Assert.Equal(DefenderState.GetUp, defender.State);
-        Advance(defender, 1f);
-        Assert.Equal(DefenderState.GetUp, defender.State);
-        Assert.Equal(landed, defender.Position);
-        Assert.Equal(yaw, defender.FacingYawDegrees);
-        Advance(defender, 1f);
-        Assert.Equal(DefenderState.Locomotion, defender.State);
-        Assert.Equal(landed, defender.Position);
-        defender.Update(new(30, 0, 30), 0.1f, false, Vector2.Zero, false);
-        Assert.NotEqual(landed, defender.Position);
+        var d = new Opponent(new(5, 0, -7), new() { OpponentJogSpeed = speed });
+        if (visual) d.InitializeVisual(_assets);
+        d.Update(d.Position + new Vector3(0, 0, -30), .01f, false, Vector2.Zero, false);
+        // Commit from ready so Left/Right are chosen from the same locked facing.
+        d.Update(d.Position + new Vector3(0, 0, -4), 0, true, Vector2.Zero, false);
+        d.Update(d.Position + new Vector3(side, 0, -1.8f), 0);
+        Assert.Equal(DefenderState.LungeTackle, d.State);
+        return d;
     }
 
     [Theory]
-    [InlineData(0.1f, DefenderState.LungeTackle)]
-    [InlineData(0.7f, DefenderState.LungeLand)]
-    [InlineData(1.3f, DefenderState.Down)]
-    [InlineData(3.3f, DefenderState.GetUp)]
-    public void ResetClearsEveryRecoveryStage(float time, DefenderState state)
+    [InlineData(-.8f, 4f)]
+    [InlineData(0f, 6.5f)]
+    [InlineData(.8f, 9f)]
+    public void FinalLungeFramePreservesPoseAndActualCommittedVelocity(float side, float speed)
     {
-        var defender = Lunge();
-        Advance(defender, time);
-        Assert.Equal(state, defender.State);
-        defender.Reset();
-        Assert.Equal(DefenderState.Locomotion, defender.State);
-        Assert.Equal("Jog", defender.AnimationName);
-        Assert.Equal(Vector3.Zero, defender.Position);
-        Assert.True(defender.IsGrounded);
-        Assert.Equal(0f, defender.VerticalVelocity);
-        Assert.Equal(4f, defender.CurrentSpeed);
-        Assert.Equal(0f, (float)typeof(Opponent).GetField("_tackleRemaining",
-            BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(defender)!);
-        Assert.Equal(Vector3.Zero, (Vector3)typeof(Opponent).GetField("_movementDirection",
-            BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(defender)!);
+        var d = Lunge(side, speed);
+        var clip = Animation(d);
+        float duration = Duration(d), yaw = d.FacingYawDegrees;
+        Vector3 launchPosition = d.Position;
+        Vector3 direction = Vector3.Normalize(new Vector3(side, 0, -1.8f));
+        d.Update(new(90, 0, 90), duration - .01f, false, Vector2.One, true);
+        Assert.False(d.Ragdoll.IsActive);
+        Assert.Same(clip, Animation(d));
+        d.Update(new(-90, 0, 90), .01f, true, -Vector2.One, true);
+        Assert.True(d.Ragdoll.IsActive);
+        Assert.Equal(RagdollState.Active, d.Ragdoll.State);
+        Assert.Equal(duration, clip.CurrentTime, 5);
+        Assert.Equal(yaw, d.FacingYawDegrees);
+        Assert.True(Vector3.Distance(new(d.Position.X, 0, d.Position.Z),
+            new Vector3(launchPosition.X, 0, launchPosition.Z) + direction * speed * duration) < .0001f);
+        Vector3 expectedVelocity = direction * speed + Vector3.UnitY * (4f - 10f * duration);
+        Assert.All(d.Ragdoll.Bodies, body => Assert.True(Vector3.Distance(expectedVelocity, body.LinearVelocity) < .0001f));
+        var bridge = Field<RagdollSkeleton>(d, "_ragdollSkeleton");
+        var model = Field<ModelInstance>(d, "_model").Model;
+        unsafe {
+            for (int i = 0; i < model.Skeleton.BoneCount; i++)
+            {
+                Assert.True(clip.TryGetBoneTransform(new string(model.Skeleton.Bones[i].Name), out var animated));
+                foreach (var point in new[] { Vector3.Zero, Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ })
+                    Assert.True(Vector3.Distance(Vector3.Transform(point, animated),
+                        Vector3.Transform(point, bridge.ModelPose[i])) < .0001f);
+            }
+        }
+        var start = CentreOfMass(d);
+        for (int i = 0; i < 12; i++) d.Update(new(100, 0, 100), Ragdoll.FixedStep);
+        Assert.True(Vector3.Dot(CentreOfMass(d) - start, direction) > .1f);
+    }
+
+    private static Vector3 CentreOfMass(Opponent d) =>
+        d.Ragdoll.Bodies.Aggregate(Vector3.Zero, (sum, b) => sum + b.Position * b.Mass) /
+        d.Ragdoll.Bodies.Sum(b => b.Mass);
+
+    [Fact]
+    public void MissSettlesAndAiCannotSteerOrRestartAnimation()
+    {
+        var a = Lunge(.8f); var b = Lunge(.8f);
+        float duration = Duration(a);
+        a.Update(Vector3.Zero, duration); b.Update(Vector3.Zero, duration);
+        var clip = Animation(a); float yaw = a.FacingYawDegrees;
+        for (int i = 0; i < 2400 && a.Ragdoll.IsActive; i++)
+        {
+            a.Update(new(200, 0, 100), Ragdoll.FixedStep, true, Vector2.One, true);
+            b.Update(new(-200, 0, -100), Ragdoll.FixedStep);
+        }
+        Assert.Equal(RagdollState.Inactive, a.Ragdoll.State);
+        Assert.Equal(a.Ragdoll.Bodies.Select(x => x.Position), b.Ragdoll.Bodies.Select(x => x.Position));
+        Assert.Equal(duration, clip.CurrentTime, 5);
+        Assert.Equal(DefenderState.Down, a.State);
+        Assert.Equal("Down", a.AnimationName);
+        Assert.All(a.Ragdoll.Bodies, x => Assert.True(x.Bottom >= -.00001f));
     }
 
     [Fact]
-    public void LargeDeltaMatchesSmallStepsAtGroundAndCannotStick()
+    public void CrossingBoundaryConsumesOnlyRemainingTimeInPhysics()
     {
-        var large = Lunge();
-        var small = Lunge();
-        Advance(large, 1.5f);
-        for (int i = 0; i < 150; i++) Advance(small, 0.01f);
-        Assert.Equal(DefenderState.Down, large.State);
-        Assert.Equal(large.State, small.State);
-        Assert.True(Vector3.Distance(large.Position, small.Position) < 0.0001f);
-        Advance(large, 100f);
-        Assert.Equal(DefenderState.Locomotion, large.State);
-        Assert.True(large.IsGrounded);
-        Assert.Equal(0f, large.Position.Y);
-        Assert.Equal(0f, large.VerticalVelocity);
+        var whole = Lunge(); var split = Lunge();
+        float duration = Duration(whole);
+        whole.Update(Vector3.Zero, duration + .1f);
+        split.Update(Vector3.Zero, duration);
+        split.Update(Vector3.Zero, .1f);
+        for (int i = 0; i < whole.Ragdoll.Bodies.Count; i++)
+            Assert.True(Vector3.Distance(whole.Ragdoll.Bodies[i].Position, split.Ragdoll.Bodies[i].Position) < .0001f);
+    }
+
+    [Theory]
+    [InlineData(.1f)]
+    [InlineData(.6f)]
+    [InlineData(2f)]
+    public void ResetClearsLungeAndPhysics(float elapsed)
+    {
+        var d = Lunge();
+        for (float t = 0; t < elapsed; t += .01f) d.Update(Vector3.Zero, .01f);
+        d.Reset();
+        Assert.Equal(DefenderState.Locomotion, d.State);
+        Assert.Equal(RagdollState.Inactive, d.Ragdoll.State);
+        Assert.Equal("Jog", d.AnimationName);
+        Assert.Equal(new Vector3(5, 0, -7), d.Position);
+        Assert.Equal(Vector3.Zero, d.Velocity);
+        Assert.Equal(0f, Field<float>(d, "_tackleRemaining"));
+        Assert.Equal(0f, Animation(d).CurrentTime);
+        d.Update(d.Position + new Vector3(0, 0, -30), .1f, false, Vector2.Zero, false);
+        Assert.True(Animation(d).CurrentTime > 0);
     }
 
     [Fact]
-    public void LandingClipWaitsForGroundEvenAfterAnimationCompletes()
+    public void SetWrapStaysGroundedAndNeverHandsOff()
     {
-        var defender = Lunge();
-        typeof(Opponent).GetProperty(nameof(Opponent.VerticalVelocity))!.SetValue(defender, 10f);
-        Advance(defender, 1.3f);
-        Assert.Equal(DefenderState.LungeLand, defender.State);
-        Assert.False(defender.IsGrounded);
-        Advance(defender, 0.8f);
-        Assert.True(defender.IsGrounded);
-        Assert.Equal(DefenderState.Down, defender.State);
+        var d = new Opponent(Vector3.Zero, new());
+        d.InitializeVisual(_assets);
+        d.Update(new(0, 0, 1), 0, true, Vector2.Zero, true);
+        float duration = Duration(d);
+        d.UpdateLungeAfterOutcome(.2f);
+        Assert.Equal(0f, Animation(d).CurrentTime);
+        d.Update(Vector3.Zero, duration, true, Vector2.Zero, false);
+        Assert.Equal(DefenderState.TackleReady, d.State);
+        Assert.False(d.Ragdoll.IsActive);
+        Assert.True(d.IsGrounded);
+        Assert.Equal(Vector3.Zero, d.Position);
     }
 
     [Fact]
-    public void SetWrapStaysGroundedAndBypassesRecovery()
+    public void HeadlessCompletionWaitsForActualPoseAndThenHandsOff()
     {
-        var defender = new Opponent(Vector3.Zero, new());
-        defender.Update(new(0, 0, 1), 0f, true, Vector2.Zero, true);
-        Advance(defender, 0.2f);
-        Assert.Equal(DefenderState.SetWrap, defender.State);
-        Assert.True(defender.IsGrounded);
-        Assert.Equal(Vector3.Zero, defender.Position);
-        Advance(defender, 0.2f);
-        Assert.Equal(DefenderState.TackleReady, defender.State);
-        Assert.True(defender.IsGrounded);
+        var d = Lunge(visual: false);
+        d.Update(Vector3.Zero, .6f);
+        var position = d.Position; var velocity = d.Velocity;
+        d.Update(new(100, 0, 100), 10f);
+        Assert.Equal(position, d.Position);
+        Assert.Equal(DefenderState.LungeTackle, d.State);
+        Assert.False(d.Ragdoll.IsActive);
+        d.InitializeVisual(_assets);
+        d.Update(Vector3.Zero, 0f);
+        Assert.True(d.Ragdoll.IsActive);
+        Assert.All(d.Ragdoll.Bodies, body => Assert.Equal(velocity, body.LinearVelocity));
     }
+
 }

@@ -32,5 +32,7 @@
   "OpponentRunDistance": 20.0,
   "OpponentSprintDistance": 8.0,
   "OpponentPaceHysteresis": 0.5,
+  "RagdollDownDuration": 2.0,
+  "RagdollDownBlendDuration": 0.6,
   "TackleDistance": 1.4
 }
