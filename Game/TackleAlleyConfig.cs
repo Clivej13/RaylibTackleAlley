@@ -19,6 +19,10 @@ public sealed class TackleAlleyConfig
     public float CameraSpeed3Distance { get; set; } = 5.40f;
     public float CameraHeight { get; set; } = 5.5f;
     public float CameraSmoothing { get; set; } = 10f;
+    public float CameraSteeringYawDegrees { get; set; } = 12f;
+    public float CameraLookSmoothing { get; set; } = 12f;
+    public float CameraLookBackThreshold { get; set; } = .55f;
+    public float CameraLookBackReleaseThreshold { get; set; } = .35f;
     public float FieldWidth { get; set; } = 24f;
     // Gameplay corridor; the visual field and stadium have independent dimensions below.
     public float FieldLength { get; set; } = 84f;
