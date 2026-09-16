@@ -12,6 +12,7 @@ public sealed class TackleAlleyGame
     private readonly ThirdPersonCamera _camera;
     private readonly InputController _input;
     private readonly CarrierPursuitPrediction _pursuitPrediction = new();
+    private Opponent? _tackleDefender;
 
     public bool TacklePendingGroundImpact { get; private set; }
     public bool Touchdown { get; private set; }
@@ -45,6 +46,7 @@ public sealed class TackleAlleyGame
 
     public void ResetRun()
     {
+        _tackleDefender = null;
         _player.Reset();
         _pursuitPrediction.Reset(_player.Position);
         foreach (Opponent opponent in _opponents)
@@ -64,8 +66,7 @@ public sealed class TackleAlleyGame
         RagdollDebugControls.Update(_opponents, _player.Position);
         if (TacklePendingGroundImpact)
         {
-            _player.UpdatePhysicsAndRecovery(deltaTime);
-            foreach (var defender in _opponents) defender.UpdateLungeAfterOutcome(deltaTime);
+            UpdateOutcomePhysics(deltaTime);
             _camera.Update(_player.Position, 0, deltaTime);
             if (_player.HasTackleGroundImpact)
             {
@@ -74,8 +75,8 @@ public sealed class TackleAlleyGame
             }
             return;
         }
-        if (GameOver) _player.UpdatePhysicsAndRecovery(deltaTime);
-        if (Touchdown || GameOver)
+        if (GameOver) UpdateOutcomePhysics(deltaTime);
+        else if (Touchdown)
             foreach (var defender in _opponents)
                 defender.UpdateLungeAfterOutcome(deltaTime);
         if (Touchdown || GameOver)
@@ -111,6 +112,7 @@ public sealed class TackleAlleyGame
             {
                 if (opponent.State == DefenderState.LungeTackle && LungeTackleOutcome.Confirm(opponent, _player))
                 {
+                    _tackleDefender = opponent;
                     TacklePendingGroundImpact = true;
                     break;
                 }
@@ -133,6 +135,29 @@ public sealed class TackleAlleyGame
             Touchdown = true;
             SuccessfulRuns++;
         }
+    }
+
+    private void UpdateOutcomePhysics(float deltaTime)
+    {
+        float remaining = Math.Max(0, deltaTime);
+        // Bound physics catch-up as Ragdoll.Update does, but retain elapsed recovery time.
+        float physicsRemaining = Math.Min(remaining, .25f);
+        while (physicsRemaining > 0)
+        {
+            float step = Math.Min(physicsRemaining, Ragdoll.FixedStep);
+            if (_tackleDefender is { } contact)
+                RagdollContact.Resolve(contact.Ragdoll, _player.Ragdoll);
+            _player.UpdatePhysicsAndRecovery(step);
+            foreach (var defender in _opponents) defender.UpdateLungeAfterOutcome(step);
+            if (_tackleDefender is { } active)
+                RagdollContact.Resolve(active.Ragdoll, _player.Ragdoll);
+            physicsRemaining = Math.Max(0, physicsRemaining - step);
+            remaining = Math.Max(0, remaining - step);
+        }
+        // Refresh the carrier render/football pose after split position correction.
+        _player.UpdatePhysicsAndRecovery(_player.Ragdoll.IsActive ? 0 : remaining);
+        foreach (var defender in _opponents)
+            if (!defender.Ragdoll.IsActive) defender.UpdateLungeAfterOutcome(remaining);
     }
 
     public void Draw()

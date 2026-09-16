@@ -27,6 +27,12 @@ public sealed partial class BallCarrier
         return true;
     }
 
+    public void BeginTackleStruggle(int? hitBody = null)
+    {
+        if (_model is not null && _animations.TryGetValue("CarryRun", out var gait))
+            Ragdoll.StartActiveDrive(RagdollPose.StruggleTargets(_model.Model, gait, Ragdoll), hitBody);
+    }
+
     // Recovery clips are already loaded for defenders during normal game startup.
     // Load players lazily so existing carrier-only consumers need not request these assets.
     private void EnsureRecoveryAnimations()
