@@ -251,6 +251,36 @@ public sealed class ControlsTests : IDisposable
         Event(1, (int)KeyboardKey.LeftShift);
     }
 
+    [Theory]
+    [InlineData(-1f, 0f)]
+    [InlineData(1f, 0f)]
+    [InlineData(0f, 1f)]
+    public void LeftStickControlsGameCameraAlongsideMovement(float x, float y)
+    {
+        var game = new TackleAlleyGame(_config, _input, new AssetManager(new AssetConfig()));
+        var camera = Field<ThirdPersonCamera>(game, "_camera");
+        var player = Field<BallCarrier>(game, "_player");
+        Axis(GamepadAxis.LeftX, x);
+        Axis(GamepadAxis.LeftY, y);
+        _input.Update();
+        for (int i = 0; i < 30; i++) game.Update(Dt);
+        Vector3 view = camera.Camera.Target - camera.Camera.Position;
+        if (y > 0)
+        {
+            Assert.True(view.Z > 0);
+            Assert.Equal(1, player.SpeedTier);
+            Assert.True(player.Position.Z < 0);
+        }
+        else
+        {
+            Assert.True(view.X * x > 0);
+            Assert.True(view.Z < 0);
+            Assert.True(player.Position.X * x > 0);
+        }
+        Axis(GamepadAxis.LeftX, 0);
+        Axis(GamepadAxis.LeftY, 0);
+    }
+
     private void TriggerMomentumMove(bool spin)
     {
         if (spin)

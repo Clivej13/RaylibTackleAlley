@@ -7,6 +7,8 @@ public sealed class ThirdPersonCamera
 {
     private readonly TackleAlleyConfig _config;
     private Vector3 _position;
+    private float _lookYaw;
+    private bool _lookingBack;
     public Camera3D Camera { get; private set; }
 
     public ThirdPersonCamera(TackleAlleyConfig config)
@@ -17,6 +19,8 @@ public sealed class ThirdPersonCamera
 
     public void Reset(Vector3 playerPosition, float currentForwardSpeed)
     {
+        _lookYaw = 0;
+        _lookingBack = false;
         _position = playerPosition + new Vector3(0, _config.CameraHeight, DistanceForSpeed(currentForwardSpeed));
         Update(playerPosition, currentForwardSpeed, 0f);
     }
@@ -32,11 +36,23 @@ public sealed class ThirdPersonCamera
         return lowDistance + (highDistance - lowDistance) * amount;
     }
 
-    public void Update(Vector3 playerPosition, float currentForwardSpeed, float deltaTime)
+    public void Update(Vector3 playerPosition, float currentForwardSpeed, float deltaTime,
+        Vector2 movementInput = default)
     {
+        float backward = Math.Clamp(movementInput.Y, 0, 1);
+        _lookingBack = backward > (_lookingBack
+            ? _config.CameraLookBackReleaseThreshold : _config.CameraLookBackThreshold);
+        float desiredYaw = _lookingBack ? MathF.PI
+            : -Math.Clamp(movementInput.X, -1, 1) * _config.CameraSteeringYawDegrees * MathF.PI / 180f;
+        float lookBlend = 1f - MathF.Exp(-_config.CameraLookSmoothing * Math.Max(deltaTime, 0f));
+        _lookYaw += (desiredYaw - _lookYaw) * lookBlend;
         Vector3 desired = playerPosition + new Vector3(0, _config.CameraHeight, DistanceForSpeed(currentForwardSpeed));
         float blend = 1f - MathF.Exp(-_config.CameraSmoothing * Math.Max(deltaTime, 0f));
         _position = Vector3.Lerp(_position, desired, blend);
-        Camera = new Camera3D { Position = _position, Target = playerPosition + new Vector3(0, 1.1f, -5.5f), Up = Vector3.UnitY, FovY = 55, Projection = CameraProjection.Perspective };
+        // Orbit the smoothed follow position at full radius, never interpolate through the runner.
+        Matrix4x4 rotation = Matrix4x4.CreateRotationY(_lookYaw);
+        Vector3 position = playerPosition + Vector3.Transform(_position - playerPosition, rotation);
+        Vector3 target = playerPosition + Vector3.Transform(new Vector3(0, 1.1f, -5.5f), rotation);
+        Camera = new Camera3D { Position = position, Target = target, Up = Vector3.UnitY, FovY = 55, Projection = CameraProjection.Perspective };
     }
 }

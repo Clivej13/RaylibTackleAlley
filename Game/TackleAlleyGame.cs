@@ -138,7 +138,10 @@ public sealed class TackleAlleyGame
                 break;
             }
         }
-        _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
+        var cameraInput = new System.Numerics.Vector2(
+            Math.Abs(_input.GetValue("MoveRight")) - Math.Abs(_input.GetValue("MoveLeft")),
+            Math.Abs(_input.GetValue("MoveBackward")) - Math.Abs(_input.GetValue("MoveForward")));
+        _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime, cameraInput);
 
         if (TacklePendingGroundImpact) return;
         if (touching)
