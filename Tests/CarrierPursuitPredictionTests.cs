@@ -4,6 +4,18 @@ using Xunit;
 
 public sealed class CarrierPursuitPredictionTests
 {
+    [Fact]
+    public void SlowingAtSprintTierShrinksLead()
+    {
+        var prediction = new CarrierPursuitPrediction();
+        prediction.Reset(Vector3.Zero);
+        var fast = new Vector3(0, 0, -.9f);
+        float fastLead = (prediction.Observe(fast, 3, .1f) - fast).Length();
+        var slow = fast + new Vector3(0, 0, -.09f);
+        float slowLead = (prediction.Observe(slow, 3, .1f) - slow).Length();
+        Assert.Equal(fastLead * .1f, slowLead, 4);
+    }
+
     private static void Near(Vector3 expected, Vector3 actual) =>
         Assert.True(Vector3.Distance(expected, actual) < 0.0001f, $"Expected {expected}, got {actual}");
 
@@ -15,7 +27,8 @@ public sealed class CarrierPursuitPredictionTests
     {
         var prediction = new CarrierPursuitPrediction();
         prediction.Reset(Vector3.Zero);
-        var position = new Vector3(0, 0, -0.5f);
+        float speed = tier == 1 ? 4f : tier == 2 ? 6.5f : 9f;
+        var position = new Vector3(0, 0, -speed * .1f);
         Near(position - Vector3.UnitZ * distance, prediction.Observe(position, tier, 0.1f));
     }
 
@@ -25,7 +38,7 @@ public sealed class CarrierPursuitPredictionTests
         var prediction = new CarrierPursuitPrediction();
         prediction.Reset(Vector3.Zero);
         var position = new Vector3(0.3f, 0, -0.4f);
-        Near(position + new Vector3(1.2f, 0, -1.6f), prediction.Observe(position, 2, 0.1f));
+        Near(position + new Vector3(1.2f, 0, -1.6f) * (5f / 6.5f), prediction.Observe(position, 2, 0.1f));
     }
 
     [Theory]
@@ -49,9 +62,9 @@ public sealed class CarrierPursuitPredictionTests
         prediction.Observe(position, 2, 0.1f);
         position -= Vector3.UnitZ * 0.1f;
         var lead = prediction.Observe(position, 2, 0.01f) - position;
-        Assert.True(lead.X > 0f && lead.Z < 0f);
-        Assert.True(lead.X > -lead.Z);
-        Assert.Equal(2f, lead.Length(), 4);
+        Assert.Equal(0f, lead.X);
+        Assert.True(lead.Z < 0f);
+        Assert.InRange(lead.Length(), 0, .05f);
         for (int i = 0; i < 150; i++)
         {
             position -= Vector3.UnitZ * 0.1f;
@@ -111,7 +124,7 @@ public sealed class CarrierPursuitPredictionTests
         actual.Update(carrier, 0.05f, Vector3.UnitX);
         Assert.Equal(DefenderState.TackleReady, actual.State);
         Assert.True(actual.Position.X > 0f);
-        Assert.Equal(0f, actual.Position.Z, 4);
+        Assert.True(actual.Position.Z < 0f); // Close pursuit still closes on the body.
 
         var baseline = new Opponent(Vector3.Zero, new());
         actual.Reset();

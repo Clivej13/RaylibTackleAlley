@@ -10,7 +10,6 @@ public sealed partial class BallCarrier
 {
     private readonly TackleAlleyConfig _config;
     private readonly RightStickInput _rightStick;
-    private const float VisualHeight = 2f;
     private ModelInstance? _model;
     // Borrowed asset value; only the draw-local copy's transform is changed.
     private Model? _football;
@@ -48,10 +47,10 @@ public sealed partial class BallCarrier
     private float _visualScale;
     private float _groundOffset;
     // Two input units (-1 to +1) in 0.6 seconds; small corrections settle sooner.
-    private const float SprintSteeringRate = 2f / 0.6f;
     private float _effectiveLateral;
-    private const float MaxRunYawDegrees = 45f;
-    private const float RunYawResponse = 12f;
+    private int _lastSteeringSide, _reversalChain;
+    private float _steeringNeutralTime, _reversalDelay;
+    public float SteeringRecoveryRemaining => _reversalDelay;
     private float _currentRunYaw;
     private float _targetRunYaw;
 
@@ -59,15 +58,13 @@ public sealed partial class BallCarrier
     // needs the opposite sign to face the corresponding world X direction.
     private float VisualYawDegrees => -_currentRunYaw + (_spinRemaining > 0f &&
         !(_animation is not null && _animations.TryGetValue(EvadeAnimationName ?? "", out var evade) && evade == _animation)
-        ? _spinDirection * 360f * (1f - _spinRemaining / SpinDuration) : 0f);
+        ? _spinDirection * 360f * (1f - _spinRemaining / _config.PlayerSpinDuration) : 0f);
 
     public Vector3 Position { get; private set; }
+    private float _evadeDistanceScale;
     private float _jukeRemaining;
     private int _jukeDirection;
     private bool _jukeReady = true;
-    private const float SpinDuration = 0.45f;
-    private const float SpinSpeed = 10f;
-    private const float SpinGestureWindow = 0.4f;
     private float _spinGestureRemaining;
     private bool _spinGestureReady = true;
     private bool _spinGestureConsumed;
@@ -75,15 +72,16 @@ public sealed partial class BallCarrier
     private float _spinRemaining;
     private int _spinDirection;
 
-    private const float CutThreshold = 0.65f;
-    private const float CutReversalWindow = 0.40f;
     // Authored keys 1-23 at 60 Hz, including the final recovery pose.
-    private const float CutDuration = 22f / 60f;
     private bool _wasSprinting;
     private int _lastCutSide;
     private float _cutReversalRemaining;
     private string? _cutName;
     private float _cutRemaining;
+
+    public bool IsTaunting { get; private set; }
+    private float _tauntElapsed;
+    public bool TauntComplete => IsTaunting && _tauntElapsed >= 2.6f;
 
     public int SpeedTier { get; private set; } = 2;
     public float CurrentForwardSpeed { get; private set; }
@@ -100,13 +98,19 @@ public sealed partial class BallCarrier
         : _jukeRemaining > 0f ? (_jukeDirection < 0 ? "JukeRight" : "JukeLeft") : null;
 
     // Tier 0 remains reserved; no stationary clip is selected.
-    public string AnimationName => _recovery is not null ? (_recovery.Phase == RecoveryPhase.Down ? "Down" : "GetUp") : _cutName ?? EvadeAnimationName ?? (SpeedTier switch
+    public string AnimationName => _recovery is not null ? (_recovery.Phase == RecoveryPhase.Down ? "Down" : "GetUp") : IsTaunting ? "TauntBicepFlex" : _cutName ?? EvadeAnimationName ?? (SpeedTier switch
     {
         1 => "CarryJog",
         2 => "CarryRun",
         3 => "CarrySprint",
         _ => throw new InvalidOperationException("No locomotion clip for this speed tier.")
     });
+
+    /// <summary>Apply a loaded texture asset to this player's Uniform material.</summary>
+    public void ApplyUniform(AssetManager assets, string textureKey) =>
+        PlayerUniform.ApplyUniform(_model ??
+            throw new InvalidOperationException("Initialize player visuals before selecting a uniform."),
+            assets, textureKey);
 
     // AssetManager owns instances and borrowed clips; instances are released first.
     public unsafe void InitializeVisual(AssetManager assets)
@@ -118,7 +122,7 @@ public sealed partial class BallCarrier
         foreach (string key in new[] { "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
             "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
             "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
-            "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations" })
+            "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations", "FootballPlayerTauntBicepFlexAnimations" })
             foreach (ModelAnimation clip in assets.GetModelAnimations(key))
                 clips[new string(clip.Name)] = clip;
 
@@ -126,7 +130,7 @@ public sealed partial class BallCarrier
         try
         {
             // Construct the initial CarryRun player last so its starting pose is applied last.
-            foreach (string name in new[] { "CutLeft", "CutRight", "JukeLeft", "JukeRight", "SpinLeft", "SpinRight", "CarryJog", "CarrySprint", "CarryRun" })
+            foreach (string name in new[] { "TauntBicepFlex", "CutLeft", "CutRight", "JukeLeft", "JukeRight", "SpinLeft", "SpinRight", "CarryJog", "CarrySprint", "CarryRun" })
             {
                 if (!clips.TryGetValue(name, out ModelAnimation clip) || clip.KeyFrameCount <= 0 ||
                     !Raylib.IsModelAnimationValid(model.Model, clip))
@@ -139,7 +143,7 @@ public sealed partial class BallCarrier
             float height = bounds.Max.Y - bounds.Min.Y;
             if (!float.IsFinite(height) || height <= 0f)
                 throw new InvalidDataException("FootballPlayer must have a finite positive height.");
-            _visualScale = VisualHeight / height;
+            _visualScale = _config.PlayerVisualHeight / height;
             _groundOffset = -bounds.Min.Y * _visualScale;
             _football = assets.GetModel("Football");
             _model = model;
@@ -164,7 +168,7 @@ public sealed partial class BallCarrier
             ReferenceEquals(next, _animation))
             return;
         float phase = 0f;
-        if (_cutName is null && EvadeAnimationName is null && _animation is { } previous &&
+        if (!IsTaunting && _cutName is null && EvadeAnimationName is null && _animation is { } previous &&
             (_animations["CarryJog"] == previous || _animations["CarryRun"] == previous || _animations["CarrySprint"] == previous))
         {
             float duration = previous.FrameCount / previous.FramesPerSecond;
@@ -183,8 +187,11 @@ public sealed partial class BallCarrier
 
     public BallCarrier(TackleAlleyConfig config)
     {
+        config.ValidatePlayer();
         config.ValidateRagdollRecovery();
         _config = config;
+        Ragdoll = new(config);
+        _contactPose = new(config);
         _rightStick = new RightStickInput(config);
         Reset();
     }
@@ -192,11 +199,13 @@ public sealed partial class BallCarrier
     public void Reset()
     {
         Ragdoll.Deactivate(); _ragdollSkeleton = null; _recovery = null;
+        IsTaunting = false; _tauntElapsed = 0f;
         HasTackleGroundImpact = false; Velocity = Vector3.Zero;
         _rightStick.IgnoreNextMouseDelta();
         _mouseSpinGesture = false;
-        Position = Vector3.Zero;
+        Position = _config.PlayerSpawn.Position;
         _effectiveLateral = 0f;
+        ResetSteeringPenalty();
         _currentRunYaw = 0f;
         _targetRunYaw = 0f;
         _cutName = null;
@@ -206,6 +215,7 @@ public sealed partial class BallCarrier
         _cutReversalRemaining = 0f;
         SpeedTier = 2;
         CurrentForwardSpeed = TargetForwardSpeed;
+        _evadeDistanceScale = 0f;
         _jukeRemaining = 0f;
         _jukeDirection = 0;
         _jukeReady = true;
@@ -231,12 +241,13 @@ public sealed partial class BallCarrier
         deltaTime = Math.Max(0f, deltaTime);
         // Backward input selects the slow running tier.
         float backwardInput = input.GetValue("MoveBackward");
-        bool sprinting = input.GetValue("Sprint") > 0.5f;
-        SpeedTier = sprinting ? 3 : Math.Abs(backwardInput) > 0.35f ? 1 : 2;
+        bool sprinting = input.GetValue("Sprint") > _config.SprintInputThreshold;
+        SpeedTier = sprinting ? 3 : Math.Abs(backwardInput) > _config.SlowInputThreshold ? 1 : 2;
 
+        ObserveSteeringReversal(lateral, deltaTime);
         _effectiveLateral = SpeedTier == 3
             ? _effectiveLateral + Math.Clamp(lateral - _effectiveLateral,
-                -SprintSteeringRate * deltaTime, SprintSteeringRate * deltaTime)
+                -_config.PlayerSprintSteeringRate * deltaTime, _config.PlayerSprintSteeringRate * deltaTime)
             : lateral;
 
         UpdateCutGesture(lateral, deltaTime);
@@ -245,7 +256,7 @@ public sealed partial class BallCarrier
         {
             // Sprint steering already limits the turn; facing shares that movement state.
             if (sprinting)
-                _currentRunYaw = _targetRunYaw = _effectiveLateral * MaxRunYawDegrees;
+                _currentRunYaw = _targetRunYaw = _effectiveLateral * _config.PlayerMaxRunYawDegrees;
             else
                 UpdateRunYaw(lateral, deltaTime);
         }
@@ -274,16 +285,17 @@ public sealed partial class BallCarrier
         {
             UpdateSpinGesture(spinX, spinBack, headZ, deltaTime, rightStick.IsMouse);
         }
-        if (!headFake && Math.Abs(juke) < 0.25f && !_spinGestureConsumed)
+        if (!headFake && Math.Abs(juke) < _config.EvadeReleaseThreshold && !_spinGestureConsumed)
             _jukeReady = true;
-        else if (!headFake && Math.Abs(juke) >= 0.65f && _jukeReady)
+        else if (!headFake && Math.Abs(juke) >= _config.JukeInputThreshold && _jukeReady)
         {
             if (_jukeRemaining <= 0f && _spinRemaining <= 0f
                 && _spinGestureRemaining <= 0f && !_spinGestureConsumed)
             {
                 _jukeDirection = Math.Sign(juke);
                 _jukeRemaining = _config.PlayerJukeDuration;
-                CurrentForwardSpeed = TargetForwardSpeed * 0.50f;
+                CaptureEvadeDistance();
+                ApplyEvadeSpeedRetention(_config.JukeSpeedRetention);
             }
             // Holding the stick must not repeat or queue a juke.
             _jukeReady = false;
@@ -296,20 +308,25 @@ public sealed partial class BallCarrier
         float spinTime = Math.Min(deltaTime, _spinRemaining);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
         Vector3 position = Position;
-        // A move owns sideways movement until its animation ends.
-        position.X += _jukeDirection * _config.PlayerJukeSpeed * jukeTime
-            + _spinDirection * SpinSpeed * spinTime
-            + _effectiveLateral * _config.PlayerLateralSpeed * Math.Max(0f, deltaTime - jukeTime - spinTime);
+        bool steeringPenaltyActive = _reversalChain > 0;
         // Forward travel is automatic, independent of forward/back input.
-        const float FullSteeringForwardRetention = 0.75f;
         float lateralAmount = Math.Abs(_effectiveLateral);
-        float forwardRetention = 1f + (FullSteeringForwardRetention - 1f) * lateralAmount;
+        float forwardRetention = 1f + (_config.FullSteeringForwardRetention - 1f) * lateralAmount;
         // Recover momentum during either evade, but pause forward travel until it ends.
         // Split at the move boundary so long frames resume only after the animation.
         float evadeTime = jukeTime + spinTime;
         if (evadeTime > 0f) AdvanceForwardSpeed(evadeTime);
-        position.Z -= AdvanceForwardSpeed(Math.Max(0f, deltaTime - evadeTime)) * forwardRetention;
-        Position = field.ClampToOuterBoundary(position, 0.7f);
+        float normalTime = Math.Max(0f, deltaTime - evadeTime);
+        float forwardDistance = AdvanceForwardSpeed(normalTime);
+        // Integrate sideways motion using the same lost/recovered momentum, so a
+        // stopped runner cannot keep zigzagging at full lateral speed.
+        float lateralTime = steeringPenaltyActive
+            ? (TargetForwardSpeed > 0 ? forwardDistance / TargetForwardSpeed : 0) : normalTime;
+        position.X += _jukeDirection * _config.PlayerJukeSpeed * _evadeDistanceScale * jukeTime
+            + _spinDirection * _config.PlayerSpinSpeed * _evadeDistanceScale * spinTime
+            + _effectiveLateral * _config.PlayerLateralSpeed * lateralTime;
+        position.Z -= forwardDistance * forwardRetention;
+        Position = field.ClampToOuterBoundary(position, _config.PlayerBoundaryRadius);
         if (deltaTime > 0f) Velocity = (Position - previousPosition) / deltaTime;
         if (!cutAdvanced) AdvanceEvadeAnimation(deltaTime, evadeName, evadeRemaining);
         UpdateFootballAttachment();
@@ -317,6 +334,20 @@ public sealed partial class BallCarrier
 
     public void RunIntoEndZone(float deltaTime, float stopZ)
     {
+        if (Position.Z <= stopZ || IsTaunting)
+        {
+            IsTaunting = true;
+            _cutName = null;
+            _jukeRemaining = _spinRemaining = 0f;
+            CurrentForwardSpeed = 0f;
+            Velocity = Vector3.Zero;
+            SelectAnimation();
+            float dt = Math.Max(0f, deltaTime);
+            _tauntElapsed += dt;
+            _animation?.Update(dt);
+            UpdateFootballAttachment();
+            return;
+        }
         if (UpdatePhysicsAndRecovery(deltaTime)) return;
         deltaTime = Math.Max(0f, deltaTime);
         string? evadeName = EvadeAnimationName;
@@ -349,15 +380,15 @@ public sealed partial class BallCarrier
         // Freeze the previous strong raw direction for this release opportunity.
         // Neutral and Sprint re-presses neither replace it nor refresh its timer.
         if (releasedSprint && _cutReversalRemaining <= 0f && _lastCutSide != 0)
-            _cutReversalRemaining = CutReversalWindow;
+            _cutReversalRemaining = _config.PlayerCutReversalWindow;
 
-        int side = Math.Abs(lateral) >= CutThreshold ? Math.Sign(lateral) : 0;
+        int side = Math.Abs(lateral) >= _config.PlayerCutThreshold ? Math.Sign(lateral) : 0;
         if (_cutReversalRemaining > 0f)
         {
             if (side != 0 && _lastCutSide == -side)
             {
                 _cutName = side > 0 ? "CutRight" : "CutLeft";
-                _cutRemaining = CutDuration;
+                _cutRemaining = _config.PlayerCutDuration;
                 _targetRunYaw = _currentRunYaw;
                 _lastCutSide = 0;
                 _cutReversalRemaining = 0f;
@@ -380,7 +411,7 @@ public sealed partial class BallCarrier
         }
 
         bool spin = name.StartsWith("Spin", StringComparison.Ordinal);
-        float duration = spin ? SpinDuration : _config.PlayerJukeDuration;
+        float duration = spin ? _config.PlayerSpinDuration : _config.PlayerJukeDuration;
         if (_animations.TryGetValue(name, out var clip))
         {
             bool changed = !ReferenceEquals(_animation, clip);
@@ -416,25 +447,76 @@ public sealed partial class BallCarrier
         // on its 24-interval gait. Sprint/Jog use the equivalent gait phase.
         float exitPhase = _cutName == "CutRight" ? 21f / 24f : 9f / 24f;
         // Neutral locomotion takes over the absolute heading from the local 90-degree turn.
-        _currentRunYaw = _targetRunYaw = _cutName == "CutLeft" ? -MaxRunYawDegrees : MaxRunYawDegrees;
+        _currentRunYaw = _targetRunYaw = _cutName == "CutLeft" ? -_config.PlayerMaxRunYawDegrees : _config.PlayerMaxRunYawDegrees;
         _cutName = null;
         SelectAnimation();
         _animation?.SeekPhase(exitPhase);
         _animation?.Update(deltaTime - cutTime);
     }
 
+    private void ResetSteeringPenalty()
+    {
+        _lastSteeringSide = _reversalChain = 0;
+        _steeringNeutralTime = _reversalDelay = 0;
+    }
+
+    private void ObserveSteeringReversal(float lateral, float dt)
+    {
+        int side = Math.Abs(lateral) >= _config.PlayerReversalInputThreshold ? Math.Sign(lateral) : 0;
+        if (side == 0)
+        {
+            _steeringNeutralTime += dt;
+            if (_steeringNeutralTime > _config.PlayerReversalWindow) _lastSteeringSide = 0;
+            return;
+        }
+        if (_lastSteeringSide != 0 && side != _lastSteeringSide &&
+            _steeringNeutralTime <= _config.PlayerReversalWindow && _config.PlayerReversalSpeedLoss > 0)
+        {
+            CurrentForwardSpeed = Math.Max(0, CurrentForwardSpeed - TargetForwardSpeed * _config.PlayerReversalSpeedLoss);
+            // Bound the chain counter once further reversals cannot lengthen the delay.
+            float delay = _config.PlayerReversalAccelerationDelay +
+                _reversalChain * _config.PlayerReversalAdditionalDelay;
+            if (_reversalChain == 0 || (_config.PlayerReversalAdditionalDelay > 0 &&
+                delay < _config.PlayerReversalMaximumDelay)) _reversalChain++;
+            _reversalDelay = Math.Min(delay, _config.PlayerReversalMaximumDelay);
+        }
+        _lastSteeringSide = side;
+        _steeringNeutralTime = 0;
+    }
+
+    private void CaptureEvadeDistance()
+    {
+        // Snapshot physical pace before the move's own speed penalty. Recovery during
+        // the animation must not lengthen an evade started slowly or at a standstill.
+        _evadeDistanceScale = _config.PlayerForwardSpeed > 0
+            ? Math.Clamp(CurrentForwardSpeed / _config.PlayerForwardSpeed, 0,
+                _config.PlayerEvadeMaximumDistanceScale) : 0;
+    }
+
+    private void ApplyEvadeSpeedRetention(float retention)
+    {
+        float speed = TargetForwardSpeed * retention;
+        CurrentForwardSpeed = _reversalChain > 0 ? Math.Min(CurrentForwardSpeed, speed) : speed;
+    }
+
     private float AdvanceForwardSpeed(float deltaTime)
     {
-        var step = SpeedRamp.Advance(CurrentForwardSpeed, TargetForwardSpeed,
-            _config.ForwardAcceleration, _config.ForwardDeceleration, deltaTime);
+        // Split at the lockout boundary so catch-up frames cannot accelerate early.
+        float heldTime = Math.Min(deltaTime, _reversalDelay);
+        var held = SpeedRamp.Advance(CurrentForwardSpeed, Math.Min(CurrentForwardSpeed, TargetForwardSpeed),
+            _config.ForwardAcceleration, _config.ForwardDeceleration, heldTime);
+        _reversalDelay = Math.Max(0, _reversalDelay - heldTime);
+        var step = SpeedRamp.Advance(held.Speed, TargetForwardSpeed,
+            _config.ForwardAcceleration, _config.ForwardDeceleration, deltaTime - heldTime);
         CurrentForwardSpeed = step.Speed;
-        return step.Distance;
+        if (_reversalDelay <= 0 && CurrentForwardSpeed >= TargetForwardSpeed) _reversalChain = 0;
+        return held.Distance + step.Distance;
     }
 
     private void UpdateSpinGesture(float side, float back, float headZ, float deltaTime, bool isMouse)
     {
         _spinGestureRemaining = Math.Max(0f, _spinGestureRemaining - deltaTime);
-        if (Math.Abs(side) < 0.25f && back < 0.25f && Math.Abs(headZ) < 0.25f)
+        if (Math.Abs(side) < _config.EvadeReleaseThreshold && back < _config.EvadeReleaseThreshold && Math.Abs(headZ) < _config.EvadeReleaseThreshold)
         {
             // No mouse delta means no movement, not an explicit stick release.
             // Retain a mouse back gesture only for the existing 0.4-second window.
@@ -447,20 +529,21 @@ public sealed partial class BallCarrier
         }
 
         // Start near straight back, then roll to either side. Controller neutral cancels.
-        if (_spinGestureReady && back >= 0.65f && Math.Abs(side) < 0.35f)
+        if (_spinGestureReady && back >= _config.SpinBackThreshold && Math.Abs(side) < _config.SpinBackLateralTolerance)
         {
             _mouseSpinGesture = isMouse;
             _spinGestureReady = false;
             _spinGestureConsumed = true;
             if (_jukeRemaining <= 0f && _spinRemaining <= 0f)
-                _spinGestureRemaining = SpinGestureWindow;
+                _spinGestureRemaining = _config.PlayerSpinGestureWindow;
         }
 
-        if (_spinGestureRemaining > 0f && Math.Abs(side) >= 0.65f && back < 0.75f)
+        if (_spinGestureRemaining > 0f && Math.Abs(side) >= _config.SpinSideThreshold && back < _config.SpinSideBackLimit)
         {
             _spinDirection = Math.Sign(side);
-            _spinRemaining = SpinDuration;
-            CurrentForwardSpeed = TargetForwardSpeed * 0.30f;
+            _spinRemaining = _config.PlayerSpinDuration;
+            CaptureEvadeDistance();
+            ApplyEvadeSpeedRetention(_config.SpinSpeedRetention);
             _spinGestureRemaining = 0f;
             _jukeReady = false;
         }
@@ -476,8 +559,8 @@ public sealed partial class BallCarrier
 
     private void UpdateRunYaw(float lateral, float deltaTime)
     {
-        _targetRunYaw = lateral * MaxRunYawDegrees;
-        float blend = 1f - MathF.Exp(-RunYawResponse * deltaTime);
+        _targetRunYaw = lateral * _config.PlayerMaxRunYawDegrees;
+        float blend = 1f - MathF.Exp(-_config.PlayerRunYawResponse * deltaTime);
         _currentRunYaw += (_targetRunYaw - _currentRunYaw) * blend;
     }
 

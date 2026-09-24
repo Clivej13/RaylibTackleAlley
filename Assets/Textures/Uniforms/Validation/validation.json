@@ -1,0 +1,95 @@
+{
+  "source_sha256": "b12f0fbe634140748f81188f50ea2d32dd4a79f4076a6ec9aff3fa089620cb2e",
+  "regions": {
+    "Chest": {
+      "triangles": 56,
+      "positive_uv_winding": 56,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.999946289062564
+    },
+    "Back": {
+      "triangles": 56,
+      "positive_uv_winding": 56,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.999946289062564
+    },
+    "Sleeve_L": {
+      "triangles": 144,
+      "positive_uv_winding": 144,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.999970703124973
+    },
+    "Sleeve_R": {
+      "triangles": 144,
+      "positive_uv_winding": 144,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.9999853515626
+    },
+    "Helmet_L": {
+      "triangles": 140,
+      "positive_uv_winding": 140,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.999970703124973
+    },
+    "Helmet_R": {
+      "triangles": 140,
+      "positive_uv_winding": 140,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.9999853515626
+    },
+    "Trousers_front": {
+      "triangles": 168,
+      "positive_uv_winding": 168,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 12.0
+    },
+    "Trousers_back": {
+      "triangles": 168,
+      "positive_uv_winding": 168,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 12.0
+    },
+    "Sock_L": {
+      "triangles": 280,
+      "positive_uv_winding": 280,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 12.0
+    },
+    "Sock_R": {
+      "triangles": 280,
+      "positive_uv_winding": 280,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.999951171874955
+    },
+    "Helmet_crown": {
+      "triangles": 316,
+      "positive_uv_winding": 316,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 12.000024414062409
+    },
+    "Undershirt": {
+      "triangles": 908,
+      "positive_uv_winding": 908,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 12.0
+    },
+    "Jersey_sides_trim": {
+      "triangles": 176,
+      "positive_uv_winding": 176,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 11.999975585937591
+    },
+    "Sock_underlayers": {
+      "triangles": 560,
+      "positive_uv_winding": 560,
+      "negative_uv_winding": 0,
+      "min_rectangle_gutter_px": 12.0
+    }
+  },
+  "overlapping_triangle_interior_pixels_2048": 0,
+  "region_crossings": [],
+  "degenerate_uv_triangles": 0,
+  "mesh_uv_material_assignment_signature_unchanged": true,
+  "runtime_game_tested": false,
+  "input_glb_unchanged": true
+}

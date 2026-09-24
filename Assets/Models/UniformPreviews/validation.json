@@ -1,0 +1,364 @@
+{
+  "rigged": {
+    "preservation": {
+      "skeleton": "12a64c61d551537bdead84b20a406111ca7241d8f43f60c58550e6d79e75eecb",
+      "actions": {
+        "Pose_ArmsForward": "6a10b8c57c171eeda5a9d1b4846e1ee8f0f463281cca46f1b862d3d7a7d3dbdb",
+        "Pose_Athletic": "2432460139d71cd8451e30d0047cf746fa3c049cfa4acadacd624d7e45c4a1db",
+        "Pose_CrossBody": "c65e92a444f3042bcfab527baa2043a84c11c374a47380df21363d7028d616af",
+        "Pose_HeadLean": "0eed8b790dc3c2d0a36b8abf7fc8bd7cf8003bfec94643a921b60fff143cc58a",
+        "Pose_KneeRaise": "1643c06c42973c829ae6b8df1499d227fd5d2cee23e69fe1b8d1f3a481c60f07",
+        "Pose_Neutral": "916c9de34ca9dc0b0994391f2679a838abc260e32d7c71a3f2aa71215db8822c",
+        "Pose_ShoulderDip": "35506a6b6f34f1774f32e34b825d8323ffaed0dc22ede2b76ea667cf07368d8b",
+        "Pose_TorsoTwist": "71f08a1445ed74cfc1d940da16d9d719ee3eef37d3c3bf0b259c5f7015c17e96"
+      },
+      "meshes": {
+        "Belly": "9e76814ae7843e71d9de7a184025ad357653ad22b5df2c05ea3ccb71b61c021e",
+        "ChinStrap": "c4014ae0a55a7361a7277d3fde16831908d392d728bdc706bf05a54c58b4118d",
+        "Facemask": "09525f662c00a206a74d34864cb4aa3accffc61369c1e2a56b184f2b5a693f41",
+        "Glutes": "eb5dab7da9821ed931e935aeabec636d37d775e54e0027646fe34b24cb5310f7",
+        "Groin": "0841abd6e0ba85a450cedde7b82bfb9cf494b17aebd927360741565e706e27c1",
+        "Helmet": "7bb43892ab953e81069fba0e4e92faaf49a3f5c912b2a64149eec740591d9bc7",
+        "LeftAnkle": "1e10a9eabc8497ab79ebb486de1c0367cead8ee5d73190b9244794556d3f3072",
+        "LeftCalf": "00d684a1d6f1f5850b9086175f979da3f068d23eeb4cd802ed8459d747777598",
+        "LeftChest": "9dda6db86d4720d30b9b7cce78b1937da1ed97ee3736a376c73f2822c17edca0",
+        "LeftEar": "686eb0c508736b9658ea09291561dce969237389a8298a5223f734540af36a07",
+        "LeftEyeArea": "60876ee829ffdc3a67e6f7da30b5fed6b519be6c66e434c62a50d478b281fe01",
+        "LeftFoot": "978af61c76468f933b11b8f49e30d7996af32c5abb7636a5628c4ff595b88ae3",
+        "LeftForearm": "f413829243a37ec289980247c7b6e7343a7fed76755aaff7832e5fe1ed16d98d",
+        "LeftHand": "7accfe6df1ef33edbda1de2cf2eceb73626ba02c7e845ba313c1374b50ac3f92",
+        "LeftKnee": "aae1670f244e245a21fe516de7eb24f475937dbbb06107f4863c789c1960584b",
+        "LeftShoulder": "9256291a2cecf6dc6ae23968f16fc2fc8acad53c1128da8d787c45fc2b25c0b5",
+        "LeftThigh": "c18d67eb9341dbdc4e03e86e62d1618bda6b208878b66d0b0c45594ddddc71c0",
+        "LeftUpperArm": "a9f8aa8d0f04c595c28cb043e8ecc5ca4127a2d95f49ea57446743ceca18eb40",
+        "LowerBack": "89af6a533ae0275d0a49c0063a214ea090c81d0b44b8eb56decf6d038bc1415b",
+        "LowerSkullJaw": "d383f543b053f3e0b477778124105787de4eeb388eaa89037ef105988d0a6fc1",
+        "MouthIndication": "27f9ffdf8cbd109ae5997ce734561fd2a0b6db14ee78a247bd68c2208deb1568",
+        "NeckBase": "c641954c92b84c0a3f884a97cb48f9fac4e606ca1b3f0887f1820db2b3e92bf1",
+        "NosePlane": "1b0bb37a993d2e9493677a084d8e7bd814b4edb77b773be1847cb96489f84fd6",
+        "Pelvis": "729e6a3240f3629d8866f7bba3bd5da4d31aa9235c6a21a6ced8f7af118a0503",
+        "RightAnkle": "fc25a6582b7e8b756ae32bd1f0bb317c9c4366d7be19bca689ee9f992e872755",
+        "RightCalf": "12ae7d1b0cb560807274c0360f679d92ad25f9c1e434b53709f377401de35867",
+        "RightChest": "434f7c01efe554d954a3541f460b66f5c318393009f86f2e334465982b17fd6a",
+        "RightEar": "f827fd0efbbcafc3aa208e2eccf7733c4409cc5b66bdbcc7673a45ec44b2364e",
+        "RightEyeArea": "e59c17f72ad777bbbc0fec5d2748806d55c4717bfc1c4282c482c74ca877d32f",
+        "RightFoot": "2bb11cee4dc23e3594b5b4f93e55276ecfc9a6379b4153d119960b7756372683",
+        "RightForearm": "9bccdfd0b42e75238d8d544422306ffc361ef9f1759fdde68db3ea83373be581",
+        "RightHand": "1b177833777c6cb6cd0378a13c84313bdeb41e797b3ae6600d0750c211c76e1e",
+        "RightKnee": "f738b9fb1ff14d598307063fc9761685bfbaf2a481629c8ad35639e4bc53e369",
+        "RightShoulder": "84c59e02b52156de4a5ff8966a4adaeefb6ebba3f2ddcc4b2058a28dac12524b",
+        "RightThigh": "c129023dfa1a7913d3f94dab93cfe70b9b96553d59e887c45b8dcb84150357de",
+        "RightUpperArm": "850b6265181a7ad913dbae19567c88405ca6ca788fa4284584b0cf91e33a4690",
+        "ShoulderPads": "a3fc10df624529e40c7e68ad036fa238e59444fa5fdc12ee397c6425e7d22020",
+        "UpperBack": "b42dc5a23ebd97db110f15fea51f1e7b5a1efb71c13041a5499803ed0f61a4ba",
+        "UpperSkullCranium": "edc5b11b6eea13c4d7d3e2ad1a8e34b9e60b5649f0c5917d12897d8f044e451c",
+        "Visor": "63f04ef47d544a32bb4abb052dc719686adb3343f8b2a7cf263c54d9aeed1e91"
+      },
+      "equipment_materials": {
+        "Helmet": [
+          "Helmet"
+        ],
+        "Facemask": [
+          "Facemask"
+        ],
+        "Visor": [
+          "Visor"
+        ],
+        "ChinStrap": [
+          "ChinStrap_PaddedNeutral"
+        ],
+        "ShoulderPads": [
+          "ShoulderPads_Shell",
+          "ShoulderPads_Padding"
+        ]
+      }
+    },
+    "animation_checks": {
+      "Pose_Neutral": {
+        "frames_checked": 2,
+        "max_cleat_attachment_error": 2.5809568279517847e-08
+      }
+    },
+    "additional_triangles": 1280,
+    "original_feet_excluded_from_export": true
+  },
+  "jog": {
+    "preservation": {
+      "skeleton": "12a64c61d551537bdead84b20a406111ca7241d8f43f60c58550e6d79e75eecb",
+      "actions": {
+        "Jog": "04f306f672c5f340d5b768f8d99be529bddbe07c4d7c1f3732c1c8e27ed298f0",
+        "Pose_ArmsForward": "6a10b8c57c171eeda5a9d1b4846e1ee8f0f463281cca46f1b862d3d7a7d3dbdb",
+        "Pose_Athletic": "2432460139d71cd8451e30d0047cf746fa3c049cfa4acadacd624d7e45c4a1db",
+        "Pose_CrossBody": "c65e92a444f3042bcfab527baa2043a84c11c374a47380df21363d7028d616af",
+        "Pose_HeadLean": "0eed8b790dc3c2d0a36b8abf7fc8bd7cf8003bfec94643a921b60fff143cc58a",
+        "Pose_KneeRaise": "1643c06c42973c829ae6b8df1499d227fd5d2cee23e69fe1b8d1f3a481c60f07",
+        "Pose_Neutral": "916c9de34ca9dc0b0994391f2679a838abc260e32d7c71a3f2aa71215db8822c",
+        "Pose_ShoulderDip": "35506a6b6f34f1774f32e34b825d8323ffaed0dc22ede2b76ea667cf07368d8b",
+        "Pose_TorsoTwist": "71f08a1445ed74cfc1d940da16d9d719ee3eef37d3c3bf0b259c5f7015c17e96"
+      },
+      "meshes": {
+        "Belly": "9e76814ae7843e71d9de7a184025ad357653ad22b5df2c05ea3ccb71b61c021e",
+        "ChinStrap": "c4014ae0a55a7361a7277d3fde16831908d392d728bdc706bf05a54c58b4118d",
+        "Facemask": "09525f662c00a206a74d34864cb4aa3accffc61369c1e2a56b184f2b5a693f41",
+        "Glutes": "eb5dab7da9821ed931e935aeabec636d37d775e54e0027646fe34b24cb5310f7",
+        "Groin": "0841abd6e0ba85a450cedde7b82bfb9cf494b17aebd927360741565e706e27c1",
+        "Helmet": "7bb43892ab953e81069fba0e4e92faaf49a3f5c912b2a64149eec740591d9bc7",
+        "LeftAnkle": "1e10a9eabc8497ab79ebb486de1c0367cead8ee5d73190b9244794556d3f3072",
+        "LeftCalf": "00d684a1d6f1f5850b9086175f979da3f068d23eeb4cd802ed8459d747777598",
+        "LeftChest": "9dda6db86d4720d30b9b7cce78b1937da1ed97ee3736a376c73f2822c17edca0",
+        "LeftEar": "686eb0c508736b9658ea09291561dce969237389a8298a5223f734540af36a07",
+        "LeftEyeArea": "60876ee829ffdc3a67e6f7da30b5fed6b519be6c66e434c62a50d478b281fe01",
+        "LeftFoot": "978af61c76468f933b11b8f49e30d7996af32c5abb7636a5628c4ff595b88ae3",
+        "LeftForearm": "f413829243a37ec289980247c7b6e7343a7fed76755aaff7832e5fe1ed16d98d",
+        "LeftHand": "7accfe6df1ef33edbda1de2cf2eceb73626ba02c7e845ba313c1374b50ac3f92",
+        "LeftKnee": "aae1670f244e245a21fe516de7eb24f475937dbbb06107f4863c789c1960584b",
+        "LeftShoulder": "9256291a2cecf6dc6ae23968f16fc2fc8acad53c1128da8d787c45fc2b25c0b5",
+        "LeftThigh": "c18d67eb9341dbdc4e03e86e62d1618bda6b208878b66d0b0c45594ddddc71c0",
+        "LeftUpperArm": "a9f8aa8d0f04c595c28cb043e8ecc5ca4127a2d95f49ea57446743ceca18eb40",
+        "LowerBack": "89af6a533ae0275d0a49c0063a214ea090c81d0b44b8eb56decf6d038bc1415b",
+        "LowerSkullJaw": "d383f543b053f3e0b477778124105787de4eeb388eaa89037ef105988d0a6fc1",
+        "MouthIndication": "27f9ffdf8cbd109ae5997ce734561fd2a0b6db14ee78a247bd68c2208deb1568",
+        "NeckBase": "c641954c92b84c0a3f884a97cb48f9fac4e606ca1b3f0887f1820db2b3e92bf1",
+        "NosePlane": "1b0bb37a993d2e9493677a084d8e7bd814b4edb77b773be1847cb96489f84fd6",
+        "Pelvis": "729e6a3240f3629d8866f7bba3bd5da4d31aa9235c6a21a6ced8f7af118a0503",
+        "RightAnkle": "fc25a6582b7e8b756ae32bd1f0bb317c9c4366d7be19bca689ee9f992e872755",
+        "RightCalf": "12ae7d1b0cb560807274c0360f679d92ad25f9c1e434b53709f377401de35867",
+        "RightChest": "434f7c01efe554d954a3541f460b66f5c318393009f86f2e334465982b17fd6a",
+        "RightEar": "f827fd0efbbcafc3aa208e2eccf7733c4409cc5b66bdbcc7673a45ec44b2364e",
+        "RightEyeArea": "e59c17f72ad777bbbc0fec5d2748806d55c4717bfc1c4282c482c74ca877d32f",
+        "RightFoot": "2bb11cee4dc23e3594b5b4f93e55276ecfc9a6379b4153d119960b7756372683",
+        "RightForearm": "9bccdfd0b42e75238d8d544422306ffc361ef9f1759fdde68db3ea83373be581",
+        "RightHand": "1b177833777c6cb6cd0378a13c84313bdeb41e797b3ae6600d0750c211c76e1e",
+        "RightKnee": "f738b9fb1ff14d598307063fc9761685bfbaf2a481629c8ad35639e4bc53e369",
+        "RightShoulder": "84c59e02b52156de4a5ff8966a4adaeefb6ebba3f2ddcc4b2058a28dac12524b",
+        "RightThigh": "c129023dfa1a7913d3f94dab93cfe70b9b96553d59e887c45b8dcb84150357de",
+        "RightUpperArm": "850b6265181a7ad913dbae19567c88405ca6ca788fa4284584b0cf91e33a4690",
+        "ShoulderPads": "a3fc10df624529e40c7e68ad036fa238e59444fa5fdc12ee397c6425e7d22020",
+        "UpperBack": "b42dc5a23ebd97db110f15fea51f1e7b5a1efb71c13041a5499803ed0f61a4ba",
+        "UpperSkullCranium": "edc5b11b6eea13c4d7d3e2ad1a8e34b9e60b5649f0c5917d12897d8f044e451c",
+        "Visor": "63f04ef47d544a32bb4abb052dc719686adb3343f8b2a7cf263c54d9aeed1e91"
+      },
+      "equipment_materials": {
+        "Helmet": [
+          "Helmet"
+        ],
+        "Facemask": [
+          "Facemask"
+        ],
+        "Visor": [
+          "Visor"
+        ],
+        "ChinStrap": [
+          "ChinStrap_PaddedNeutral"
+        ],
+        "ShoulderPads": [
+          "ShoulderPads_Shell",
+          "ShoulderPads_Padding"
+        ]
+      }
+    },
+    "animation_checks": {
+      "Pose_Neutral": {
+        "frames_checked": 2,
+        "max_cleat_attachment_error": 2.5809568279517847e-08
+      },
+      "Jog": {
+        "frames_checked": 29,
+        "max_cleat_attachment_error": 1.8189185285171422e-07
+      }
+    },
+    "additional_triangles": 1280,
+    "original_feet_excluded_from_export": true
+  },
+  "run": {
+    "preservation": {
+      "skeleton": "12a64c61d551537bdead84b20a406111ca7241d8f43f60c58550e6d79e75eecb",
+      "actions": {
+        "Jog": "04f306f672c5f340d5b768f8d99be529bddbe07c4d7c1f3732c1c8e27ed298f0",
+        "Pose_ArmsForward": "6a10b8c57c171eeda5a9d1b4846e1ee8f0f463281cca46f1b862d3d7a7d3dbdb",
+        "Pose_Athletic": "2432460139d71cd8451e30d0047cf746fa3c049cfa4acadacd624d7e45c4a1db",
+        "Pose_CrossBody": "c65e92a444f3042bcfab527baa2043a84c11c374a47380df21363d7028d616af",
+        "Pose_HeadLean": "0eed8b790dc3c2d0a36b8abf7fc8bd7cf8003bfec94643a921b60fff143cc58a",
+        "Pose_KneeRaise": "1643c06c42973c829ae6b8df1499d227fd5d2cee23e69fe1b8d1f3a481c60f07",
+        "Pose_Neutral": "916c9de34ca9dc0b0994391f2679a838abc260e32d7c71a3f2aa71215db8822c",
+        "Pose_ShoulderDip": "35506a6b6f34f1774f32e34b825d8323ffaed0dc22ede2b76ea667cf07368d8b",
+        "Pose_TorsoTwist": "71f08a1445ed74cfc1d940da16d9d719ee3eef37d3c3bf0b259c5f7015c17e96",
+        "Run": "801dda13dfd9f4bc9bb5385d0705be5cded944d0c5c860f154ee5f49251e429a"
+      },
+      "meshes": {
+        "Belly": "9e76814ae7843e71d9de7a184025ad357653ad22b5df2c05ea3ccb71b61c021e",
+        "ChinStrap": "c4014ae0a55a7361a7277d3fde16831908d392d728bdc706bf05a54c58b4118d",
+        "Facemask": "09525f662c00a206a74d34864cb4aa3accffc61369c1e2a56b184f2b5a693f41",
+        "Glutes": "eb5dab7da9821ed931e935aeabec636d37d775e54e0027646fe34b24cb5310f7",
+        "Groin": "0841abd6e0ba85a450cedde7b82bfb9cf494b17aebd927360741565e706e27c1",
+        "Helmet": "7bb43892ab953e81069fba0e4e92faaf49a3f5c912b2a64149eec740591d9bc7",
+        "LeftAnkle": "1e10a9eabc8497ab79ebb486de1c0367cead8ee5d73190b9244794556d3f3072",
+        "LeftCalf": "00d684a1d6f1f5850b9086175f979da3f068d23eeb4cd802ed8459d747777598",
+        "LeftChest": "9dda6db86d4720d30b9b7cce78b1937da1ed97ee3736a376c73f2822c17edca0",
+        "LeftEar": "686eb0c508736b9658ea09291561dce969237389a8298a5223f734540af36a07",
+        "LeftEyeArea": "60876ee829ffdc3a67e6f7da30b5fed6b519be6c66e434c62a50d478b281fe01",
+        "LeftFoot": "978af61c76468f933b11b8f49e30d7996af32c5abb7636a5628c4ff595b88ae3",
+        "LeftForearm": "f413829243a37ec289980247c7b6e7343a7fed76755aaff7832e5fe1ed16d98d",
+        "LeftHand": "7accfe6df1ef33edbda1de2cf2eceb73626ba02c7e845ba313c1374b50ac3f92",
+        "LeftKnee": "aae1670f244e245a21fe516de7eb24f475937dbbb06107f4863c789c1960584b",
+        "LeftShoulder": "9256291a2cecf6dc6ae23968f16fc2fc8acad53c1128da8d787c45fc2b25c0b5",
+        "LeftThigh": "c18d67eb9341dbdc4e03e86e62d1618bda6b208878b66d0b0c45594ddddc71c0",
+        "LeftUpperArm": "a9f8aa8d0f04c595c28cb043e8ecc5ca4127a2d95f49ea57446743ceca18eb40",
+        "LowerBack": "89af6a533ae0275d0a49c0063a214ea090c81d0b44b8eb56decf6d038bc1415b",
+        "LowerSkullJaw": "d383f543b053f3e0b477778124105787de4eeb388eaa89037ef105988d0a6fc1",
+        "MouthIndication": "27f9ffdf8cbd109ae5997ce734561fd2a0b6db14ee78a247bd68c2208deb1568",
+        "NeckBase": "c641954c92b84c0a3f884a97cb48f9fac4e606ca1b3f0887f1820db2b3e92bf1",
+        "NosePlane": "1b0bb37a993d2e9493677a084d8e7bd814b4edb77b773be1847cb96489f84fd6",
+        "Pelvis": "729e6a3240f3629d8866f7bba3bd5da4d31aa9235c6a21a6ced8f7af118a0503",
+        "RightAnkle": "fc25a6582b7e8b756ae32bd1f0bb317c9c4366d7be19bca689ee9f992e872755",
+        "RightCalf": "12ae7d1b0cb560807274c0360f679d92ad25f9c1e434b53709f377401de35867",
+        "RightChest": "434f7c01efe554d954a3541f460b66f5c318393009f86f2e334465982b17fd6a",
+        "RightEar": "f827fd0efbbcafc3aa208e2eccf7733c4409cc5b66bdbcc7673a45ec44b2364e",
+        "RightEyeArea": "e59c17f72ad777bbbc0fec5d2748806d55c4717bfc1c4282c482c74ca877d32f",
+        "RightFoot": "2bb11cee4dc23e3594b5b4f93e55276ecfc9a6379b4153d119960b7756372683",
+        "RightForearm": "9bccdfd0b42e75238d8d544422306ffc361ef9f1759fdde68db3ea83373be581",
+        "RightHand": "1b177833777c6cb6cd0378a13c84313bdeb41e797b3ae6600d0750c211c76e1e",
+        "RightKnee": "f738b9fb1ff14d598307063fc9761685bfbaf2a481629c8ad35639e4bc53e369",
+        "RightShoulder": "84c59e02b52156de4a5ff8966a4adaeefb6ebba3f2ddcc4b2058a28dac12524b",
+        "RightThigh": "c129023dfa1a7913d3f94dab93cfe70b9b96553d59e887c45b8dcb84150357de",
+        "RightUpperArm": "850b6265181a7ad913dbae19567c88405ca6ca788fa4284584b0cf91e33a4690",
+        "ShoulderPads": "a3fc10df624529e40c7e68ad036fa238e59444fa5fdc12ee397c6425e7d22020",
+        "UpperBack": "b42dc5a23ebd97db110f15fea51f1e7b5a1efb71c13041a5499803ed0f61a4ba",
+        "UpperSkullCranium": "edc5b11b6eea13c4d7d3e2ad1a8e34b9e60b5649f0c5917d12897d8f044e451c",
+        "Visor": "63f04ef47d544a32bb4abb052dc719686adb3343f8b2a7cf263c54d9aeed1e91"
+      },
+      "equipment_materials": {
+        "Helmet": [
+          "Helmet"
+        ],
+        "Facemask": [
+          "Facemask"
+        ],
+        "Visor": [
+          "Visor"
+        ],
+        "ChinStrap": [
+          "ChinStrap_PaddedNeutral"
+        ],
+        "ShoulderPads": [
+          "ShoulderPads_Shell",
+          "ShoulderPads_Padding"
+        ]
+      }
+    },
+    "animation_checks": {
+      "Pose_Neutral": {
+        "frames_checked": 2,
+        "max_cleat_attachment_error": 2.5809568279517847e-08
+      },
+      "Jog": {
+        "frames_checked": 29,
+        "max_cleat_attachment_error": 1.8189185285171422e-07
+      },
+      "Run": {
+        "frames_checked": 25,
+        "max_cleat_attachment_error": 1.2489448945403256e-07
+      }
+    },
+    "additional_triangles": 1280,
+    "original_feet_excluded_from_export": true
+  },
+  "sprint": {
+    "preservation": {
+      "skeleton": "12a64c61d551537bdead84b20a406111ca7241d8f43f60c58550e6d79e75eecb",
+      "actions": {
+        "Jog": "04f306f672c5f340d5b768f8d99be529bddbe07c4d7c1f3732c1c8e27ed298f0",
+        "Pose_ArmsForward": "6a10b8c57c171eeda5a9d1b4846e1ee8f0f463281cca46f1b862d3d7a7d3dbdb",
+        "Pose_Athletic": "2432460139d71cd8451e30d0047cf746fa3c049cfa4acadacd624d7e45c4a1db",
+        "Pose_CrossBody": "c65e92a444f3042bcfab527baa2043a84c11c374a47380df21363d7028d616af",
+        "Pose_HeadLean": "0eed8b790dc3c2d0a36b8abf7fc8bd7cf8003bfec94643a921b60fff143cc58a",
+        "Pose_KneeRaise": "1643c06c42973c829ae6b8df1499d227fd5d2cee23e69fe1b8d1f3a481c60f07",
+        "Pose_Neutral": "916c9de34ca9dc0b0994391f2679a838abc260e32d7c71a3f2aa71215db8822c",
+        "Pose_ShoulderDip": "35506a6b6f34f1774f32e34b825d8323ffaed0dc22ede2b76ea667cf07368d8b",
+        "Pose_TorsoTwist": "71f08a1445ed74cfc1d940da16d9d719ee3eef37d3c3bf0b259c5f7015c17e96",
+        "Run": "801dda13dfd9f4bc9bb5385d0705be5cded944d0c5c860f154ee5f49251e429a",
+        "Sprint": "6d83458576be587aaf8cd879c2a117962b452feb5043cb6b45ac96bc0f54fcfd"
+      },
+      "meshes": {
+        "Belly": "9e76814ae7843e71d9de7a184025ad357653ad22b5df2c05ea3ccb71b61c021e",
+        "ChinStrap": "c4014ae0a55a7361a7277d3fde16831908d392d728bdc706bf05a54c58b4118d",
+        "Facemask": "09525f662c00a206a74d34864cb4aa3accffc61369c1e2a56b184f2b5a693f41",
+        "Glutes": "eb5dab7da9821ed931e935aeabec636d37d775e54e0027646fe34b24cb5310f7",
+        "Groin": "0841abd6e0ba85a450cedde7b82bfb9cf494b17aebd927360741565e706e27c1",
+        "Helmet": "7bb43892ab953e81069fba0e4e92faaf49a3f5c912b2a64149eec740591d9bc7",
+        "LeftAnkle": "1e10a9eabc8497ab79ebb486de1c0367cead8ee5d73190b9244794556d3f3072",
+        "LeftCalf": "00d684a1d6f1f5850b9086175f979da3f068d23eeb4cd802ed8459d747777598",
+        "LeftChest": "9dda6db86d4720d30b9b7cce78b1937da1ed97ee3736a376c73f2822c17edca0",
+        "LeftEar": "686eb0c508736b9658ea09291561dce969237389a8298a5223f734540af36a07",
+        "LeftEyeArea": "60876ee829ffdc3a67e6f7da30b5fed6b519be6c66e434c62a50d478b281fe01",
+        "LeftFoot": "978af61c76468f933b11b8f49e30d7996af32c5abb7636a5628c4ff595b88ae3",
+        "LeftForearm": "f413829243a37ec289980247c7b6e7343a7fed76755aaff7832e5fe1ed16d98d",
+        "LeftHand": "7accfe6df1ef33edbda1de2cf2eceb73626ba02c7e845ba313c1374b50ac3f92",
+        "LeftKnee": "aae1670f244e245a21fe516de7eb24f475937dbbb06107f4863c789c1960584b",
+        "LeftShoulder": "9256291a2cecf6dc6ae23968f16fc2fc8acad53c1128da8d787c45fc2b25c0b5",
+        "LeftThigh": "c18d67eb9341dbdc4e03e86e62d1618bda6b208878b66d0b0c45594ddddc71c0",
+        "LeftUpperArm": "a9f8aa8d0f04c595c28cb043e8ecc5ca4127a2d95f49ea57446743ceca18eb40",
+        "LowerBack": "89af6a533ae0275d0a49c0063a214ea090c81d0b44b8eb56decf6d038bc1415b",
+        "LowerSkullJaw": "d383f543b053f3e0b477778124105787de4eeb388eaa89037ef105988d0a6fc1",
+        "MouthIndication": "27f9ffdf8cbd109ae5997ce734561fd2a0b6db14ee78a247bd68c2208deb1568",
+        "NeckBase": "c641954c92b84c0a3f884a97cb48f9fac4e606ca1b3f0887f1820db2b3e92bf1",
+        "NosePlane": "1b0bb37a993d2e9493677a084d8e7bd814b4edb77b773be1847cb96489f84fd6",
+        "Pelvis": "729e6a3240f3629d8866f7bba3bd5da4d31aa9235c6a21a6ced8f7af118a0503",
+        "RightAnkle": "fc25a6582b7e8b756ae32bd1f0bb317c9c4366d7be19bca689ee9f992e872755",
+        "RightCalf": "12ae7d1b0cb560807274c0360f679d92ad25f9c1e434b53709f377401de35867",
+        "RightChest": "434f7c01efe554d954a3541f460b66f5c318393009f86f2e334465982b17fd6a",
+        "RightEar": "f827fd0efbbcafc3aa208e2eccf7733c4409cc5b66bdbcc7673a45ec44b2364e",
+        "RightEyeArea": "e59c17f72ad777bbbc0fec5d2748806d55c4717bfc1c4282c482c74ca877d32f",
+        "RightFoot": "2bb11cee4dc23e3594b5b4f93e55276ecfc9a6379b4153d119960b7756372683",
+        "RightForearm": "9bccdfd0b42e75238d8d544422306ffc361ef9f1759fdde68db3ea83373be581",
+        "RightHand": "1b177833777c6cb6cd0378a13c84313bdeb41e797b3ae6600d0750c211c76e1e",
+        "RightKnee": "f738b9fb1ff14d598307063fc9761685bfbaf2a481629c8ad35639e4bc53e369",
+        "RightShoulder": "84c59e02b52156de4a5ff8966a4adaeefb6ebba3f2ddcc4b2058a28dac12524b",
+        "RightThigh": "c129023dfa1a7913d3f94dab93cfe70b9b96553d59e887c45b8dcb84150357de",
+        "RightUpperArm": "850b6265181a7ad913dbae19567c88405ca6ca788fa4284584b0cf91e33a4690",
+        "ShoulderPads": "a3fc10df624529e40c7e68ad036fa238e59444fa5fdc12ee397c6425e7d22020",
+        "UpperBack": "b42dc5a23ebd97db110f15fea51f1e7b5a1efb71c13041a5499803ed0f61a4ba",
+        "UpperSkullCranium": "edc5b11b6eea13c4d7d3e2ad1a8e34b9e60b5649f0c5917d12897d8f044e451c",
+        "Visor": "63f04ef47d544a32bb4abb052dc719686adb3343f8b2a7cf263c54d9aeed1e91"
+      },
+      "equipment_materials": {
+        "Helmet": [
+          "Helmet"
+        ],
+        "Facemask": [
+          "Facemask"
+        ],
+        "Visor": [
+          "Visor"
+        ],
+        "ChinStrap": [
+          "ChinStrap_PaddedNeutral"
+        ],
+        "ShoulderPads": [
+          "ShoulderPads_Shell",
+          "ShoulderPads_Padding"
+        ]
+      }
+    },
+    "animation_checks": {
+      "Pose_Neutral": {
+        "frames_checked": 2,
+        "max_cleat_attachment_error": 2.5809568279517847e-08
+      },
+      "Jog": {
+        "frames_checked": 29,
+        "max_cleat_attachment_error": 1.8189185285171422e-07
+      },
+      "Run": {
+        "frames_checked": 25,
+        "max_cleat_attachment_error": 1.2489448945403256e-07
+      },
+      "Sprint": {
+        "frames_checked": 21,
+        "max_cleat_attachment_error": 1.7943374184954607e-07
+      }
+    },
+    "additional_triangles": 1280,
+    "original_feet_excluded_from_export": true
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "action": "TauntBicepFlex",
+  "duration_seconds": 2.6,
+  "get_up_entry_match": true,
+  "standing_exit_match": true,
+  "geometry_skeleton_weights_preserved": true,
+  "root_identity": true,
+  "maximum_foot_matrix_error": 5.960464477539063e-08,
+  "minimum_mesh_y": 0.00299999862909317,
+  "single_named_glb_action": true
+}

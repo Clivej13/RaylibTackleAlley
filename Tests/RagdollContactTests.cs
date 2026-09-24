@@ -4,7 +4,7 @@ using Xunit;
 
 public sealed class RagdollContactTests
 {
-    internal static Ragdoll Create(Vector3 position, Vector3 velocity)
+    internal static Ragdoll Create(Vector3 position, Vector3 velocity, TackleAlleyConfig? config = null)
     {
         var points = new Dictionary<string, Vector3> {
             ["Hips"] = new(0, 1, 0), ["Chest"] = new(0, 1.4f, 0),
@@ -20,7 +20,7 @@ public sealed class RagdollContactTests
             points["Foot." + side] = new(x * .5f, .1f, 0);
         }
         var pose = points.ToDictionary(p => p.Key, p => Matrix4x4.CreateTranslation(p.Value + position));
-        var doll = new Ragdoll();
+        var doll = new Ragdoll(config);
         doll.Activate(pose, pose, velocity);
         return doll;
     }
@@ -95,7 +95,7 @@ public sealed class RagdollContactTests
         Assert.True(Push(6) > Push(2) * 2);
         Assert.Equal(0, Push(-6));
         Assert.Equal(0, Push(0));
-        Assert.InRange(Push(1000), 0, RagdollContact.MaximumImpulse + .001f);
+        Assert.InRange(Push(1000), 0, new TackleAlleyConfig().ContactMaximumImpulse + .001f);
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public sealed class RagdollContactTests
         Vector3 left = Spin(-1), right = Spin(1);
         Assert.True(Math.Abs(left.Y) > .01f);
         Assert.True(left.Y * right.Y < 0);
-        Assert.All(new[] { left, right }, w => Assert.InRange(w.Length(), 0, Ragdoll.MaximumAngularSpeed + .001f));
+        Assert.All(new[] { left, right }, w => Assert.InRange(w.Length(), 0, new TackleAlleyConfig().RagdollMaximumAngularSpeed + .001f));
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class RagdollContactTests
                     Assert.True(float.IsFinite(b.Position.LengthSquared()));
                     Assert.True(b.Bottom >= -.0001f);
                     Assert.InRange(b.LinearVelocity.Length(), 0, 25);
-                    Assert.InRange(b.AngularVelocity.Length(), 0, Ragdoll.MaximumAngularSpeed + .001f);
+                    Assert.InRange(b.AngularVelocity.Length(), 0, new TackleAlleyConfig().RagdollMaximumAngularSpeed + .001f);
                 });
         }
         Assert.True(carrier.HasMeaningfulGroundContact);
@@ -235,7 +235,7 @@ public sealed class RagdollContactTests
         var defender = Create(new(0, 10, -.65f), new(0, 0, 1000));
         var carrier = Create(new(0, 10, 0), Vector3.Zero);
         RagdollContact.Resolve(defender, carrier, true);
-        Assert.InRange(Momentum(carrier).Length(), 0, RagdollContact.MaximumTackleImpulse + .01f);
+        Assert.InRange(Momentum(carrier).Length(), 0, new TackleAlleyConfig().ContactMaximumTackleImpulse + .01f);
         defender = Create(new(0, 10, -.65f), new(0, 0, -4));
         carrier = Create(new(0, 10, 0), new(0, 0, 4));
         Vector3 beforeD = Momentum(defender), beforeC = Momentum(carrier);
@@ -256,6 +256,6 @@ public sealed class RagdollContactTests
         foreach (int i in new[] { 0, 1, 3, 4, 5, 6, 7, 8, 9, 10 })
         foreach (int j in new[] { 0, 1, 3, 4, 5, 6, 7, 8, 9, 10 })
             Assert.True(RagdollContact.SurfaceGap(a.Bodies[i], b.Bodies[j]) >=
-                -RagdollContact.PenetrationSlop - .002f, $"Bodies {i}/{j} interpenetrated");
+                -new TackleAlleyConfig().ContactPenetrationSlop - .002f, $"Bodies {i}/{j} interpenetrated");
     }
 }

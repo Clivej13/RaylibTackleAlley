@@ -38,16 +38,33 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         for (int i = 1; i < defenders.Length; i++) defenders[i] = new(new(1000 + i, 0, 0), _config);
     }
     public void Dispose() { _assets.UnloadAll(); Raylib.CloseWindow(); }
-    private void Launch(float side = .5f)
+    private void Launch(float side = .5f, Vector3? predictedDirection = null)
     {
         _defender.Update(_defender.Position + new Vector3(0, 0, -30), .1f, false, Vector2.Zero, false);
         _defender.Update(_defender.Position + new Vector3(0, 0, -4), 0, true, Vector2.Zero, false);
-        _defender.Update(_defender.Position + new Vector3(side, 0, -1.8f), 0);
+        _defender.Update(_defender.Position + new Vector3(side, 0, -1.8f), 0,
+            carrierPredictedDirection: predictedDirection);
         Assert.Equal(DefenderState.LungeTackle, _defender.State);
         _defender.Update(Vector3.Zero, .15f);
         // Advance actual carrier motion before contact, then place it inside the existing distance test.
         _carrier.Update(_input, .1f, new FootballField(_config, _assets));
         Position(_carrier, _defender.Position + new Vector3(0, 0, -.3f));
+    }
+
+    [Fact]
+    public void ReachableTackleOutsideReadyConeStillActivatesBothRagdolls()
+    {
+        // The carrier is ahead of this defender and predicted to keep running away.
+        // The cone controls preparation, not whether a reachable dive can commit.
+        Launch(predictedDirection: -Vector3.UnitZ);
+        _game.Update(0);
+        Assert.True(_game.TacklePendingGroundImpact);
+        Assert.True(_defender.Ragdoll.IsActive);
+        Assert.True(_carrier.Ragdoll.IsActive);
+        for (int i = 0; i < 2400 && !_game.GameOver; i++)
+            _game.Update(Ragdoll.FixedStep);
+        Assert.True(_game.GameOver);
+        Assert.True(_carrier.HasTackleGroundImpact);
     }
 
     [Theory]
@@ -94,6 +111,21 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         Assert.True(_game.TacklePendingGroundImpact || _carrier.HasTackleGroundImpact);
         Assert.True(_carrier.Ragdoll.IsActive);
         Assert.True(Field<AnimationPlayer>(_defender, "_animation").CurrentTime >= .12f);
+    }
+
+    [Fact]
+    public void ConfiguredRadiiAndMassesReachAnimatedProbesAndActivatedRagdolls()
+    {
+        Launch();
+        Position(_carrier, _defender.Position + new Vector3(1.25f, 0, 0));
+        Assert.False(_defender.HasBodyContact(_carrier));
+        _config.ContactTorsoRadius = .9f;
+        _config.ContactPelvisRadius = .9f;
+        _config.RagdollChestMass = 45;
+        Assert.True(_defender.HasBodyContact(_carrier));
+        Assert.True(LungeTackleOutcome.Confirm(_defender, _carrier));
+        Assert.Equal(45, _carrier.Ragdoll.Bodies[1].Mass);
+        Assert.Equal(45, _defender.Ragdoll.Bodies[1].Mass);
     }
 
     [Fact]
@@ -161,8 +193,13 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         if (boundary)
         {
             var lunge = Field<AnimationPlayer>(_defender, "_animation");
-            _defender.Update(Vector3.Zero, (lunge.FrameCount - 1) / lunge.FramesPerSecond - lunge.CurrentTime - .01f);
-            Position(_carrier, _defender.Position);
+            _defender.Update(Vector3.Zero, .6f - lunge.CurrentTime - .01f);
+            // The dive extends forward of its root; align actual torso positions
+            // instead of relying on the old upright endpoint at the same origin.
+            _defender.HasBodyContact(_carrier);
+            var defenderPose = Field<Ragdoll>(_defender, "_contactPose");
+            var carrierPose = Field<Ragdoll>(_carrier, "_contactPose");
+            Position(_carrier, _carrier.Position + defenderPose.Bodies[1].Position - carrierPose.Bodies[1].Position);
         }
         _game.Update(boundary ? .01f : 0);
         Assert.True(_game.TacklePendingGroundImpact); Assert.False(_game.GameOver);
@@ -250,7 +287,7 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
     {
         Launch(); Position(_carrier, new(-10, 0, 0));
         var lunge = Field<AnimationPlayer>(_defender, "_animation");
-        _defender.Update(Vector3.Zero, (lunge.FrameCount - 1) / lunge.FramesPerSecond - lunge.CurrentTime);
+        _defender.Update(Vector3.Zero, .6f - lunge.CurrentTime);
         Assert.True(_defender.Ragdoll.IsActive);
         Vector3 start = _carrier.Position;
         for (int i = 0; i < 120; i++) _game.Update(Ragdoll.FixedStep);
@@ -285,7 +322,11 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
                 !_carrier.IsRecovering && !_defender.IsRecovering) break;
         }
         Assert.True(carrierDown && defenderDown && carrierGetUp && defenderGetUp);
-        Assert.Equal(DefenderState.Locomotion, _defender.State);
+        _game.Update(Ragdoll.FixedStep);
+        Assert.Equal(DefenderState.Taunt, _defender.State);
+        Assert.Equal("TauntBicepFlex", _defender.AnimationName);
+        for (int i = 0; i < 360; i++) _game.Update(Ragdoll.FixedStep);
+        Assert.True(_game.OutcomeCelebrationComplete);
         Assert.False(_carrier.IsRecovering); Assert.StartsWith("Carry", _carrier.AnimationName);
         Assert.False(_carrier.Ragdoll.IsActive);
         _game.ResetRun(); Assert.Equal(Vector3.Zero, _carrier.Position);
@@ -302,14 +343,44 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
     }
 
     [Fact]
-    public void SetWrapRetainsImmediateOutcomeWithoutRagdolls()
+    public void SetWrapContactWaitsForCarrierGroundContact()
     {
         _defender.Update(_defender.Position + Vector3.UnitZ, 0, true, Vector2.Zero, true);
         Position(_carrier, _defender.Position);
         _game.Update(0);
-        Assert.True(_game.GameOver); Assert.False(_game.TacklePendingGroundImpact);
-        Assert.False(_carrier.Ragdoll.IsActive); Assert.False(_defender.Ragdoll.IsActive);
-        Assert.Equal(DefenderState.SetWrap, _defender.State);
+        Assert.False(_game.GameOver);
+        Assert.True(_game.TacklePendingGroundImpact);
+        Assert.True(_carrier.Ragdoll.IsActive);
+        Assert.True(_defender.Ragdoll.IsActive);
+        for (int i = 0; i < 2400 && !_game.GameOver; i++)
+        {
+            _game.Update(Ragdoll.FixedStep);
+            Assert.Equal(_carrier.HasTackleGroundImpact, _game.GameOver);
+        }
+        Assert.True(_game.GameOver);
+        Assert.True(_carrier.Ragdoll.HasDownGroundContact);
+        _game.ResetRun();
+        Assert.False(_carrier.HasTackleGroundImpact);
+        Assert.False(_carrier.Ragdoll.HasDownGroundContact);
+    }
+
+    [Fact]
+    public void TouchdownRunsIntoEndZoneThenCelebratesBeforeAutomaticRestart()
+    {
+        var field = new FootballField(_config, _assets);
+        Position(_carrier, new Vector3(0, 0, field.GoalLineZ));
+        _game.Update(0);
+        Assert.True(_game.Touchdown);
+        Assert.False(_game.OutcomeCelebrationComplete);
+        for (int i = 0; i < 1200 && !_carrier.IsTaunting; i++) _game.Update(1f / 60f);
+        Assert.True(_carrier.IsTaunting);
+        Assert.False(_game.OutcomeCelebrationComplete);
+        Assert.Equal(field.GoalLineZ - field.EndZoneLength * _config.EndZoneStopFraction, _carrier.Position.Z);
+        for (int i = 0; i < 180; i++) _game.Update(1f / 60f);
+        Assert.True(_game.OutcomeCelebrationComplete);
+        Assert.False(_defender.TauntComplete);
+        _game.ResetRun();
+        Assert.False(_carrier.IsTaunting);
     }
 
     private static unsafe void Key(KeyboardKey key, bool down)
@@ -326,14 +397,14 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
             _defender.UpdateLungeAfterOutcome(Ragdoll.FixedStep);
         Assert.Equal(DefenderState.Down, _defender.State);
         Vector3 root = _defender.Position; float yaw = _defender.FacingYawDegrees;
-        _defender.Update(new(-100, 0, 100), _config.RagdollDownDuration - .01f, true, Vector2.One, true);
+        _defender.Update(new(-100, 0, 100), _config.OpponentRecoveryBlendDuration - .01f, true, Vector2.One, true);
         Assert.Equal(DefenderState.Down, _defender.State);
         Raylib.BeginDrawing(); _defender.Draw(); Raylib.EndDrawing();
         AssertGroundedRecovery(_defender);
         _defender.Update(new(100, 0, -100), .01f, false, -Vector2.One, true);
         Assert.Equal(DefenderState.GetUp, _defender.State);
         var clip = Field<AnimationPlayer>(_defender, "_animation");
-        float duration = (clip.FrameCount - 1) / clip.FramesPerSecond;
+        float duration = (clip.FrameCount - 1) / clip.FramesPerSecond / _config.OpponentGetUpPlaybackSpeed;
         _defender.Update(Vector3.Zero, duration - .01f, true, Vector2.One, true);
         Assert.Equal(DefenderState.GetUp, _defender.State);
         Assert.Equal(root, _defender.Position); Assert.Equal(yaw, _defender.FacingYawDegrees);

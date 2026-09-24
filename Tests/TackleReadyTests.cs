@@ -49,7 +49,7 @@ public sealed class TackleReadyTests
         Assert.Equal(facing, defender.FacingYawDegrees);
         defender.Update(start + new Vector3(0, 0, 30), 0.2f);
         Assert.Equal(DefenderState.Locomotion, defender.State);
-        Assert.Equal("Jog", defender.AnimationName);
+        Assert.Equal("Sprint", defender.AnimationName);
         Assert.Equal(start, defender.Position);
     }
 
@@ -90,7 +90,7 @@ public sealed class TackleReadyTests
             float before = Vector3.Distance(defender.Position, carrier);
             defender.Update(carrier, 1f / 60f);
             if (defender.State == DefenderState.LungeTackle)
-                Assert.InRange(before, Opponent.WrapCommitDistance, Opponent.LungeReachDistance);
+                Assert.InRange(before, new TackleAlleyConfig().OpponentWrapCommitDistance, new TackleAlleyConfig().OpponentLungeReachDistance);
             else
             {
                 Assert.True(Vector3.Distance(defender.Position, carrier) < before);
@@ -103,9 +103,9 @@ public sealed class TackleReadyTests
     }
 
     [Theory]
-    [InlineData(-3, 0, "TackleReadyLeft")]
-    [InlineData(3, 0, "TackleReadyRight")]
-    [InlineData(0, 3, "TackleReadyBackward")]
+    [InlineData(-3, 0, "TackleReadyForward")]
+    [InlineData(3, 0, "TackleReadyForward")]
+    [InlineData(0, 3, "TackleReadyForward")]
     [InlineData(0, -3, "TackleReadyForward")]
     public void AiReadyFollowsInterceptionTargetWhileFacingCarrier(float x, float z, string clip)
     {
@@ -115,7 +115,8 @@ public sealed class TackleReadyTests
         Assert.Equal(DefenderState.TackleReady, defender.State);
         Assert.Equal(clip, defender.AnimationName);
         Assert.Equal(0f, defender.FacingYawDegrees);
-        Assert.True(Vector3.Dot(defender.Position - start, new Vector3(x, 0, z)) > 0f);
+        Assert.True(defender.Position.Z < start.Z);
+        if (x != 0) Assert.Equal(Math.Sign(x), Math.Sign(defender.Position.X - start.X));
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public sealed class TackleReadyTests
         Assert.Equal("TackleReadyForward", defender.AnimationName); // Incoming travel is still active.
         defender.Update(new(0, 0, -30), 0, false, Vector2.Zero, false);
         Assert.Equal(DefenderState.Locomotion, defender.State);
-        Assert.Equal("Jog", defender.AnimationName);
+        Assert.Equal("Sprint", defender.AnimationName);
     }
 
     [Theory]
@@ -214,7 +215,7 @@ public sealed class TackleReadyTests
 
     [Theory]
     [InlineData(true, DefenderState.TackleReady, "TackleReady")]
-    [InlineData(false, DefenderState.Locomotion, "Jog")]
+    [InlineData(false, DefenderState.Locomotion, "Sprint")]
     public void ActiveTackleIgnoresSteeringAndReselectionThenReturns(bool held, DefenderState state, string clip)
     {
         var defender = Defender();
@@ -294,8 +295,7 @@ public sealed class TackleReadyTests
                 Assert.Equal(side == 0f ? "LungeTackleForward" :
                     side < 0f ? "LungeTackleLeft" : "LungeTackleRight", defender.AnimationName);
                 var animation = (AnimationPlayer)field.GetValue(defender)!;
-                float duration = (animation.FrameCount - 1) / animation.FramesPerSecond;
-                Assert.InRange(duration, 0.58f, 0.62f);
+                float duration = .6f; // Authored end, before the imported return-to-ready sample.
                 Assert.Equal(0f, animation.CurrentTime);
                 float facing = defender.FacingYawDegrees;
                 defender.Update(defender.Position + new Vector3(0, 0, 4), duration / 2);

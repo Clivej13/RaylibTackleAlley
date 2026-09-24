@@ -24,7 +24,8 @@ public sealed class DefenderRecoveryTests : IDisposable
     private static T Field<T>(object target, string name) =>
         (T)target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(target)!;
     private static AnimationPlayer Animation(Opponent d) => Field<AnimationPlayer>(d, "_animation");
-    private static float Duration(Opponent d) => (Animation(d).FrameCount - 1) / Animation(d).FramesPerSecond;
+    private static float Duration(Opponent d) => d.State == DefenderState.LungeTackle
+        ? .6f : (Animation(d).FrameCount - 1) / Animation(d).FramesPerSecond;
 
     private Opponent Lunge(float side = 0, float speed = 6.5f, bool visual = true)
     {
@@ -59,22 +60,80 @@ public sealed class DefenderRecoveryTests : IDisposable
         Assert.Equal(yaw, d.FacingYawDegrees);
         Assert.True(Vector3.Distance(new(d.Position.X, 0, d.Position.Z),
             new Vector3(launchPosition.X, 0, launchPosition.Z) + direction * speed * duration) < .0001f);
-        Vector3 expectedVelocity = direction * speed + Vector3.UnitY * (4f - 10f * duration);
+        Vector3 expectedVelocity = direction * speed;
+        Assert.True(d.IsGrounded);
         Assert.All(d.Ragdoll.Bodies, body => Assert.True(Vector3.Distance(expectedVelocity, body.LinearVelocity) < .0001f));
         var bridge = Field<RagdollSkeleton>(d, "_ragdollSkeleton");
         var model = Field<ModelInstance>(d, "_model").Model;
         unsafe {
             for (int i = 0; i < model.Skeleton.BoneCount; i++)
             {
-                Assert.True(clip.TryGetBoneTransform(new string(model.Skeleton.Bones[i].Name), out var animated));
+                var animated = RagdollPose.Matrix(clip.Animation.KeyframePoses[(int)clip.CurrentFrame][i]);
                 foreach (var point in new[] { Vector3.Zero, Vector3.UnitX, Vector3.UnitY, Vector3.UnitZ })
                     Assert.True(Vector3.Distance(Vector3.Transform(point, animated),
                         Vector3.Transform(point, bridge.ModelPose[i])) < .0001f);
             }
         }
+        Vector3 torso = Vector3.Normalize(d.Ragdoll.Bodies[1].Position - d.Ragdoll.Bodies[0].Position);
+        Assert.True(torso.Y < .7f, $"Dive handed off upright: torso {torso}, frame {clip.CurrentFrame}/{clip.FrameCount}");
+        AssertSkinnedPoseSurvivesHandoff(d, bridge, model);
         var start = CentreOfMass(d);
         for (int i = 0; i < 12; i++) d.Update(new(100, 0, 100), Ragdoll.FixedStep);
         Assert.True(Vector3.Dot(CentreOfMass(d) - start, direction) > .1f);
+    }
+
+    private static unsafe void AssertSkinnedPoseSurvivesHandoff(Opponent d, RagdollSkeleton bridge, Model model)
+    {
+        var before = new List<Vector3>();
+        for (int m = 0; m < model.MeshCount; m++)
+        {
+            var mesh = model.Meshes[m];
+            for (int v = 0; v < mesh.VertexCount; v++)
+                before.Add(new(mesh.AnimVertices[v * 3], mesh.AnimVertices[v * 3 + 1], mesh.AnimVertices[v * 3 + 2]));
+        }
+        bridge.Apply(model, d.Ragdoll);
+        int index = 0;
+        for (int m = 0; m < model.MeshCount; m++)
+        {
+            var mesh = model.Meshes[m];
+            for (int v = 0; v < mesh.VertexCount; v++)
+                Assert.True(Vector3.Distance(before[index++], new(mesh.AnimVertices[v * 3],
+                    mesh.AnimVertices[v * 3 + 1], mesh.AnimVertices[v * 3 + 2])) < .0001f,
+                    "Rendered mesh changed at ragdoll handoff.");
+        }
+    }
+
+    [Theory]
+    [InlineData(-.8f)]
+    [InlineData(0f)]
+    [InlineData(.8f)]
+    public void MissedDiveRecoversPromptlyAfterLanding(float side)
+    {
+        var d = Lunge(side);
+        bool landed = false, recovering = false;
+        float elapsed = 0;
+        while (elapsed < 3f)
+        {
+            bool groundContact = d.Ragdoll.HasMeaningfulGroundContact;
+            d.Update(new(100, 0, 100), Ragdoll.FixedStep);
+            elapsed += Ragdoll.FixedStep;
+            landed |= groundContact || d.Ragdoll.HasMeaningfulGroundContact;
+            if (d.IsRecovering)
+            {
+                Assert.True(landed, "Recovery must wait for torso landing.");
+                recovering = true;
+            }
+            if (recovering && d.State == DefenderState.Locomotion) break;
+        }
+        Assert.True(recovering);
+        Assert.Equal(DefenderState.Locomotion, d.State);
+        Assert.True(elapsed < 3f, $"Recovery took {elapsed}s.");
+        Vector3 position = d.Position;
+        d.Update(new(100, 0, 100), .1f);
+        Assert.True(Vector3.Distance(position, d.Position) > 0);
+        Assert.True(d.HasEngaged);
+        Assert.Equal(OpponentPace.Sprint, d.Pace);
+        Assert.Equal(new TackleAlleyConfig().OpponentSprintSpeed, d.TargetSpeed);
     }
 
     private static Vector3 CentreOfMass(Opponent d) =>

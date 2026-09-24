@@ -11,6 +11,7 @@ namespace RaylibTackleAlley.Application;
 public sealed class GameApplication
 {
     private readonly GameConfig _config;
+    private readonly TackleAlleyConfig _tuning;
     private readonly InputController _input;
     private readonly InputConfig _inputConfig;
     private readonly MenuManager _mainMenu;
@@ -24,6 +25,7 @@ public sealed class GameApplication
     public GameApplication(GameConfig config, InputConfig input, MenuConfig menus, AssetConfig assets, TackleAlleyConfig tuning)
     {
         _config = config;
+        _tuning = tuning;
         _input = new InputController(input);
         _inputConfig = input;
         foreach (MenuItemDefinition item in menus.Menus["Options"].Items)
@@ -56,12 +58,15 @@ public sealed class GameApplication
                 "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
                 "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations");
             _assets.RequireAssets(Opponent.AnimationAssetKeys);
+            _assets.RequireAssets(_tuning.OffenseUniform, _tuning.DefenseUniform);
             while (!_assets.ProcessNext())
             {
                 // Models must be loaded after the graphics context is initialized.
             }
 
             _game.InitializeVisuals(_assets);
+            _game.ApplyPlayerUniform(_assets, _tuning.OffenseUniform);
+            _game.ApplyOpponentUniforms(_assets, _tuning.DefenseUniform);
 
             while (!_exitRequested && !Raylib.WindowShouldClose())
             {
@@ -111,7 +116,7 @@ public sealed class GameApplication
                 break;
             case GameState.Touchdown:
             case GameState.GameOver:
-                if (_input.WasPressed("Pause") || _input.WasPressed("MenuConfirm") || _game.EndStateElapsed >= 2.5f)
+                if (_input.WasPressed("Pause") || _input.WasPressed("MenuConfirm") || (_game.EndStateElapsed >= _tuning.AutoRestartDelay && _game.OutcomeCelebrationComplete))
                 {
                     _game.ResetRun();
                     _state = GameState.Playing;

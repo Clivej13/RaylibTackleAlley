@@ -62,6 +62,30 @@ public sealed class CameraTests
         Assert.Equal(new Vector3(0, 1.1f, -5.5f), camera.Camera.Target);
     }
 
+    [Theory]
+    [InlineData(169f, false)]
+    [InlineData(170f, true)]
+    [InlineData(175f, true)]
+    [InlineData(180f, true)]
+    [InlineData(185f, true)]
+    [InlineData(190f, true)]
+    [InlineData(191f, false)]
+    [InlineData(135f, false)]
+    [InlineData(225f, false)]
+    public void RearViewRequiresTheNarrowBackSector(float angle, bool behind)
+    {
+        float radians = angle * MathF.PI / 180;
+        var input = new Vector2(MathF.Sin(radians), -MathF.Cos(radians));
+        var camera = new ThirdPersonCamera(new());
+        camera.Reset(Vector3.Zero, 6.5f);
+        camera.Update(Vector3.Zero, 6.5f, 1, input);
+        Assert.Equal(behind, camera.Camera.Target.Z > camera.Camera.Position.Z);
+        // Leaving the sector must also release an already-held rear view.
+        camera.Update(Vector3.Zero, 6.5f, 1, new(0, 1));
+        camera.Update(Vector3.Zero, 6.5f, 1, input);
+        Assert.Equal(behind, camera.Camera.Target.Z > camera.Camera.Position.Z);
+    }
+
     [Fact]
     public void LookSmoothingIsFrameRateIndependent()
     {

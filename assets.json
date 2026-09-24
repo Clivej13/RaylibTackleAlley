@@ -1,8 +1,12 @@
 {
   "Assets": [
+    { "Key": "OffenseUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/offense_uniform.png" },
+    { "Key": "DefenseUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/defense_uniform.png" },
+    { "Key": "PlayerUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/test_uniform.png" },
     { "Key": "FootballField", "Type": "Model", "Path": "Assets/Models/football_field.glb" },
     { "Key": "Stadium", "Type": "Model", "Path": "Assets/Models/stadium.glb" },
     { "Key": "Football", "Type": "Model", "Path": "Assets/Models/football.glb" },
+    { "Key": "FootballPlayerTauntBicepFlexAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_taunt_bicep_flex.glb" },
     { "Key": "FootballPlayer", "Type": "Model", "Path": "Assets/Models/football_player.glb" },
     { "Key": "FootballPlayerSprintAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/lowpoly_human_sprint_validation.glb" },
     { "Key": "FootballPlayerRunAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/lowpoly_human_run_validation.glb" },

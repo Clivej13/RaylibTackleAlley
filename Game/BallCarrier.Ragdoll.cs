@@ -6,8 +6,8 @@ namespace RaylibTackleAlley.Game;
 
 public sealed partial class BallCarrier
 {
-    public Ragdoll Ragdoll { get; } = new();
-    private readonly Ragdoll _contactPose = new();
+    public Ragdoll Ragdoll { get; }
+    private readonly Ragdoll _contactPose;
     internal Ragdoll? ContactPose()
     {
         if (Ragdoll.IsActive) return Ragdoll;
@@ -26,10 +26,12 @@ public sealed partial class BallCarrier
     public bool ActivateRagdoll()
     {
         if (!CanActivateRagdoll || _model is null || _animation is null) return false;
+        _animation.SeekTime(_animation.CurrentTime);
         _ragdollSkeleton = RagdollPose.Activate(_model.Model, _animation, PlayerWorldTransform,
             Ragdoll, Velocity, null, 0);
         _jukeRemaining = _spinRemaining = _cutRemaining = _spinGestureRemaining = _cutReversalRemaining = 0;
         _cutName = null;
+        ResetSteeringPenalty();
         HasTackleGroundImpact = false;
         UpdatePhysicsFootball();
         return true;
@@ -65,7 +67,7 @@ public sealed partial class BallCarrier
         if (Ragdoll.IsActive)
         {
             Ragdoll.Update(Math.Max(0, dt));
-            HasTackleGroundImpact |= Ragdoll.HasMeaningfulGroundContact;
+            HasTackleGroundImpact |= Ragdoll.HasDownGroundContact;
             if (_ragdollSkeleton is not null)
             {
                 _ragdollSkeleton.Evaluate(Ragdoll);

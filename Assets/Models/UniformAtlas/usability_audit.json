@@ -1,0 +1,13 @@
+{
+  "continuous_triangle_interior_overlap_pairs": 0,
+  "intersection_area_tolerance_px2": 1e-07,
+  "maximum_intersection_area_px2": 0.0,
+  "uniform_triangles": 3536,
+  "changed_existing_islands": 29,
+  "maximum_rigid_transform_distance_error_px": 0.00014175091495616243,
+  "gltf_json_exact": true,
+  "all_non_target_uv_bytes_exact": true,
+  "chest_back_uvs_exact": true,
+  "geometry_topology_skinning_skeleton_animations_material_assignments_exact": true,
+  "atlas_region_boundaries_unchanged": true
+}

@@ -25,19 +25,20 @@ public sealed class OpponentTests
     }
 
     [Fact]
-    public void SeparationSlowsDownWithSmallHysteresisAndResetRestoresSpawn()
+    public void EngagementKeepsSprintAcrossSeparationAndResetRestoresSpawn()
     {
         var opponent = new Opponent(Vector3.Zero, new());
         void At(float distance) => opponent.UpdateLocomotionForTest(new(0, 0, -distance), 0f);
         At(8); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
         At(8.5f); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
-        At(8.51f); Assert.Equal(OpponentPace.Run, opponent.Pace);
-        At(20.5f); Assert.Equal(OpponentPace.Run, opponent.Pace);
-        At(20.51f); Assert.Equal(OpponentPace.Jog, opponent.Pace);
-        At(20.1f); Assert.Equal(OpponentPace.Jog, opponent.Pace);
+        At(8.51f); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
+        At(20.5f); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
+        At(20.51f); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
+        At(20.1f); Assert.Equal(OpponentPace.Sprint, opponent.Pace);
         opponent.UpdateLocomotionForTest(new(0, 0, -5), 0.1f);
         opponent.Reset();
         Assert.Equal(Vector3.Zero, opponent.Position);
+        Assert.False(opponent.HasEngaged);
         Assert.Equal(OpponentPace.Jog, opponent.Pace);
     }
 
@@ -69,11 +70,10 @@ public sealed class OpponentTests
         Tick(3f, 0.2f);
         Assert.Equal(9f, opponent.CurrentSpeed, 4);
         Tick(12f, 0.1f);
-        Assert.InRange(opponent.CurrentSpeed, 6.6f, 8.9f);
-        Tick(12f, 0.1f);
-        Assert.Equal(6.5f, opponent.CurrentSpeed, 4);
+        Assert.Equal(9f, opponent.CurrentSpeed, 4);
         Tick(30f, 0.2f);
-        Assert.Equal(4f, opponent.CurrentSpeed, 4);
+        Assert.Equal(9f, opponent.CurrentSpeed, 4);
+        Assert.True(opponent.HasEngaged);
         foreach (float distance in new[] { 3f, 30f })
         {
             opponent.Reset();
@@ -213,7 +213,7 @@ public sealed class OpponentTests
             Assert.Equal(0f, Field<AnimationPlayer>(runner, "_animation").CurrentTime);
             runner.UpdateLocomotionForTest(new(0, 0, -30), 0.23f);
             foreach (var (distance, name) in new[] {
-                (12f, "Run"), (3f, "Sprint"), (8.51f, "Run"), (20.51f, "Jog") })
+                (12f, "Run"), (3f, "Sprint") })
             {
                 var previous = Field<AnimationPlayer>(runner, "_animation");
                 float phase = previous.CurrentTime / (previous.FrameCount / previous.FramesPerSecond);

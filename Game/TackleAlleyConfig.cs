@@ -1,12 +1,14 @@
 namespace RaylibTackleAlley.Game;
 
-public sealed class TackleAlleyConfig
+public sealed partial class TackleAlleyConfig
 {
+    public string OffenseUniform { get; set; } = "OffenseUniform";
+    public string DefenseUniform { get; set; } = "DefenseUniform";
     public float PlayerForwardSpeed { get; set; } = 6.5f;
     public float PlayerLateralSpeed { get; set; } = 8f;
     public float PlayerSlowSpeed { get; set; } = 4f;
     public float PlayerSprintSpeed { get; set; } = 9f;
-    public float PlayerJukeSpeed { get; set; } = 8f;
+    public float PlayerJukeSpeed { get; set; } = 4f;
     public float PlayerJukeDuration { get; set; } = 0.35f;
     // Stick units per mouse pixel per frame; 20 pixels reaches full deflection.
     public float MouseGestureSensitivity { get; set; } = 0.05f;

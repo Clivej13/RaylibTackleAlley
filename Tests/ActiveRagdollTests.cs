@@ -27,8 +27,8 @@ public sealed class ActiveRagdollTests
         var doll = Create();
         doll.StartActiveDrive(Gait(doll), hit);
         Assert.Equal(hit, doll.LastHitBody);
-        Assert.Equal(Ragdoll.HitLimbMotorStrength, doll.MotorStrength(hit));
-        Assert.Equal(Ragdoll.HitLimbMotorStrength, doll.MotorStrength(partner));
+        Assert.Equal(new TackleAlleyConfig().RagdollHitLimbMotorStrength, doll.MotorStrength(hit));
+        Assert.Equal(new TackleAlleyConfig().RagdollHitLimbMotorStrength, doll.MotorStrength(partner));
         Assert.Equal(1, doll.MotorStrength(torso));
         Assert.Equal(1, doll.MotorStrength(other));
     }
@@ -38,7 +38,7 @@ public sealed class ActiveRagdollTests
     {
         var doll = Create();
         doll.StartActiveDrive(Gait(doll), 1);
-        Assert.Equal(Ragdoll.HitTorsoMotorStrength, doll.MotorStrength(1));
+        Assert.Equal(new TackleAlleyConfig().RagdollHitTorsoMotorStrength, doll.MotorStrength(1));
         Assert.Equal(1, doll.MotorStrength(7));
         var before = doll.Bodies.Select(b => b.Position).ToArray();
         doll.Update(0);
@@ -105,7 +105,7 @@ public sealed class ActiveRagdollTests
             {
                 Assert.True(float.IsFinite(body.Position.LengthSquared()));
                 Assert.True(body.Bottom >= -.0001f);
-                Assert.InRange(body.AngularVelocity.Length(), 0, Ragdoll.MaximumAngularSpeed + .001f);
+                Assert.InRange(body.AngularVelocity.Length(), 0, new TackleAlleyConfig().RagdollMaximumAngularSpeed + .001f);
             });
             if (doll.HasMeaningfulGroundContact) Assert.False(doll.IsActivelyDriven);
             Assert.All(doll.Joints, j => Assert.InRange(doll.JointSeparation(j), 0, .08f));
@@ -145,7 +145,7 @@ public sealed class ActiveRagdollTests
         Assert.InRange(hit.Value.CarrierBody, 7, 10);
         b.StartActiveDrive(Gait(b), hit.Value.CarrierBody);
         Assert.Equal(1, b.MotorStrength(1));
-        Assert.Equal(Ragdoll.HitLimbMotorStrength, b.MotorStrength(hit.Value.CarrierBody));
+        Assert.Equal(new TackleAlleyConfig().RagdollHitLimbMotorStrength, b.MotorStrength(hit.Value.CarrierBody));
         Assert.True(b.Bodies[hit.Value.CarrierBody].AngularVelocity.Length() > .01f);
     }
 
@@ -158,7 +158,7 @@ public sealed class ActiveRagdollTests
         doll.ReactToContact(3, .1f);
         Assert.Equal(1, doll.MotorStrength(3)); // ignore resting contact jitter
         doll.ReactToContact(3, 4);
-        Assert.Equal(Ragdoll.HitLimbMotorStrength, doll.MotorStrength(3));
+        Assert.Equal(new TackleAlleyConfig().RagdollHitLimbMotorStrength, doll.MotorStrength(3));
         Assert.Equal(1, doll.MotorStrength(9));
         for (int i = 0; i < 50; i++) doll.Update(Ragdoll.FixedStep);
         Assert.False(doll.IsActivelyDriven);

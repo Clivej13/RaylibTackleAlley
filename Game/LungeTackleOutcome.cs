@@ -4,7 +4,8 @@ public static class LungeTackleOutcome
 {
     public static bool Confirm(Opponent defender, BallCarrier carrier)
     {
-        if (defender.State != DefenderState.LungeTackle || !carrier.CanActivateRagdoll ||
+        // Any confirmed body contact starts physics; only ground contact ends the run.
+        if (!carrier.CanActivateRagdoll ||
             (!defender.Ragdoll.IsActive && !defender.CanActivateRagdoll) ||
             !defender.HasBodyContact(carrier)) return false;
         // Capture current poses and actual velocities before resolving geometric contact.

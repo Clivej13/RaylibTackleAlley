@@ -5,6 +5,63 @@ using Xunit;
 public sealed class LungeInterceptionTests
 {
     [Theory]
+    [InlineData(-1f, 1f / 30)]
+    [InlineData(1f, 1f / 60)]
+    [InlineData(-1f, 1f / 120)]
+    public void SuddenCloseRangeEvadeDoesNotTriggerFreshDive(float side, float dt)
+    {
+        var defender = new Opponent(Vector3.Zero, new() { OpponentInitialYawDegrees = 0 });
+        defender.Update(new(0, 0, -7), .6f, false, Vector2.Zero, false);
+        defender.Update(defender.Position + new Vector3(0, 0, -10), dt, null, new Vector3(0, 0, 9));
+        var carrier = defender.Position + new Vector3(0, 0, -1.5f);
+        defender.Update(carrier, dt, null, new Vector3(side * 4, 0, 0));
+        Assert.NotEqual(DefenderState.LungeTackle, defender.State);
+        Assert.Equal(0, defender.VerticalVelocity);
+        Assert.True(defender.HasEngaged);
+    }
+
+    [Theory]
+    [InlineData(-1f)]
+    [InlineData(1f)]
+    public void UnreachableSidewaysBurstDoesNotTriggerDive(float side)
+    {
+        var defender = new Opponent(Vector3.Zero, new() { OpponentInitialYawDegrees = 0 });
+        defender.Update(new(0, 0, -4), 0, true, Vector2.Zero, false);
+        defender.Update(new(0, 0, -2), .01f, new Vector3(side * 3, 0, -2), new Vector3(side * 10, 0, 0));
+        Assert.Equal(DefenderState.TackleReady, defender.State);
+        Assert.Equal(0, defender.VerticalVelocity);
+        Assert.Equal(Math.Sign(side), Math.Sign(defender.Position.X));
+        Assert.True(defender.Position.Z < 0);
+    }
+
+    [Fact]
+    public void StableMovementAllowsTacklingAgainAfterAnEvade()
+    {
+        var defender = new Opponent(Vector3.Zero, new() { OpponentInitialYawDegrees = 0 });
+        defender.Update(new(0, 0, -7), .6f, false, Vector2.Zero, false);
+        defender.Update(defender.Position + new Vector3(0, 0, -10), .01f, null, new Vector3(0, 0, 9));
+        defender.Update(defender.Position + new Vector3(0, 0, -1.5f), .01f, null, new Vector3(4, 0, 0));
+        Assert.Equal(DefenderState.TackleReady, defender.State);
+        // Keep observing the new path at a safe distance, then test a reachable
+        // crossing opportunity after the initial surprise has passed.
+        for (int i = 0; i < 60; i++)
+            defender.Update(defender.Position + new Vector3(0, 0, -10), 1f / 60, null, new Vector3(4, 0, 0));
+        defender.Update(defender.Position + new Vector3(0, 0, -1.5f), .01f, null, new Vector3(4, 0, 0));
+        Assert.Equal(DefenderState.LungeTackle, defender.State);
+    }
+
+    [Fact]
+    public void ContactMustBeReachableWithinTheAvailableWindow()
+    {
+        Assert.False(LungeInterception.TryTarget(Vector3.Zero, new(0, 0, -4),
+            Vector3.Zero, 4, .6f, out _));
+        Assert.True(LungeInterception.TryTarget(Vector3.Zero, new(0, 0, -2),
+            Vector3.Zero, 4, .6f, out _));
+        Assert.False(LungeInterception.TryTarget(Vector3.Zero, new(0, 0, -2),
+            Vector3.Zero, 4, .2f, out _));
+    }
+
+    [Theory]
     [InlineData(-1f)]
     [InlineData(1f)]
     public void CrossingRunnerGetsLeadAtTheReachableMeetingPoint(float side)
@@ -12,7 +69,7 @@ public sealed class LungeInterceptionTests
         Vector3 defender = new(side * 3, 0, 0), carrier = Vector3.Zero, velocity = new(0, 0, -6);
         Vector3 target = LungeInterception.Target(defender, carrier, velocity, 9);
         float time = -target.Z / 6;
-        Assert.InRange(time, .1f, LungeInterception.MaximumPredictionSeconds);
+        Assert.InRange(time, .1f, new TackleAlleyConfig().LungeMaximumPredictionSeconds);
         Assert.True(Vector3.Distance(target, carrier + velocity * time) < .0001f);
         Assert.Equal(9 * time, Vector3.Distance(defender, target), 4);
         Assert.True(Vector3.Distance(target, carrier) > 1);
@@ -49,7 +106,7 @@ public sealed class LungeInterceptionTests
         Vector3 carrier = new(0, 0, -4), velocity = new(x, 0, z);
         Vector3 target = LungeInterception.Target(Vector3.Zero, carrier, velocity, 4);
         Assert.True(float.IsFinite(target.LengthSquared()));
-        Assert.InRange(Vector3.Distance(target, carrier), 0, velocity.Length() * LungeInterception.MaximumPredictionSeconds + .0001f);
+        Assert.InRange(Vector3.Distance(target, carrier), 0, velocity.Length() * new TackleAlleyConfig().LungeMaximumPredictionSeconds + .0001f);
         Assert.True(Vector3.Dot(target - carrier, velocity) > 0);
     }
 
@@ -104,7 +161,7 @@ public sealed class LungeInterceptionTests
         defender.Update(new(0, 0, -20), .01f, false, Vector2.Zero, false);
         defender.Update(defender.Position + new Vector3(0, 0, -4), 0, true, Vector2.Zero, false);
         Vector3 carrier = defender.Position + new Vector3(1, 0, -2);
-        Vector3 velocity = new(0, 0, -6.5f);
+        Vector3 velocity = new(0, 0, 2f); // Approaching and reachable before the dive ends.
         float launchSpeed = Math.Max(defender.CurrentSpeed, 4);
         Vector3 target = LungeInterception.Target(defender.Position, carrier, velocity, launchSpeed);
         defender.Update(carrier, 0, null, velocity);

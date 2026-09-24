@@ -218,7 +218,7 @@ public sealed class BallCarrierAnimationTests
                 Vector3 before = player.Position;
                 Key(KeyboardKey.D, true); // Normal steering cannot take action travel.
                 Tick(duration * 0.25f);
-                Assert.Equal((left ? -1f : 1f) * (spin ? 10f : config.PlayerJukeSpeed) *
+                Assert.Equal((left ? -1f : 1f) * (spin ? config.PlayerSpinSpeed : config.PlayerJukeSpeed) *
                     duration * 0.25f, player.Position.X - before.X, 5);
                 Assert.Equal(before.Z, player.Position.Z);
                 Assert.Contains(Vertices(player).Zip(entry), p => MathF.Abs(p.First - p.Second) > 0.001f);
@@ -320,6 +320,20 @@ public sealed class BallCarrierAnimationTests
             player.RunIntoEndZone(0.1f, -1f);
             Assert.Equal(-1f, player.Position.Z);
             Assert.Equal(0.2f, clocks["CarryRun"].CurrentTime, 5);
+            player.RunIntoEndZone(.2f, -1f);
+            Assert.Equal("TauntBicepFlex", player.AnimationName);
+            Assert.Equal(0f, player.CurrentForwardSpeed);
+            Assert.Equal(-1f, player.Position.Z);
+            CheckAttachment();
+            Assert.False(player.TauntComplete);
+            player.RunIntoEndZone(3f, -1f);
+            Assert.True(player.TauntComplete);
+            Assert.Equal(clocks["TauntBicepFlex"].FrameCount - 1f, clocks["TauntBicepFlex"].CurrentFrame, 4);
+            CheckAttachment();
+            player.Reset();
+            Assert.False(player.IsTaunting);
+            Assert.False(player.TauntComplete);
+            Assert.Equal(startPose, Vertices(player));
             CheckAttachment();
             Assert.Equal(Matrix4x4.Identity, assets.GetModel("Football").Transform);
         }

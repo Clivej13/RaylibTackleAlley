@@ -1,0 +1,23 @@
+{
+  "source": "Assets\\Models\\football_player.glb",
+  "source_sha256": "b12f0fbe634140748f81188f50ea2d32dd4a79f4076a6ec9aff3fa089620cb2e",
+  "source_unchanged": true,
+  "mesh_and_uvs_unchanged": true,
+  "atlas_size": [
+    2048,
+    2048
+  ],
+  "number": "10",
+  "offense": {
+    "jersey": "#102344",
+    "numbers": "#f5f5f5",
+    "sleeve_stripes": "#d9ac45",
+    "pants": "#f5f5f5"
+  },
+  "defense": {
+    "jersey": "#f5f5f5",
+    "numbers": "#102344",
+    "sleeve_stripes": "#cc2638",
+    "pants": "#102344"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "uniform_material": "Uniform",
+  "atlas_size": 2048,
+  "uniform_objects": [
+    "Helmet",
+    "Jersey",
+    "LeftAnkle",
+    "LeftCalf",
+    "Pants",
+    "RightAnkle",
+    "RightCalf",
+    "Socks",
+    "Undershirt"
+  ],
+  "overlapping_interior_pixels": 0,
+  "geometry_normals_weights_joints": "Exact per-triangle-corner equality",
+  "nodes_skins_animations": "Exact JSON and original binary accessor preservation",
+  "animations": [
+    {
+      "name": "Jog",
+      "channels": 75
+    }
+  ],
+  "source_sha256": "fcedea9c3d00698071364672980c82acfc91c4c3a7292e56d8c1cf89408f7455",
+  "output_sha256": "bb70f4af54b318ba14460cb0969f3a3d673d81884a744882d6714d7b67a90b93"
+}

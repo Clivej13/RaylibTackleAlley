@@ -13,7 +13,7 @@ public sealed class RagdollRecovery
     private readonly AnimationPlayer _down, _getUp;
     private readonly int[] _parents;
     private readonly Transform[] _startLocal, _native;
-    private readonly float _downDuration, _blendDuration;
+    private readonly float _downDuration, _blendDuration, _getUpSpeed;
     private float _elapsed;
     public RecoveryPhase Phase { get; private set; } = RecoveryPhase.Down;
     public Matrix4x4 World { get; }
@@ -24,11 +24,15 @@ public sealed class RagdollRecovery
 
     public unsafe RagdollRecovery(Model model, RagdollSkeleton skeleton, Ragdoll ragdoll,
         AnimationPlayer down, AnimationPlayer getUp, float scale, float groundOffset,
-        float previousYaw, TackleAlleyConfig config)
+        float previousYaw, TackleAlleyConfig config, bool defender = false)
     {
         config.ValidateRagdollRecovery();
         _model = model; _down = down; _getUp = getUp;
-        _downDuration = config.RagdollDownDuration; _blendDuration = config.RagdollDownBlendDuration;
+        if (defender) config.ValidateTackle();
+        _blendDuration = defender ? config.OpponentRecoveryBlendDuration : config.RagdollDownBlendDuration;
+        // Defenders only spend enough time down to blend continuously from physics.
+        _downDuration = defender ? _blendDuration : config.RagdollDownDuration;
+        _getUpSpeed = defender ? config.OpponentGetUpPlaybackSpeed : 1f;
         skeleton.Evaluate(ragdoll);
         var settled = skeleton.ModelPose.Select(p => p * skeleton.ModelWorld).ToArray();
         _parents = new int[settled.Length];
@@ -77,9 +81,9 @@ public sealed class RagdollRecovery
         while (Phase != RecoveryPhase.Complete)
         {
             float duration = Phase == RecoveryPhase.Down ? _downDuration :
-                (_getUp.FrameCount - 1) / _getUp.FramesPerSecond;
+                (_getUp.FrameCount - 1) / _getUp.FramesPerSecond / _getUpSpeed;
             float step = Math.Min(dt, Math.Max(0, duration - _elapsed));
-            Animation.Update(step); _elapsed += step; dt -= step;
+            Animation.Update(step * (Phase == RecoveryPhase.GetUp ? _getUpSpeed : 1f)); _elapsed += step; dt -= step;
             if (_elapsed + .000001f < duration) break;
             if (Phase == RecoveryPhase.Down) { Phase = RecoveryPhase.GetUp; _elapsed = 0; _getUp.SeekTime(0); }
             else { Phase = RecoveryPhase.Complete; break; }
