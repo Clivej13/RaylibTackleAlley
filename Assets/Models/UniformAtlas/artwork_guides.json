@@ -1,0 +1,189 @@
+[
+  {
+    "region": "Helmet_crown",
+    "kind": "vertical",
+    "center_px": 1754,
+    "width_px": 26,
+    "span_px": [
+      532.48,
+      1208.32
+    ],
+    "note": "Outer crown and rim centerline; inner shell remains red"
+  },
+  {
+    "region": "Trousers_front",
+    "island": "Trousers_front_00",
+    "kind": "vertical",
+    "center_px": 386.6094357437291,
+    "width_px": 24,
+    "span_px": [
+      931.48,
+      1120.424116907092
+    ]
+  },
+  {
+    "region": "Trousers_front",
+    "island": "Trousers_front_02",
+    "kind": "vertical",
+    "center_px": 493.4642323140394,
+    "width_px": 24,
+    "span_px": [
+      937.48,
+      1125.8852923102004
+    ]
+  },
+  {
+    "region": "Trousers_front",
+    "island": "Trousers_front_05",
+    "kind": "vertical",
+    "center_px": 284.97046059545227,
+    "width_px": 24,
+    "span_px": [
+      895.48,
+      1198.8761705766385
+    ]
+  },
+  {
+    "region": "Trousers_front",
+    "island": "Trousers_front_06",
+    "kind": "vertical",
+    "center_px": 248.97369488040624,
+    "width_px": 24,
+    "span_px": [
+      589.48,
+      892.8230765471974
+    ]
+  },
+  {
+    "region": "Trousers_back",
+    "island": "Trousers_back_00",
+    "kind": "vertical",
+    "center_px": 818.6837159389228,
+    "width_px": 24,
+    "span_px": [
+      931.48,
+      1120.4240969785224
+    ]
+  },
+  {
+    "region": "Trousers_back",
+    "island": "Trousers_back_02",
+    "kind": "vertical",
+    "center_px": 923.5371332453763,
+    "width_px": 24,
+    "span_px": [
+      937.48,
+      1125.885400948254
+    ]
+  },
+  {
+    "region": "Trousers_back",
+    "island": "Trousers_back_03",
+    "kind": "vertical",
+    "center_px": 695.4394448011318,
+    "width_px": 24,
+    "span_px": [
+      589.48,
+      892.8230732012319
+    ]
+  },
+  {
+    "region": "Trousers_back",
+    "island": "Trousers_back_08",
+    "kind": "vertical",
+    "center_px": 731.358018747568,
+    "width_px": 24,
+    "span_px": [
+      895.48,
+      1198.8761557753937
+    ]
+  },
+  {
+    "region": "Sleeve_L",
+    "island": "Sleeve_L_00",
+    "kind": "horizontal",
+    "center_px": 1689.8321531735576,
+    "width_px": 17.067833138162836,
+    "span_px": [
+      1517.72,
+      1603.5444008004501
+    ]
+  },
+  {
+    "region": "Sleeve_L",
+    "island": "Sleeve_L_01",
+    "kind": "horizontal",
+    "center_px": 1711.1100725132067,
+    "width_px": 16.723953434030943,
+    "span_px": [
+      1319.72,
+      1471.5123924340535
+    ]
+  },
+  {
+    "region": "Sleeve_L",
+    "island": "Sleeve_L_02",
+    "kind": "horizontal",
+    "center_px": 1917.9304770721888,
+    "width_px": 17.08611021481109,
+    "span_px": [
+      1409.72,
+      1495.5597843031405
+    ]
+  },
+  {
+    "region": "Sleeve_L",
+    "island": "Sleeve_L_03",
+    "kind": "horizontal",
+    "center_px": 1862.2582411950723,
+    "width_px": 16.72231458920106,
+    "span_px": [
+      1499.72,
+      1644.2419544820718
+    ]
+  },
+  {
+    "region": "Sleeve_R",
+    "island": "Sleeve_R_00",
+    "kind": "horizontal",
+    "center_px": 1689.832277387944,
+    "width_px": 17.067840493453385,
+    "span_px": [
+      1886.36,
+      1972.1843919217445
+    ]
+  },
+  {
+    "region": "Sleeve_R",
+    "island": "Sleeve_R_01",
+    "kind": "horizontal",
+    "center_px": 1711.110185783378,
+    "width_px": 16.723965695224365,
+    "span_px": [
+      1688.36,
+      1840.1523924328355
+    ]
+  },
+  {
+    "region": "Sleeve_R",
+    "island": "Sleeve_R_02",
+    "kind": "horizontal",
+    "center_px": 1862.2583863076604,
+    "width_px": 16.722332190275612,
+    "span_px": [
+      1868.36,
+      2012.8821117665386
+    ]
+  },
+  {
+    "region": "Sleeve_R",
+    "island": "Sleeve_R_03",
+    "kind": "horizontal",
+    "center_px": 1917.930511161869,
+    "width_px": 17.08612224283152,
+    "span_px": [
+      1778.36,
+      1864.199700686169
+    ]
+  }
+]

@@ -25,7 +25,7 @@ public sealed class FootballRenderTests
                 "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
                 "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
                 "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
-                "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations");
+                "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations", "FootballPlayerTauntBicepFlexAnimations");
             while (!assets.ProcessNext()) { }
             var player = new BallCarrier(new TackleAlleyConfig());
             player.InitializeVisual(assets);

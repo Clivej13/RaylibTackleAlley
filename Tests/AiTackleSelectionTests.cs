@@ -78,8 +78,8 @@ public sealed class AiTackleSelectionTests
             defender.Update(start + new Vector3(10, 0, 10), 0.1f, false, Vector2.Zero, false);
         Assert.Equal(start.Z - expectedSpeed * 0.3f, defender.Position.Z, 4);
         Assert.Equal(start.X, defender.Position.X);
-        Assert.True(defender.Position.Y > start.Y);
-        Assert.False(defender.IsGrounded);
+        Assert.Equal(start.Y, defender.Position.Y);
+        Assert.True(defender.IsGrounded);
         Assert.Equal(expectedSpeed, defender.CurrentSpeed);
         defender.Update(start + new Vector3(10, 0, 10), 0.3f, false, Vector2.Zero, false);
         Assert.Equal(start.Z - expectedSpeed * 0.6f, defender.Position.Z, 4);
@@ -126,7 +126,7 @@ public sealed class AiTackleSelectionTests
         var target = defender.Position + new Vector3(0, 0, -3.8f);
         defender.Update(target, 0, null, new Vector3(0, 0, 9));
         Assert.Equal(DefenderState.LungeTackle, defender.State);
-        Assert.True(Vector3.Distance(defender.Position, target) > Opponent.LungeReachDistance);
+        Assert.True(Vector3.Distance(defender.Position, target) > new TackleAlleyConfig().OpponentLungeReachDistance);
         Assert.True(defender.VerticalVelocity > 0);
     }
 

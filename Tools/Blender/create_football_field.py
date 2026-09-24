@@ -1,199 +1,140 @@
-"""Create a deterministic low-poly football field for RaylibTackleAlley.
-
-Run from the repository root with Blender's Python API. The field is centered
-at the origin. The authored asset uses +Z as up, +Y as gameplay forward, and
-is converted to the game's Y-up, -Z-forward space by the game importer.
+"""Deterministic yard-scale field. Run through Blender MCP; no stadium inputs.
+NFL markings: https://operations.nfl.com/rules-officiating/2026-nfl-rulebook
+The requested 53.333 width approximates 53 1/3 yards. Boundary paint is
+clipped inward to the requested footprint; external stadium borders excluded.
 """
-
-import bpy
-import math
-from mathutils import Matrix, Vector
 from pathlib import Path
+import json
+import bpy
+import numpy as np
+from mathutils import Vector
 
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / 'Assets/Models'
+TEX = ROOT / 'Assets/Textures/FootballField'
+WIDTH, LENGTH = 53.333, 120.0
+NX, NY = 2048, 4096
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_DIR = PROJECT_ROOT / "Assets" / "Models"
-BLEND_PATH = OUTPUT_DIR / "football_field.blend"
-
-FIELD_WIDTH = 53.333
-FIELD_LENGTH = 120.0
-PLAYING_LENGTH = 100.0
-END_ZONE_LENGTH = 10.0
-SURFACE_THICKNESS = 0.30
-PAINT_HEIGHT = 0.035
-
-
-def log(message):
-    print(f"[football-field] {message}", flush=True)
-
-
-def make_material(name, color, roughness=0.82):
-    material = bpy.data.materials.new(name)
-    material.diffuse_color = (*color, 1.0)
-    material.use_nodes = True
-    bsdf = material.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (*color, 1.0)
-    bsdf.inputs["Roughness"].default_value = roughness
-    return material
-
-
-def add_box(collection, name, location, dimensions, material, bevel=0.0):
-    bpy.ops.mesh.primitive_cube_add(location=location)
-    obj = bpy.context.object
-    obj.name = name
-    obj.dimensions = dimensions
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    if material:
-        obj.data.materials.append(material)
-    if bevel > 0:
-        modifier = obj.modifiers.new("Tiny edge softening", "BEVEL")
-        modifier.width = bevel
-        modifier.segments = 1
-        obj.modifiers.new("Weighted normals", "WEIGHTED_NORMAL")
-    for old_collection in list(obj.users_collection):
-        old_collection.objects.unlink(obj)
-    collection.objects.link(obj)
-    return obj
-
-
-def aim_at(camera, target):
-    camera.rotation_euler = (Vector(target) - camera.location).to_track_quat("-Z", "Y").to_euler()
-
+def save_image(name, rgb, noncolor=False):
+    h, w = rgb.shape[:2]
+    image = bpy.data.images.new(name, width=w, height=h, alpha=False)
+    image.colorspace_settings.name = 'Non-Color' if noncolor else 'sRGB'
+    rgba = np.ones((h, w, 4), dtype=np.float32)
+    rgba[:, :, :3] = rgb
+    image.pixels.foreach_set(rgba.ravel())
+    image.filepath_raw = str(TEX / (name + '.png'))
+    image.file_format = 'PNG'
+    image.save()
+    image.pack()
+    return image
 
 def main():
-    log("starting deterministic scene build")
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
+    OUT.mkdir(parents=True, exist_ok=True)
+    TEX.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    field_collection = bpy.data.collections.new("FootballField")
-    bpy.context.scene.collection.children.link(field_collection)
-
-    # Keep the material values explicit and Blender-version independent.
-    turf = make_material("Turf Green", (0.075, 0.38, 0.12))
-    end_zone_a = make_material("End Zone Blue", (0.055, 0.22, 0.48))
-    end_zone_b = make_material("End Zone Gold", (0.78, 0.42, 0.045))
-    paint = make_material("White Paint", (0.98, 0.99, 0.94), 0.7)
-    sideline = make_material("Sideline Border", (0.12, 0.16, 0.13), 0.9)
-
-    # Main slab plus two thin end-zone overlays. The visible grass surface is y=0.
-    add_box(field_collection, "Turf Base", (0, -SURFACE_THICKNESS / 2, 0),
-            (FIELD_WIDTH, SURFACE_THICKNESS, FIELD_LENGTH), turf)
-    add_box(field_collection, "End Zone North", (0, PAINT_HEIGHT / 2, -(PLAYING_LENGTH / 2 + END_ZONE_LENGTH / 2)),
-            (FIELD_WIDTH, PAINT_HEIGHT, END_ZONE_LENGTH), end_zone_a)
-    add_box(field_collection, "End Zone South", (0, PAINT_HEIGHT / 2, (PLAYING_LENGTH / 2 + END_ZONE_LENGTH / 2)),
-            (FIELD_WIDTH, PAINT_HEIGHT, END_ZONE_LENGTH), end_zone_b)
-
-    line_width = 0.18
-    line_depth = 0.10
-    # Outside border, with a subtle darker strip beyond it for a clean silhouette.
-    border = 0.65
-    add_box(field_collection, "Sideline Left", (-(FIELD_WIDTH / 2 + border / 2), 0.02, 0), (border, 0.06, FIELD_LENGTH), sideline)
-    add_box(field_collection, "Sideline Right", ((FIELD_WIDTH / 2 + border / 2), 0.02, 0), (border, 0.06, FIELD_LENGTH), sideline)
-    add_box(field_collection, "End Border North", (0, 0.02, -FIELD_LENGTH / 2 - border / 2), (FIELD_WIDTH + border * 2, 0.06, border), sideline)
-    add_box(field_collection, "End Border South", (0, 0.02, FIELD_LENGTH / 2 + border / 2), (FIELD_WIDTH + border * 2, 0.06, border), sideline)
-
-    # Boundary and goal lines sit above the colored surface.
-    add_box(field_collection, "Boundary Left", (-FIELD_WIDTH / 2 + line_width / 2, PAINT_HEIGHT + 0.02, 0), (line_width, line_depth, FIELD_LENGTH - 1.0), paint)
-    add_box(field_collection, "Boundary Right", (FIELD_WIDTH / 2 - line_width / 2, PAINT_HEIGHT + 0.02, 0), (line_width, line_depth, FIELD_LENGTH - 1.0), paint)
-    for label, z in (("Goal Line North", -PLAYING_LENGTH / 2), ("Goal Line South", PLAYING_LENGTH / 2)):
-        add_box(field_collection, label, (0, PAINT_HEIGHT + 0.025, z), (FIELD_WIDTH, line_depth, line_width * 1.5), paint)
-
-    # Yard lines every ten yards, including a strong midfield stripe.
-    for index, z in enumerate(range(-40, 41, 10)):
-        name = "Midfield Line" if z == 0 else f"Yard Line {abs(z):02d}"
-        add_box(field_collection, name, (0, PAINT_HEIGHT + 0.025, z), (FIELD_WIDTH - 0.5, line_depth, line_width), paint)
-
-    # Compact hash marks: two short marks per yard line, aligned for gameplay readability.
-    hash_length = 1.25
-    for z in range(-40, 41, 10):
-        for x in (-FIELD_WIDTH * 0.22, FIELD_WIDTH * 0.22):
-            add_box(field_collection, f"Hash {z:+03d} {x:+.1f}", (x, PAINT_HEIGHT + 0.027, z), (hash_length, line_depth, line_width), paint)
-
-    # End-zone emphasis is intentionally simple: one inner stripe at each goal line.
-    for label, z in (("End Zone Stripe North", -PLAYING_LENGTH / 2 - END_ZONE_LENGTH + 0.8),
-                     ("End Zone Stripe South", PLAYING_LENGTH / 2 + END_ZONE_LENGTH - 0.8)):
-        add_box(field_collection, label, (0, PAINT_HEIGHT + 0.027, z), (FIELD_WIDTH - 1.1, line_depth, line_width), paint)
-
-    # Stable metadata for importers and future tooling.
-    field_collection["asset_type"] = "arcade_football_field"
-    field_collection["dimensions_m"] = (FIELD_WIDTH + border * 2, SURFACE_THICKNESS + PAINT_HEIGHT, FIELD_LENGTH + border * 2)
-    field_collection["gameplay_forward"] = "+Y"
-    field_collection["up_axis"] = "+Z"
-    field_collection["origin"] = "geometric center of field"
-
-    log(f"created field geometry: {FIELD_WIDTH:.3f}m x {FIELD_LENGTH:.3f}m")
-
-    # Camera and simple Eevee lighting for the repository preview.
+    bpy.context.preferences.filepaths.save_version = 0
     scene = bpy.context.scene
-    # Blender 3.x uses BLENDER_EEVEE; newer versions renamed this to EEVEE_NEXT.
-    scene.render.engine = "BLENDER_EEVEE"
-    scene.render.resolution_x = 512
-    scene.render.resolution_y = 512
-    scene.render.resolution_percentage = 100
-    scene.render.image_settings.file_format = "PNG"
-    scene.render.film_transparent = False
-    if scene.world is None:
-        scene.world = bpy.data.worlds.new("Field Preview World")
-        scene.world.use_nodes = True
-    scene.world.color = (0.035, 0.045, 0.055)
-    world_nodes = scene.world.node_tree.nodes
-    world_nodes["Background"].inputs["Color"].default_value = (0.035, 0.045, 0.055, 1.0)
-    world_nodes["Background"].inputs["Strength"].default_value = 0.8
-    scene.view_settings.view_transform = "Standard"
-    scene.view_settings.look = "Medium High Contrast"
-    scene.view_settings.exposure = 1.0
+    scene.unit_settings.system = 'IMPERIAL'
+    scene.unit_settings.scale_length = 0.9144
+    scene.unit_settings.length_unit = 'FEET'
+    scene['units_per_yard'] = 1.0
+    scene['field_width_yards'] = WIDTH
+    scene['field_length_yards'] = LENGTH
+    scene['orientation'] = '+Z up, +Y length; blue end at +Y; GLB +Y up, -Z forward'
+    x = ((np.arange(NX, dtype=np.float32) + .5) / NX * WIDTH - WIDTH/2)[None, :]
+    y = ((np.arange(NY, dtype=np.float32) + .5) / NY * LENGTH - LENGTH/2)[:, None]
+    layout = np.empty((NY, NX, 3), np.float32)
+    layout[:] = (.19, .38, .16)
+    layout[np.broadcast_to(y >= 50, (NY, NX))] = (.055, .20, .39)
+    layout[np.broadcast_to(y <= -50, (NY, NX))] = (.62, .34, .055)
+    # Analytic coverage antialiasing keeps four-inch paint measurable.
+    paint = np.zeros((NY, NX), np.float32)
+    def rect(x0, x1, y0, y1):
+        cx = np.clip((x-x0)/(WIDTH/NX)+.5, 0, 1)*np.clip((x1-x)/(WIDTH/NX)+.5, 0, 1)
+        cy = np.clip((y-y0)/(LENGTH/NY)+.5, 0, 1)*np.clip((y1-y)/(LENGTH/NY)+.5, 0, 1)
+        np.maximum(paint, cx*cy, out=paint)
+    lw = 4/36
+    for side in (-1, 1):
+        if side < 0: rect(-WIDTH/2, -WIDTH/2+lw, -60, 60)
+        else: rect(WIDTH/2-lw, WIDTH/2, -60, 60)
+    rect(-WIDTH/2, WIDTH/2, -60, -60+lw)
+    rect(-WIDTH/2, WIDTH/2, 60-lw, 60)
+    for yard in range(-50, 51, 5):
+        rect(-WIDTH/2, WIDTH/2, yard-lw/2, yard+lw/2)
+    # Inbound edges 70 ft 9 in from each sideline; hashes extend outward.
+    hx = WIDTH/2 - (70.75/3)
+    for yard in range(-49, 50):
+        if yard % 5 == 0: continue
+        for a,b in [(-hx-2/3,-hx),(hx,hx+2/3),
+                    (-WIDTH/2+8/36,-WIDTH/2+8/36+2/3),
+                    (WIDTH/2-8/36-2/3,WIDTH/2-8/36)]:
+            rect(a,b,yard-lw/2,yard+lw/2)
+    # Two-yard conversion marks.
+    for yard in (-48,48): rect(-.5,.5,yard-lw/2,yard+lw/2)
+    layout = layout*(1-paint[:,:,None]) + np.array([.94,.95,.90],np.float32)*paint[:,:,None]
+    save_image('field_layout', layout)
+    rng = np.random.default_rng(1709)
+    grain = rng.normal(0, .018, (NY,NX)).astype(np.float32)
+    broad = .013*np.sin(x*1.9)*np.sin(y*.83) + .008*np.cos(x*.71+y*.32)
+    detail = np.clip(1 + grain + broad, .91, 1.09)
+    grass = np.empty_like(layout)
+    grass[:] = (.19,.38,.16)
+    grass *= detail[:,:,None]
+    save_image('grass_color_detail', grass)
+    # A directly exportable composite guarantees the same layout in GLB.
+    base = layout * (1 + (detail-1)*(1-paint*.85))[:,:,None]
+    base_image = save_image('field_basecolor', base)
+    dx = (np.roll(grain,-1,axis=1)-np.roll(grain,1,axis=1))*.65
+    dy = (np.roll(grain,-1,axis=0)-np.roll(grain,1,axis=0))*.65
+    normal = np.stack((-dx,-dy,np.ones_like(dx)),axis=2)
+    normal /= np.linalg.norm(normal,axis=2)[:,:,None]
+    normal_image = save_image('grass_normal', normal*.5+.5, True)
+    mesh = bpy.data.meshes.new('FieldSurfaceMesh')
+    mesh.from_pydata([(-WIDTH/2,-60,0),(WIDTH/2,-60,0),(WIDTH/2,60,0),(-WIDTH/2,60,0)], [], [(0,1,2,3)])
+    mesh.update()
+    uv = mesh.uv_layers.new(name='FieldUV')
+    for loop, coord in zip(uv.data, [(0,0),(1,0),(1,1),(0,1)]): loop.uv = coord
+    field = bpy.data.objects.new('FootballField',mesh)
+    scene.collection.objects.link(field)
+    field['units_per_yard'] = 1.0
+    field['goal_lines_y'] = [-50.0,50.0]
+    field['end_zone_length_yards'] = 10.0
+    field['hash_inbound_edge_x'] = [-hx,hx]
+    mat = bpy.data.materials.new('Field Turf and Painted Layout')
+    mat.use_nodes = True
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    bsdf = nodes.get('Principled BSDF')
+    bsdf.inputs['Roughness'].default_value = .92
+    albedo = nodes.new('ShaderNodeTexImage'); albedo.image = base_image
+    links.new(albedo.outputs['Color'],bsdf.inputs['Base Color'])
+    texnormal = nodes.new('ShaderNodeTexImage'); texnormal.image = normal_image
+    normalnode = nodes.new('ShaderNodeNormalMap')
+    links.new(texnormal.outputs['Color'],normalnode.inputs['Color'])
+    links.new(normalnode.outputs['Normal'],bsdf.inputs['Normal'])
+    field.data.materials.append(mat)
+    bpy.ops.object.camera_add(location=(95,-115,145))
+    cam = bpy.context.object
+    cam.rotation_euler = (-cam.location).to_track_quat('-Z','Y').to_euler()
+    cam.data.type='ORTHO'; cam.data.ortho_scale=155
+    scene.camera=cam
+    bpy.ops.object.light_add(type='SUN',location=(0,0,100))
+    bpy.context.object.rotation_euler=(.2,-.3,-.2)
+    bpy.context.object.data.energy=2.0
+    scene.world=bpy.data.worlds.new('Field Preview World')
+    scene.world.use_nodes=True
+    scene.world.node_tree.nodes['Background'].inputs[0].default_value=(.08,.10,.13,1)
+    scene.render.engine='BLENDER_EEVEE'
+    scene.view_settings.view_transform='Standard'
+    scene.view_settings.look='Medium High Contrast'
+    scene.render.resolution_x=1400; scene.render.resolution_y=1100
+    scene.render.resolution_percentage=100
+    bpy.ops.object.select_all(action='DESELECT')
+    field.select_set(True); bpy.context.view_layer.objects.active=field
+    bpy.context.view_layer.update()
+    assert abs(field.dimensions.x-WIDTH)<1e-5 and abs(field.dimensions.y-LENGTH)<1e-5
+    assert len([o for o in scene.objects if o.type=='MESH'])==1
+    bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'football_field.blend'))
+    bpy.ops.export_scene.gltf(filepath=str(OUT/'football_field.glb'), export_format='GLB', use_selection=True, export_yup=True, export_extras=True, export_apply=False)
+    print('FIELD_VALIDATED: one quad, two exported triangles, identity transform, 53.333 x 120 yards')
 
-    bpy.ops.object.camera_add(location=(86, 112, 118))
-    camera = bpy.context.object
-    camera.name = "Preview Camera"
-    camera.data.type = "ORTHO"
-    camera.data.ortho_scale = 143
-    aim_at(camera, (0, 0, 0))
-    scene.camera = camera
-
-    bpy.ops.object.light_add(type="AREA", location=(20, 45, 35))
-    key = bpy.context.object
-    key.name = "Preview Key Light"
-    key.data.energy = 5200
-    key.data.shape = "DISK"
-    key.data.size = 70
-    aim_at(key, (0, 0, 0))
-    bpy.ops.object.light_add(type="AREA", location=(-45, 20, -40))
-    fill = bpy.context.object
-    fill.name = "Preview Fill Light"
-    fill.data.energy = 2200
-    fill.data.size = 55
-    aim_at(fill, (0, 0, 0))
-    bpy.ops.object.light_add(type="AREA", location=(0, 95, 0))
-    top = bpy.context.object
-    top.name = "Preview Top Light"
-    top.data.energy = 4200
-    top.data.size = 90
-    aim_at(top, (0, 0, 0))
-
-    # Select only the asset collection's meshes for convenient inspection/export.
-    # The construction above is convenient in Blender's Y-up layout. Bake the
-    # asset contract expected by the importer: +Z up and +Y forward. This is a
-    # +90 degree X rotation, which also keeps the blue north end at +Y.
-    asset_rotation = Matrix.Rotation(math.radians(90.0), 4, "X")
-    for obj in field_collection.objects:
-        if obj.type == "MESH":
-            obj.matrix_world = asset_rotation @ obj.matrix_world
-
-    bpy.ops.object.select_all(action="DESELECT")
-    for obj in field_collection.objects:
-        if obj.type == "MESH":
-            obj.select_set(True)
-    bpy.context.view_layer.objects.active = bpy.data.objects.get("Turf Base")
-
-    scene["field_width_m"] = FIELD_WIDTH
-    scene["field_length_m"] = FIELD_LENGTH
-    scene["orientation"] = "+Z up, +Y gameplay forward; importer maps to world -Z"
-    scene["asset_notes"] = "Low-poly standalone tackle-alley football field; no stadium; baked asset rotation"
-    bpy.ops.wm.save_as_mainfile(filepath=str(BLEND_PATH))
-    log(f"saved blend: {BLEND_PATH}")
-    log("scene build complete")
-
-
-if __name__ == "__main__":
-    main()
+if __name__=='__main__': main()

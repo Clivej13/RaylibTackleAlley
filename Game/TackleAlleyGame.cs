@@ -6,12 +6,13 @@ namespace RaylibTackleAlley.Game;
 
 public sealed class TackleAlleyGame
 {
+    private readonly TackleAlleyConfig _config;
     private readonly FootballField _field;
     private readonly BallCarrier _player;
     private readonly Opponent[] _opponents;
     private readonly ThirdPersonCamera _camera;
     private readonly InputController _input;
-    private readonly CarrierPursuitPrediction _pursuitPrediction = new();
+    private readonly CarrierPursuitPrediction _pursuitPrediction;
     private Opponent? _tackleDefender;
 
     public bool TacklePendingGroundImpact { get; private set; }
@@ -19,20 +20,20 @@ public sealed class TackleAlleyGame
     public bool GameOver { get; private set; }
     public bool OutOfBounds { get; private set; }
     public float EndStateElapsed { get; private set; }
+    private Opponent? _celebratingDefender;
+    public bool OutcomeCelebrationComplete => Touchdown ? _player.TauntComplete :
+        _celebratingDefender?.TauntComplete ?? true;
     public int SuccessfulRuns { get; private set; }
 
     public TackleAlleyGame(TackleAlleyConfig config, InputController input, AssetManager assets)
     {
+        config.Validate();
+        _config = config;
+        _pursuitPrediction = new(config);
         _input = input;
         _field = new FootballField(config, assets);
         _player = new BallCarrier(config);
-        _opponents =
-        [
-            new Opponent(new(-5.5f, 0, -18f), config),
-            new Opponent(new(5.5f, 0, -31f), config),
-            new Opponent(new(-4.5f, 0, -46f), config),
-            new Opponent(new(4.5f, 0, -61f), config)
-        ];
+        _opponents = config.OpponentSpawns.Select(spawn => new Opponent(spawn.Position, config)).ToArray();
         _camera = new ThirdPersonCamera(config);
         ResetRun();
     }
@@ -44,9 +45,19 @@ public sealed class TackleAlleyGame
             opponent.InitializeVisual(assets);
     }
 
+    public void ApplyPlayerUniform(AssetManager assets, string textureKey) =>
+        _player.ApplyUniform(assets, textureKey);
+
+    public void ApplyOpponentUniforms(AssetManager assets, string textureKey)
+    {
+        foreach (Opponent opponent in _opponents)
+            opponent.ApplyUniform(assets, textureKey);
+    }
+
     public void ResetRun()
     {
         _tackleDefender = null;
+        _celebratingDefender = null;
         _player.Reset();
         _pursuitPrediction.Reset(_player.Position);
         foreach (Opponent opponent in _opponents)
@@ -66,7 +77,7 @@ public sealed class TackleAlleyGame
         RagdollDebugControls.Update(_opponents, _player.Position);
         // Tighter capsules need short motion steps to catch fast head-on contact.
         if (!TacklePendingGroundImpact && !GameOver && !Touchdown && deltaTime > Ragdoll.FixedStep &&
-            _opponents.Any(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position) < 36f))
+            _opponents.Any(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position) < _config.ContactSubstepDistance * _config.ContactSubstepDistance))
         {
             float remaining = Math.Min(deltaTime, .25f);
             while (remaining > 0)
@@ -103,7 +114,7 @@ public sealed class TackleAlleyGame
             if (Touchdown)
             {
                 // Keep running after scoring, then stop in the middle of the end zone.
-                _player.RunIntoEndZone(deltaTime, _field.GoalLineZ - _field.EndZoneLength * 0.5f);
+                _player.RunIntoEndZone(deltaTime, _field.GoalLineZ - _field.EndZoneLength * _config.EndZoneStopFraction);
                 _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
             }
             return;
@@ -119,37 +130,44 @@ public sealed class TackleAlleyGame
             return;
         }
         var predictedTarget = _pursuitPrediction.Observe(_player.Position, _player.SpeedTier, deltaTime);
-        bool touching = false;
         foreach (Opponent opponent in _opponents)
         {
             // Test the animated capsules, including the final lunge handoff pose.
             // Existing ragdolls remain excluded from starting another tackle.
             bool controlledAtStart = !opponent.Ragdoll.IsActive && !opponent.IsRecovering;
-            opponent.Update(_player.Position, deltaTime, predictedTarget, _player.Velocity);
+            opponent.Update(_player.Position, deltaTime, predictedTarget, _player.Velocity,
+                predictedTarget - _player.Position);
             if (controlledAtStart && opponent.HasBodyContact(_player))
             {
-                if (opponent.State == DefenderState.LungeTackle && LungeTackleOutcome.Confirm(opponent, _player))
+                if (LungeTackleOutcome.Confirm(opponent, _player))
                 {
                     _tackleDefender = opponent;
+                    _celebratingDefender = opponent;
+                    opponent.CelebrateTackle();
                     TacklePendingGroundImpact = true;
                     break;
                 }
-                touching = true;
-                break;
             }
         }
         var cameraInput = new System.Numerics.Vector2(
             Math.Abs(_input.GetValue("MoveRight")) - Math.Abs(_input.GetValue("MoveLeft")),
             Math.Abs(_input.GetValue("MoveBackward")) - Math.Abs(_input.GetValue("MoveForward")));
+        // Movement deadzones discard small X values that still matter to the rear-view
+        // cone. Recover raw X only for the standard left-stick mapping and active back
+        // input; keep keyboard and rebound controls on their configured action values.
+        if (cameraInput.Y > 0 && Raylib.IsGamepadAvailable(0) &&
+            _input.GetBinding("MoveBackward", InputDeviceFamily.Gamepad)?.Input == "LeftYPositive" &&
+            _input.GetBinding("MoveLeft", InputDeviceFamily.Gamepad)?.Input == "LeftXNegative" &&
+            _input.GetBinding("MoveRight", InputDeviceFamily.Gamepad)?.Input == "LeftXPositive")
+        {
+            float rawY = Raylib.GetGamepadAxisMovement(0, GamepadAxis.LeftY);
+            float rawX = Raylib.GetGamepadAxisMovement(0, GamepadAxis.LeftX);
+            if (rawY >= cameraInput.Y && Math.Abs(rawX) >= Math.Abs(cameraInput.X))
+                cameraInput.X = rawX;
+        }
         _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime, cameraInput);
 
         if (TacklePendingGroundImpact) return;
-        if (touching)
-        {
-            GameOver = true;
-            EndStateElapsed = 0;
-            return;
-        }
 
         if (_player.Position.Z <= _field.GoalLineZ)
         {

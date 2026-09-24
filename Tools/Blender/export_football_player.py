@@ -30,9 +30,9 @@ scene.frame_end = 29
 scene.frame_set(1)
 bpy.ops.object.select_all(action='DESELECT')
 for obj in scene.objects:
-    if obj.type in {'MESH', 'ARMATURE', 'EMPTY'}:
+    if obj.type in {'MESH', 'ARMATURE', 'EMPTY'} and not obj.get('uniform_reference'):
         obj.select_set(True)
-expected_meshes = {o.name for o in scene.objects if o.type == 'MESH'}
+expected_meshes = {o.name for o in scene.objects if o.type == 'MESH' and not o.get('uniform_reference')}
 path = OUT / 'football_player.glb'
 bpy.ops.export_scene.gltf(
     filepath=str(path), export_format='GLB', use_selection=True,

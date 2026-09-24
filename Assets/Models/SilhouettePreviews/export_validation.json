@@ -1,0 +1,74 @@
+{
+  "rigged": {
+    "source_preservation": true,
+    "weights_unchanged": true,
+    "idempotent": true
+  },
+  "jog": {
+    "source_preservation": true,
+    "weights_unchanged": true,
+    "idempotent": true
+  },
+  "run": {
+    "source_preservation": true,
+    "weights_unchanged": true,
+    "idempotent": true
+  },
+  "sprint": {
+    "source_preservation": true,
+    "weights_unchanged": true,
+    "idempotent": true
+  },
+  "football_player.glb": {
+    "exact_animation_channels": 75,
+    "triangles": 8290,
+    "joints": 24
+  },
+  "lowpoly_human_jog_validation.glb": {
+    "exact_animation_channels": 75,
+    "triangles": 8290,
+    "joints": 24
+  },
+  "lowpoly_human_run_validation.glb": {
+    "exact_animation_channels": 75,
+    "triangles": 8290,
+    "joints": 24
+  },
+  "lowpoly_human_sprint_validation.glb": {
+    "exact_animation_channels": 75,
+    "triangles": 8290,
+    "joints": 24
+  },
+  "Jog": {
+    "renders_checked": 116,
+    "resolution": [
+      320,
+      360
+    ],
+    "visible_pad_samples": []
+  },
+  "Run": {
+    "renders_checked": 100,
+    "resolution": [
+      320,
+      360
+    ],
+    "visible_pad_samples": []
+  },
+  "Sprint": {
+    "renders_checked": 84,
+    "resolution": [
+      320,
+      360
+    ],
+    "visible_pad_samples": []
+  },
+  "Standing": {
+    "renders_checked": 4,
+    "resolution": [
+      320,
+      360
+    ],
+    "visible_pad_samples": []
+  }
+}

@@ -45,7 +45,7 @@ public static class RagdollPose
             }
         }
         float start = gait.CurrentTime * gait.FramesPerSecond;
-        float rate = gait.FramesPerSecond * .8f;
+        float rate = gait.FramesPerSecond * ragdoll.Config.RagdollGaitPlaybackRate;
         var result = new Quaternion[ragdoll.Joints.Count];
         return seconds =>
         {

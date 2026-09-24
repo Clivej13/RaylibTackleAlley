@@ -4,23 +4,6 @@ namespace RaylibTackleAlley.Game;
 
 public sealed partial class Ragdoll
 {
-    public const float StruggleDuration = 1.25f;
-    public const float StruggleBlendIn = .12f;
-    public const float StruggleFadeOut = .5f;
-    public const float MotorStiffness = 100f;
-    public const float MotorDamping = 12f;
-    public const float MaximumMotorAcceleration = 90f;
-    public const float MotorPoseResponse = 35f;
-    public const float MaximumMotorCorrectionSpeed = 6f;
-    public const float FootSupportDistance = .12f;
-    public const float SupportStiffness = 32f;
-    public const float SupportDamping = 6f;
-    public const float MaximumSupportAcceleration = 14f;
-    public const float BalanceStiffness = 18f;
-    public const float MaximumBalanceAcceleration = 12f;
-    public const float HitLimbMotorStrength = .08f;
-    public const float HitTorsoMotorStrength = .15f;
-    public const float ContactYieldSpeed = .75f;
     private float[] _motorStrength = [];
     private bool _torsoHit;
     public int? LastHitBody { get; private set; }
@@ -28,19 +11,19 @@ public sealed partial class Ragdoll
 
     public void ReactToContact(int body, float closingSpeed)
     {
-        if (!IsActivelyDriven || closingSpeed < ContactYieldSpeed) return;
+        if (!IsActivelyDriven || closingSpeed < _config.RagdollContactYieldSpeed) return;
         if (body < 0 || body >= _bodies.Length) throw new ArgumentOutOfRangeException(nameof(body));
         LastHitBody = body;
         if (body <= 1)
         {
             _torsoHit = true;
-            _motorStrength[0] = _motorStrength[1] = HitTorsoMotorStrength;
+            _motorStrength[0] = _motorStrength[1] = _config.RagdollHitTorsoMotorStrength;
             return; // Legs keep their gait while the torso falls.
         }
         if (body == 2) return;
         // Yield the entire struck limb, leaving other limbs and the torso braced.
         int first = body % 2 == 0 ? body - 1 : body;
-        _motorStrength[first] = _motorStrength[first + 1] = HitLimbMotorStrength;
+        _motorStrength[first] = _motorStrength[first + 1] = _config.RagdollHitLimbMotorStrength;
     }
     private Func<float, IReadOnlyList<Quaternion>>? _drivePose;
     private Quaternion[] _driveStart = [], _driveTargets = [];
@@ -62,7 +45,7 @@ public sealed partial class Ragdoll
         _driveElapsed = 0; ActiveDriveWeight = 0; _drivePose = pose;
         _motorStrength = Enumerable.Repeat(1f, _bodies.Length).ToArray();
         _torsoHit = false; LastHitBody = null;
-        if (hitBody is { } hit) ReactToContact(hit, ContactYieldSpeed);
+        if (hitBody is { } hit) ReactToContact(hit, _config.RagdollContactYieldSpeed);
     }
 
     private void StopActiveDrive()
@@ -80,8 +63,8 @@ public sealed partial class Ragdoll
         Vector3 error = Log(a.Orientation * _driveTargets[index] * Quaternion.Inverse(b.Orientation));
         // Compliant angular motor inside the position solver, so attachment projection
         // cannot erase the animation's small velocity impulse on every iteration.
-        Vector3 correction = ClampLength(error * MotorPoseResponse * FixedStep / SolverIterations,
-            MaximumMotorCorrectionSpeed * FixedStep / SolverIterations) *
+        Vector3 correction = ClampLength(error * _config.RagdollMotorPoseResponse * FixedStep / SolverIterations,
+            _config.RagdollMaximumMotorCorrectionSpeed * FixedStep / SolverIterations) *
             ActiveDriveWeight * _motorStrength[joint.Child];
         float inverse = a.InverseInertia + b.InverseInertia;
         a.Orientation = Quaternion.Normalize(Exp(-correction * a.InverseInertia / inverse) * a.Orientation);
@@ -92,12 +75,12 @@ public sealed partial class Ragdoll
     {
         if (_drivePose is null) return;
         _driveElapsed += FixedStep;
-        if (_driveElapsed >= StruggleDuration || HasMeaningfulGroundContact)
+        if (_driveElapsed >= _config.RagdollStruggleDuration || HasMeaningfulGroundContact)
         {
             StopActiveDrive(); return;
         }
-        float blendIn = Math.Clamp(_driveElapsed / StruggleBlendIn, 0, 1);
-        float fade = Math.Clamp((StruggleDuration - _driveElapsed) / StruggleFadeOut, 0, 1);
+        float blendIn = Math.Clamp(_driveElapsed / _config.RagdollStruggleBlendIn, 0, 1);
+        float fade = Math.Clamp((_config.RagdollStruggleDuration - _driveElapsed) / _config.RagdollStruggleFadeOut, 0, 1);
         ActiveDriveWeight = blendIn * fade;
         var targets = _drivePose(_driveElapsed);
         if (targets.Count != _joints.Length) throw new ArgumentException("One drive target per ragdoll joint is required.");
@@ -111,8 +94,8 @@ public sealed partial class Ragdoll
             _driveTargets[i] = Quaternion.Normalize(j.ReferenceRotation * Exp(angles));
             Quaternion desired = Quaternion.Normalize(a.Orientation * _driveTargets[i]);
             Vector3 acceleration = ClampLength(
-                Log(desired * Quaternion.Inverse(b.Orientation)) * MotorStiffness -
-                (b.AngularVelocity - a.AngularVelocity) * MotorDamping, MaximumMotorAcceleration) * ActiveDriveWeight * _motorStrength[j.Child];
+                Log(desired * Quaternion.Inverse(b.Orientation)) * _config.RagdollMotorStiffness -
+                (b.AngularVelocity - a.AngularVelocity) * _config.RagdollMotorDamping, _config.RagdollMaximumMotorAcceleration) * ActiveDriveWeight * _motorStrength[j.Child];
             // Equal/opposite internal torque: animation works against the collision, never teleports bones.
             Vector3 angularImpulse = acceleration * FixedStep / (a.InverseInertia + b.InverseInertia);
             a.AngularVelocity -= angularImpulse * a.InverseInertia;
@@ -123,17 +106,17 @@ public sealed partial class Ragdoll
         // no horizontal root motion, and no strength after a large roll/knockdown.
         var root = _bodies[0];
         float tilt = Log(root.Orientation * Quaternion.Inverse(_driveRoot)).Length();
-        float balance = Math.Clamp(1 - tilt / (MathF.PI * .45f), 0, 1);
-        bool supported = (_motorStrength[8] > .5f && _bodies[8].Bottom <= GroundHeight + FootSupportDistance) ||
-            (_motorStrength[10] > .5f && _bodies[10].Bottom <= GroundHeight + FootSupportDistance);
+        float balance = Math.Clamp(1 - tilt / _config.RagdollBalanceTiltLimitRadians, 0, 1);
+        bool supported = (_motorStrength[8] > _config.RagdollMinimumSupportStrength && _bodies[8].Bottom <= GroundHeight + _config.RagdollFootSupportDistance) ||
+            (_motorStrength[10] > _config.RagdollMinimumSupportStrength && _bodies[10].Bottom <= GroundHeight + _config.RagdollFootSupportDistance);
         if (!supported || _torsoHit) return;
         float weight = ActiveDriveWeight * balance;
-        float support = Math.Clamp(Gravity + SupportStiffness * (_driveHeight - (root.Position.Y - GroundHeight)) -
-            SupportDamping * root.LinearVelocity.Y, 0, MaximumSupportAcceleration) * weight;
+        float support = Math.Clamp(_config.RagdollGravity + _config.RagdollSupportStiffness * (_driveHeight - (root.Position.Y - GroundHeight)) -
+            _config.RagdollSupportDamping * root.LinearVelocity.Y, 0, _config.RagdollMaximumSupportAcceleration) * weight;
         foreach (var body in _bodies) body.LinearVelocity += Vector3.UnitY * support * FixedStep;
         Vector3 balanceAcceleration = ClampLength(
-            Log(_driveRoot * Quaternion.Inverse(root.Orientation)) * BalanceStiffness -
-            root.AngularVelocity * 3f, MaximumBalanceAcceleration);
+            Log(_driveRoot * Quaternion.Inverse(root.Orientation)) * _config.RagdollBalanceStiffness -
+            root.AngularVelocity * _config.RagdollBalanceDamping, _config.RagdollMaximumBalanceAcceleration);
         root.AngularVelocity += balanceAcceleration * weight * FixedStep;
     }
 }

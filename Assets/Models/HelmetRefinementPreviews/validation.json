@@ -1,0 +1,126 @@
+{
+  "rigged": {
+    "samples": 1,
+    "max_head_attachment_error": 0,
+    "head_neck_intersections": [],
+    "sampled_minimum_head_neck_clearance": {
+      "Helmet": 0.010189279913902283,
+      "Facemask": 0.006490691099315882,
+      "Visor": 0.012750428169965744,
+      "ChinStrap": 0.010815592482686043
+    },
+    "equipment_intersections_at_first_frame": {
+      "Helmet/Facemask": 138,
+      "Helmet/Visor": 0,
+      "Helmet/ChinStrap": 46,
+      "Facemask/Visor": 0,
+      "Facemask/ChinStrap": 0
+    },
+    "protected_source_data_unchanged": true
+  },
+  "jog": {
+    "samples": 57,
+    "max_head_attachment_error": 4.4705035758886937e-07,
+    "head_neck_intersections": [],
+    "sampled_minimum_head_neck_clearance": {
+      "Helmet": 0.010189232416450977,
+      "Facemask": 0.006490684114396572,
+      "Visor": 0.012750420719385147,
+      "ChinStrap": 0.010815471410751343
+    },
+    "equipment_intersections_at_first_frame": {
+      "Helmet/Facemask": 138,
+      "Helmet/Visor": 0,
+      "Helmet/ChinStrap": 46,
+      "Facemask/Visor": 0,
+      "Facemask/ChinStrap": 0
+    },
+    "protected_source_data_unchanged": true
+  },
+  "run": {
+    "samples": 49,
+    "max_head_attachment_error": 5.371140036797094e-07,
+    "head_neck_intersections": [],
+    "sampled_minimum_head_neck_clearance": {
+      "Helmet": 0.010189213789999485,
+      "Facemask": 0.006490682251751423,
+      "Visor": 0.012750418856739998,
+      "ChinStrap": 0.010815491899847984
+    },
+    "equipment_intersections_at_first_frame": {
+      "Helmet/Facemask": 138,
+      "Helmet/Visor": 0,
+      "Helmet/ChinStrap": 46,
+      "Facemask/Visor": 0,
+      "Facemask/ChinStrap": 0
+    },
+    "protected_source_data_unchanged": true
+  },
+  "sprint": {
+    "samples": 41,
+    "max_head_attachment_error": 6.020004574859281e-07,
+    "head_neck_intersections": [],
+    "sampled_minimum_head_neck_clearance": {
+      "Helmet": 0.010189228691160679,
+      "Facemask": 0.006490680854767561,
+      "Visor": 0.012750411406159401,
+      "ChinStrap": 0.010815504938364029
+    },
+    "equipment_intersections_at_first_frame": {
+      "Helmet/Facemask": 138,
+      "Helmet/Visor": 0,
+      "Helmet/ChinStrap": 46,
+      "Facemask/Visor": 0,
+      "Facemask/ChinStrap": 0
+    },
+    "protected_source_data_unchanged": true
+  },
+  "football_player.glb": {
+    "exact_animation_channels": 75,
+    "head_skin_validation": {
+      "Helmet": 1160,
+      "Facemask": 1068,
+      "Visor": 192,
+      "ChinStrap": 352
+    },
+    "triangles_before": 8290,
+    "triangles": 8410,
+    "joints": 24
+  },
+  "lowpoly_human_jog_validation.glb": {
+    "exact_animation_channels": 75,
+    "head_skin_validation": {
+      "Helmet": 1160,
+      "Facemask": 1068,
+      "Visor": 192,
+      "ChinStrap": 352
+    },
+    "triangles_before": 8290,
+    "triangles": 8410,
+    "joints": 24
+  },
+  "lowpoly_human_run_validation.glb": {
+    "exact_animation_channels": 75,
+    "head_skin_validation": {
+      "Helmet": 1160,
+      "Facemask": 1068,
+      "Visor": 192,
+      "ChinStrap": 352
+    },
+    "triangles_before": 8290,
+    "triangles": 8410,
+    "joints": 24
+  },
+  "lowpoly_human_sprint_validation.glb": {
+    "exact_animation_channels": 75,
+    "head_skin_validation": {
+      "Helmet": 1160,
+      "Facemask": 1068,
+      "Visor": 192,
+      "ChinStrap": 352
+    },
+    "triangles_before": 8290,
+    "triangles": 8410,
+    "joints": 24
+  }
+}

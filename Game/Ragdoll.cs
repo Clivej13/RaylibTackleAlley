@@ -8,6 +8,8 @@ public readonly record struct RagdollImpulse(int Body, Vector3 Impulse, Vector3?
 
 public sealed class RagdollBody
 {
+    internal TackleAlleyConfig Config { get; }
+    internal float Scale { get; }
     public string Bone { get; }
     public Vector3 Position { get; internal set; }
     public Quaternion Orientation { get; internal set; }
@@ -22,8 +24,9 @@ public sealed class RagdollBody
     public Vector3 SegmentEnd => Position + Vector3.Transform(HalfSegment, Orientation);
     public float Bottom => Math.Min(SegmentStart.Y, SegmentEnd.Y) - Radius;
 
-    internal RagdollBody(string bone, Vector3 position, Quaternion rotation, Vector3 halfSegment, float radius, float mass)
+    internal RagdollBody(string bone, Vector3 position, Quaternion rotation, Vector3 halfSegment, float radius, float mass, TackleAlleyConfig config, float scale)
     {
+        Config = config; Scale = scale;
         Bone = bone; Position = position; Orientation = rotation;
         HalfSegment = halfSegment; Radius = radius; Mass = mass;
     }
@@ -38,25 +41,21 @@ public sealed partial class Ragdoll
 {
     public const float FixedStep = 1f / 120f;
     public const int SolverIterations = 24;
-    public const float Gravity = 9.81f;
-    public const float LinearDamping = 0.35f;
-    public const float AngularDamping = 2.5f;
-    public const float GroundFriction = 8f;
-    public const float MaximumAngularSpeed = 12f;
-    public const float SettleLinearSpeed = 0.12f;
-    public const float SettleAngularSpeed = 0.25f;
-    public const float SettleDuration = 0.8f;
+    internal TackleAlleyConfig Config { get; }
+    private TackleAlleyConfig _config => Config;
+    public Ragdoll(TackleAlleyConfig? config = null)
+    {
+        Config = config ?? new();
+        Config.ValidateRagdollPhysics();
+    }
     private RagdollBody[] _bodies = [];
     private RagdollJoint[] _joints = [];
     private Vector3[] _previousPositions = [];
     private Quaternion[] _previousRotations = [];
     private float _accumulator, _quietTime, _torsoContactTime;
     private float[] _incomingVertical = [];
-    public const float GroundContactTolerance = .005f;
-    public const float DownTorsoRadiusMultiplier = 3.5f;
-    public const float GroundImpactMinimumSpeed = .5f;
-    public const float GroundContactHoldSeconds = .08f;
     public bool HasMeaningfulGroundContact { get; private set; }
+    public bool HasDownGroundContact { get; private set; }
     public RagdollState State { get; private set; }
     public bool IsActive => State != RagdollState.Inactive;
     public IReadOnlyList<RagdollBody> Bodies => Array.AsReadOnly(_bodies);
@@ -68,13 +67,13 @@ public sealed partial class Ragdoll
         "Hips", "Chest", "Neck", "Head", "UpperArm.L", "LowerArm.L", "Hand.L",
         "UpperArm.R", "LowerArm.R", "Hand.R", "UpperLeg.L", "LowerLeg.L", "Foot.L",
         "UpperLeg.R", "LowerLeg.R", "Foot.R" });
-    private static readonly (string Bone, string? End, int Parent, float Radius, float Mass)[] Layout = [
-        ("Hips", "Chest", -1, .15f, 18f), ("Chest", "Neck", 0, .19f, 25f),
-        ("Head", null, 1, .13f, 6f),
-        ("UpperArm.L", "LowerArm.L", 1, .065f, 3f), ("LowerArm.L", "Hand.L", 3, .055f, 2f),
-        ("UpperArm.R", "LowerArm.R", 1, .065f, 3f), ("LowerArm.R", "Hand.R", 5, .055f, 2f),
-        ("UpperLeg.L", "LowerLeg.L", 0, .095f, 9f), ("LowerLeg.L", "Foot.L", 7, .07f, 5f),
-        ("UpperLeg.R", "LowerLeg.R", 0, .095f, 9f), ("LowerLeg.R", "Foot.R", 9, .07f, 5f)
+    private (string Bone, string? End, int Parent, float Radius, float Mass)[] Layout => [
+        ("Hips", "Chest", -1, _config.RagdollPelvisRadius, _config.RagdollPelvisMass), ("Chest", "Neck", 0, _config.RagdollChestRadius, _config.RagdollChestMass),
+        ("Head", null, 1, _config.RagdollHeadRadius, _config.RagdollHeadMass),
+        ("UpperArm.L", "LowerArm.L", 1, _config.RagdollUpperArmRadius, _config.RagdollUpperArmMass), ("LowerArm.L", "Hand.L", 3, _config.RagdollLowerArmRadius, _config.RagdollLowerArmMass),
+        ("UpperArm.R", "LowerArm.R", 1, _config.RagdollUpperArmRadius, _config.RagdollUpperArmMass), ("LowerArm.R", "Hand.R", 5, _config.RagdollLowerArmRadius, _config.RagdollLowerArmMass),
+        ("UpperLeg.L", "LowerLeg.L", 0, _config.RagdollUpperLegRadius, _config.RagdollUpperLegMass), ("LowerLeg.L", "Foot.L", 7, _config.RagdollLowerLegRadius, _config.RagdollLowerLegMass),
+        ("UpperLeg.R", "LowerLeg.R", 0, _config.RagdollUpperLegRadius, _config.RagdollUpperLegMass), ("LowerLeg.R", "Foot.R", 9, _config.RagdollLowerLegRadius, _config.RagdollLowerLegMass)
     ];
 
     /// <summary>Both dictionaries contain absolute bone transforms in world space.
@@ -89,16 +88,17 @@ public sealed partial class Ragdoll
             if (!pose.TryGetValue(name, out var p) || !referencePose.TryGetValue(name, out var r) ||
                 !ValidTransform(p) || !ValidTransform(r))
                 throw new ArgumentException($"Missing or invalid ragdoll bone: {name}");
-        if (impulse is { } requested) ValidateImpulse(requested, Layout.Length);
-        var bodies = new RagdollBody[Layout.Length];
+        var layout = Layout;
+        if (impulse is { } requested) ValidateImpulse(requested, layout.Length);
+        var bodies = new RagdollBody[layout.Length];
         var joints = new List<RagdollJoint>();
-        for (int i = 0; i < Layout.Length; i++)
+        for (int i = 0; i < layout.Length; i++)
         {
-            var part = Layout[i];
+            var part = layout[i];
             Matrix4x4.Decompose(pose[part.Bone], out var scale, out var rotation, out var start);
             rotation = Quaternion.Normalize(rotation);
             Vector3 end = part.End is { } name ? pose[name].Translation :
-                start + Vector3.Transform(Vector3.UnitY * .12f * scale.Y, rotation);
+                start + Vector3.Transform(Vector3.UnitY * _config.RagdollHeadSegmentLength * scale.Y, rotation);
             Vector3 centre = (start + end) * .5f;
             // Keep rounded ends within the bone span where possible.
             Vector3 half = (end - start) * .5f;
@@ -106,11 +106,11 @@ public sealed partial class Ragdoll
             if (half.Length() > radius) half *= (half.Length() - radius) / half.Length();
             else half = Vector3.Zero;
             bodies[i] = new(part.Bone, centre, rotation,
-                Vector3.Transform(half, Quaternion.Inverse(rotation)), radius, part.Mass) { LinearVelocity = velocity };
+                Vector3.Transform(half, Quaternion.Inverse(rotation)), radius, part.Mass, _config, Math.Abs(scale.Y)) { LinearVelocity = velocity };
             if (part.Parent < 0) continue;
             var parent = bodies[part.Parent];
             Vector3 anchor = start;
-            var parentReference = Rotation(referencePose[Layout[part.Parent].Bone]);
+            var parentReference = Rotation(referencePose[layout[part.Parent].Bone]);
             var childReference = Rotation(referencePose[part.Bone]);
             var (min, max) = Limits(i);
             joints.Add(new(part.Parent, i,
@@ -122,7 +122,7 @@ public sealed partial class Ragdoll
         _bodies = bodies; _joints = joints.ToArray();
         _previousPositions = new Vector3[bodies.Length]; _previousRotations = new Quaternion[bodies.Length];
         _incomingVertical = new float[bodies.Length];
-        HasMeaningfulGroundContact = false; _torsoContactTime = 0f;
+        HasMeaningfulGroundContact = false; HasDownGroundContact = false; _torsoContactTime = 0f;
         _accumulator = _quietTime = 0f; GroundHeight = groundHeight;
         State = RagdollState.Active;
         if (impulse is { } kick) ApplyImpulse(kick);
@@ -130,15 +130,15 @@ public sealed partial class Ragdoll
 
     // Quaternion rotation-vector bounds in the child's anatomical reference frame.
     // Elbows/knees predominantly hinge about X; small Y/Z slack avoids a brittle perfect hinge.
-    private static (Vector3, Vector3) Limits(int body)
+    private (Vector3, Vector3) Limits(int body)
     {
         var degrees = body switch {
-            1 => (new Vector3(-35, -30, -25), new Vector3(35, 30, 25)),
-            2 => (new Vector3(-45, -65, -35), new Vector3(45, 65, 35)),
-            4 or 6 => (new Vector3(-145, -8, -8), new Vector3(5, 8, 8)),
-            8 or 10 => (new Vector3(-5, -6, -6), new Vector3(145, 6, 6)),
-            7 or 9 => (new Vector3(-110, -35, -45), new Vector3(35, 35, 45)),
-            _ => (new Vector3(-120, -70, -95), new Vector3(120, 70, 95))
+            1 => (_config.RagdollTorsoLimits.Minimum, _config.RagdollTorsoLimits.Maximum),
+            2 => (_config.RagdollNeckLimits.Minimum, _config.RagdollNeckLimits.Maximum),
+            4 or 6 => (_config.RagdollElbowLimits.Minimum, _config.RagdollElbowLimits.Maximum),
+            8 or 10 => (_config.RagdollKneeLimits.Minimum, _config.RagdollKneeLimits.Maximum),
+            7 or 9 => (_config.RagdollHipLimits.Minimum, _config.RagdollHipLimits.Maximum),
+            _ => (_config.RagdollShoulderLimits.Minimum, _config.RagdollShoulderLimits.Maximum)
         };
         return (degrees.Item1 * (MathF.PI / 180f), degrees.Item2 * (MathF.PI / 180f));
     }
@@ -151,7 +151,7 @@ public sealed partial class Ragdoll
         body.LinearVelocity += impulse.Impulse / body.Mass;
         if (impulse.WorldPoint is { } point)
             body.AngularVelocity = ClampLength(body.AngularVelocity +
-                Vector3.Cross(point - body.Position, impulse.Impulse) * body.InverseInertia, MaximumAngularSpeed);
+                Vector3.Cross(point - body.Position, impulse.Impulse) * body.InverseInertia, _config.RagdollMaximumAngularSpeed);
         _quietTime = 0f; State = RagdollState.Active;
     }
 
@@ -159,7 +159,7 @@ public sealed partial class Ragdoll
     {
         StopActiveDrive();
         State = RagdollState.Inactive; _accumulator = _quietTime = _torsoContactTime = 0f;
-        HasMeaningfulGroundContact = false;
+        HasMeaningfulGroundContact = false; HasDownGroundContact = false;
         foreach (var b in _bodies) b.LinearVelocity = b.AngularVelocity = Vector3.Zero;
     }
 
@@ -182,8 +182,8 @@ public sealed partial class Ragdoll
         {
             var b = _bodies[i];
             _previousPositions[i] = b.Position; _previousRotations[i] = b.Orientation;
-            b.LinearVelocity = (b.LinearVelocity - Vector3.UnitY * Gravity * FixedStep) * MathF.Exp(-LinearDamping * FixedStep);
-            b.AngularVelocity = ClampLength(b.AngularVelocity * MathF.Exp(-AngularDamping * FixedStep), MaximumAngularSpeed);
+            b.LinearVelocity = (b.LinearVelocity - Vector3.UnitY * _config.RagdollGravity * FixedStep) * MathF.Exp(-_config.RagdollLinearDamping * FixedStep);
+            b.AngularVelocity = ClampLength(b.AngularVelocity * MathF.Exp(-_config.RagdollAngularDamping * FixedStep), _config.RagdollMaximumAngularSpeed);
             _incomingVertical[i] = b.LinearVelocity.Y;
             b.Position += b.LinearVelocity * FixedStep;
             b.Orientation = Quaternion.Normalize(Exp(b.AngularVelocity * FixedStep) * b.Orientation);
@@ -244,31 +244,54 @@ public sealed partial class Ragdoll
             var b = _bodies[i];
             b.Position += Vector3.UnitY * Math.Max(0f, GroundHeight - b.Bottom);
             b.LinearVelocity = (b.Position - _previousPositions[i]) / FixedStep;
-            b.AngularVelocity = ClampLength(Log(b.Orientation * Quaternion.Inverse(_previousRotations[i])) / FixedStep, MaximumAngularSpeed);
-            if (b.Bottom <= GroundHeight + GroundContactTolerance)
+            b.AngularVelocity = ClampLength(Log(b.Orientation * Quaternion.Inverse(_previousRotations[i])) / FixedStep, _config.RagdollMaximumAngularSpeed);
+            if (b.Bottom <= GroundHeight + _config.RagdollGroundContactTolerance)
             {
                 grounded = true;
-                b.LinearVelocity *= MathF.Exp(-GroundFriction * FixedStep);
-                b.AngularVelocity *= MathF.Exp(-GroundFriction * FixedStep);
+                b.LinearVelocity *= MathF.Exp(-_config.RagdollGroundFriction * FixedStep);
+                b.AngularVelocity *= MathF.Exp(-_config.RagdollGroundFriction * FixedStep);
                 if (b.LinearVelocity.Y < 0) b.LinearVelocity = new(b.LinearVelocity.X, 0, b.LinearVelocity.Z);
             }
-            quiet &= b.LinearVelocity.Length() < SettleLinearSpeed && b.AngularVelocity.Length() < SettleAngularSpeed;
+            quiet &= b.LinearVelocity.Length() < _config.RagdollSettleLinearSpeed && b.AngularVelocity.Length() < _config.RagdollSettleAngularSpeed;
         }
+        HasDownGroundContact |= IsDownOnGround();
         // Ignore feet/hands/head grazes. A low torso plus pelvis/chest contact means
         // the carrier is actually down. Evaluate every substep so a brief impact is not lost.
-        bool torsoContact = (_bodies[0].Bottom <= GroundHeight + GroundContactTolerance ||
-            _bodies[1].Bottom <= GroundHeight + GroundContactTolerance) &&
-            _bodies[1].Position.Y <= GroundHeight + DownTorsoRadiusMultiplier * _bodies[1].Radius;
-        bool impact = (_bodies[0].Bottom <= GroundHeight + GroundContactTolerance && _incomingVertical[0] <= -GroundImpactMinimumSpeed) ||
-            (_bodies[1].Bottom <= GroundHeight + GroundContactTolerance && _incomingVertical[1] <= -GroundImpactMinimumSpeed);
+        bool torsoContact = (_bodies[0].Bottom <= GroundHeight + _config.RagdollGroundContactTolerance ||
+            _bodies[1].Bottom <= GroundHeight + _config.RagdollGroundContactTolerance) &&
+            _bodies[1].Position.Y <= GroundHeight + _config.RagdollDownTorsoRadiusMultiplier * _bodies[1].Radius;
+        bool impact = (_bodies[0].Bottom <= GroundHeight + _config.RagdollGroundContactTolerance && _incomingVertical[0] <= -_config.RagdollGroundImpactMinimumSpeed) ||
+            (_bodies[1].Bottom <= GroundHeight + _config.RagdollGroundContactTolerance && _incomingVertical[1] <= -_config.RagdollGroundImpactMinimumSpeed);
         _torsoContactTime = torsoContact ? _torsoContactTime + FixedStep : 0f;
-        HasMeaningfulGroundContact |= torsoContact && (impact || _torsoContactTime >= GroundContactHoldSeconds);
+        HasMeaningfulGroundContact |= torsoContact && (impact || _torsoContactTime >= _config.RagdollGroundContactHoldSeconds);
         if (HasMeaningfulGroundContact) StopActiveDrive();
         _quietTime = quiet && grounded ? _quietTime + FixedStep : 0f;
-        State = _quietTime >= SettleDuration ? RagdollState.Settled :
+        State = _quietTime >= _config.RagdollSettleDuration ? RagdollState.Settled :
             _quietTime > 0f ? RagdollState.Settling : RagdollState.Active;
         if (State == RagdollState.Settled)
             foreach (var b in _bodies) b.LinearVelocity = b.AngularVelocity = Vector3.Zero;
+    }
+
+    // Pelvis covers the bum; torso capsules cover belly/back. Use the proximal
+    // half of each forearm so a hand plant alone does not end the run.
+    // Only the knee end of a lower leg counts, never its foot end.
+    public bool IsDownOnGround()
+    {
+        if (!IsActive) return false;
+        float floor = GroundHeight + _config.RagdollGroundContactTolerance;
+        foreach (var body in _bodies)
+        {
+            float bottom = body.Bone switch
+            {
+                "Hips" or "Chest" => body.Bottom,
+                "LowerArm.L" or "LowerArm.R" =>
+                    Math.Min(body.SegmentStart.Y, body.Position.Y) - body.Radius,
+                "LowerLeg.L" or "LowerLeg.R" => body.SegmentStart.Y - body.Radius,
+                _ => float.PositiveInfinity
+            };
+            if (bottom <= floor) return true;
+        }
+        return false;
     }
 
     private void SolveGround(RagdollBody b)

@@ -13,14 +13,14 @@ public sealed partial class Opponent
     private readonly TackleAlleyConfig _config;
     private Vector3 _position;
     private Vector3 _movementDirection;
-    private const float VisualHeight = 2f;
     private ModelInstance? _model;
     private readonly Dictionary<string, AnimationPlayer> _animations = new();
     private AnimationPlayer? _animation;
     private float _visualScale;
     private float _groundOffset;
-    private float _yawDegrees = 180f;
+    private float _yawDegrees;
 
+    public bool HasEngaged { get; private set; }
     public OpponentPace Pace { get; private set; } = OpponentPace.Jog;
     public Vector3 Position => _position;
     public float CurrentSpeed { get; private set; }
@@ -40,6 +40,12 @@ public sealed partial class Opponent
         OpponentPace.Sprint => "Sprint",
         _ => throw new InvalidOperationException("Unknown opponent pace.")
     });
+
+    /// <summary>Apply a loaded texture asset to this player's Uniform material.</summary>
+    public void ApplyUniform(AssetManager assets, string textureKey) =>
+        PlayerUniform.ApplyUniform(_model ??
+            throw new InvalidOperationException("Initialize player visuals before selecting a uniform."),
+            assets, textureKey);
 
     // AssetManager owns instances and borrowed clips; instances are released first.
     public unsafe void InitializeVisual(AssetManager assets)
@@ -62,19 +68,19 @@ public sealed partial class Opponent
                     throw new InvalidDataException($"{name} must be nonempty and compatible with FootballPlayer.");
                 // Each opponent owns its playback clocks and deformable model instance.
                 // Raylib resamples glTF animation at 60 Hz independently of Blender FPS.
-                _animations.Add(name, new AnimationPlayer(model, clip, loop: !name.StartsWith("SetWrap") && !name.StartsWith("LungeTackle") && name != "LungeLand" && name != "GetUp"));
+                _animations.Add(name, new AnimationPlayer(model, clip, loop: !name.StartsWith("SetWrap") && !name.StartsWith("LungeTackle") && name != "LungeLand" && name != "GetUp" && name != "TauntBicepFlex"));
             }
             BoundingBox bounds = Raylib.GetModelBoundingBox(model.Model);
             float height = bounds.Max.Y - bounds.Min.Y;
             if (!float.IsFinite(height) || height <= 0f)
                 throw new InvalidDataException("FootballPlayer must have a finite positive height.");
-            _visualScale = VisualHeight / height;
+            _visualScale = _config.OpponentVisualHeight / height;
             _groundOffset = -bounds.Min.Y * _visualScale;
             _model = model;
             SelectAnimation();
             // A completed headless lunge waits for a real pose rather than fabricating one.
             if (State == DefenderState.LungeTackle && _tackleRemaining <= 0f && _animation is { } lunge)
-                lunge.SeekTime((lunge.FrameCount - 1) / lunge.FramesPerSecond);
+                lunge.SeekTime(OneShotDuration);
         }
         catch
         {
@@ -87,26 +93,32 @@ public sealed partial class Opponent
     public Opponent(Vector3 spawnPosition, TackleAlleyConfig config)
     {
         config.ValidateOpponentLocomotion();
+        config.ValidateTackle();
         config.ValidateRagdollRecovery();
         _spawnPosition = spawnPosition;
         _config = config;
+        Ragdoll = new(config);
+        _contactPose = new(config);
         Reset();
     }
 
     public void Reset()
     {
+        _tauntRequested = false; _tauntElapsed = 0f;
         Ragdoll.Deactivate();
         _recovery = null;
         _position = _spawnPosition;
         _movementDirection = Vector3.Zero;
+        _observedCarrierVelocity = null;
         State = DefenderState.Locomotion;
         _tackleAnimation = null;
         _tackleRemaining = 0f;
         VerticalVelocity = 0f;
         foreach (var animation in _animations.Values) animation.SeekTime(0f);
+        HasEngaged = false;
         Pace = OpponentPace.Jog;
         CurrentSpeed = TargetSpeed;
-        _yawDegrees = 180f;
+        _yawDegrees = _config.OpponentInitialYawDegrees;
         SelectAnimation();
         _animation?.SeekTime(0f);
         RestoreAnimatedOwnership();
@@ -134,11 +146,12 @@ public sealed partial class Opponent
 
     private OpponentPace SelectPace(float distance)
     {
-        float margin = _config.OpponentPaceHysteresis;
-        float sprintExit = _config.OpponentSprintDistance +
-            (Pace == OpponentPace.Sprint ? margin : 0f);
-        if (distance <= sprintExit)
+        if (HasEngaged || distance <= _config.OpponentSprintDistance)
+        {
+            HasEngaged = true;
             return OpponentPace.Sprint;
+        }
+        float margin = _config.OpponentPaceHysteresis;
         float runExit = _config.OpponentRunDistance +
             (Pace != OpponentPace.Jog ? margin : 0f);
         return distance <= runExit ? OpponentPace.Run : OpponentPace.Jog;
@@ -159,7 +172,7 @@ public sealed partial class Opponent
         CurrentSpeed = step.Speed;
         Vector3 direction = (pursuitTarget ?? playerPosition) - _position;
         direction.Y = 0;
-        if (direction.LengthSquared() > 0.001f)
+        if (direction.LengthSquared() > _config.OpponentPursuitStopDistance * _config.OpponentPursuitStopDistance)
         {
             _movementDirection = Vector3.Normalize(direction);
             _position += _movementDirection * step.Distance;

@@ -64,7 +64,7 @@ internal sealed class RightStickInput
         float Read(string action)
         {
             float value = _directions!.GetValue(prefix + action);
-            return normalizeMouse ? NormalizeMouseDelta(value, _config.MouseGestureSensitivity) : value;
+            return normalizeMouse ? NormalizeMouseDelta(value, _config.MouseGestureSensitivity, _config.MouseGestureNoisePixels) : value;
         }
 
         return new Vector2(
@@ -72,12 +72,12 @@ internal sealed class RightStickInput
             CombineDirections(Read(Actions[2]), Read(Actions[3])));
     }
 
-    internal static float NormalizeMouseDelta(float delta, float sensitivity)
+    internal static float NormalizeMouseDelta(float delta, float sensitivity, float noisePixels)
     {
         if (!float.IsFinite(delta) || !float.IsFinite(sensitivity) || sensitivity <= 0f)
             return 0f;
-        // Ignore up to two pixels of noise, regardless of the configured sensitivity.
-        if (Math.Abs(delta) <= 2f)
+        // Filter mouse noise before applying sensitivity.
+        if (Math.Abs(delta) <= noisePixels)
             return 0f;
         return Math.Clamp(delta * sensitivity, -1f, 1f);
     }

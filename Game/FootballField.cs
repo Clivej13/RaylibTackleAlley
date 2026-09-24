@@ -27,6 +27,7 @@ public sealed class FootballField
 
     public FootballField(TackleAlleyConfig config, AssetManager assets)
     {
+        config.ValidateField();
         _assets = assets;
         Width = config.FieldWidth;
         Length = config.FieldLength;
@@ -51,7 +52,38 @@ public sealed class FootballField
 
         // The turf is the gameplay ground; preserve the stadium's authored elevation.
         _fieldPosition.Y = -fieldBounds.Max.Y;
+        ConfigureTextureFiltering(_assets.GetModel("FootballField"));
         _meshesAligned = true;
+    }
+
+    private static unsafe void ConfigureTextureFiltering(Model model)
+    {
+        // Embedded GLB textures belong to the loaded model. Update its material map
+        // in place so mipmap metadata survives the Texture2D value-type copy.
+        var configured = new Dictionary<uint, Texture2D>();
+        for (int i = 0; i < model.MaterialCount; i++)
+        {
+            ref Texture2D texture = ref model.Materials[i].Maps[(int)MaterialMapIndex.Albedo].Texture;
+            if (texture.Id == 0 || texture.Id == Rlgl.GetTextureIdDefault())
+                continue;
+
+            if (configured.TryGetValue(texture.Id, out Texture2D existing))
+            {
+                texture = existing;
+                continue;
+            }
+
+            if (texture.Mipmaps <= 1)
+                Raylib.GenTextureMipmaps(ref texture);
+
+            // Anisotropy only changes the anisotropy parameter in raylib 6.0:
+            // establish linear mip blending first, including the unsupported fallback.
+            Raylib.SetTextureFilter(texture, TextureFilter.Trilinear);
+            // OpenGL clamps the request to the device maximum. Raylib leaves the
+            // trilinear min/mag filters intact when anisotropy is unavailable.
+            Raylib.SetTextureFilter(texture, TextureFilter.Anisotropic16X);
+            configured.Add(texture.Id, texture);
+        }
     }
 
     private static (Vector3 Scale, Vector3 Position) FitBounds(BoundingBox bounds, float width, float length, float centerZ)

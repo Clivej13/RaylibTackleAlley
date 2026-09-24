@@ -29,6 +29,42 @@ public sealed class RagdollTests
         return doll;
     }
 
+    [Theory]
+    [InlineData("Hips", true)]
+    [InlineData("Chest", true)]
+    [InlineData("LowerArm.L", true)]
+    [InlineData("LowerArm.R", true)]
+    [InlineData("LowerLeg.L", true)]
+    [InlineData("LowerLeg.R", true)]
+    [InlineData("Head", false)]
+    [InlineData("UpperArm.L", false)]
+    public void OnlyDownBodyRegionsCountAsGroundContact(string bone, bool expected)
+    {
+        var doll = Create(5);
+        var body = doll.Bodies.Single(b => b.Bone == bone);
+        // Place this capsule horizontally on the floor, isolated from other parts.
+        typeof(RagdollBody).GetProperty(nameof(RagdollBody.Orientation))!.SetValue(body,
+            Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI / 2));
+        float bottom = body.Bottom;
+        typeof(RagdollBody).GetProperty(nameof(RagdollBody.Position))!.SetValue(body,
+            body.Position - Vector3.UnitY * bottom);
+        Assert.Equal(expected, doll.IsDownOnGround());
+    }
+
+    [Theory]
+    [InlineData("LowerLeg.L")]
+    [InlineData("LowerLeg.R")]
+    [InlineData("LowerArm.L")]
+    [InlineData("LowerArm.R")]
+    public void FootOrHandEndAloneDoesNotCount(string bone)
+    {
+        var doll = Create(5);
+        var body = doll.Bodies.Single(b => b.Bone == bone);
+        typeof(RagdollBody).GetProperty(nameof(RagdollBody.Position))!.SetValue(body,
+            body.Position - Vector3.UnitY * body.Bottom);
+        Assert.False(doll.IsDownOnGround());
+    }
+
     [Fact]
     public void ActivationCopiesExistingPoseAndVelocityWithoutProjection()
     {
@@ -74,7 +110,7 @@ public sealed class RagdollTests
         var body = doll.Bodies[1];
         doll.ApplyImpulse(new(1, new(25, 50, -75), body.Position + Vector3.UnitX));
         Assert.Equal(new Vector3(2, 4, 0), body.LinearVelocity);
-        Assert.InRange(body.AngularVelocity.Length(), .01f, Ragdoll.MaximumAngularSpeed + .0001f);
+        Assert.InRange(body.AngularVelocity.Length(), .01f, new TackleAlleyConfig().RagdollMaximumAngularSpeed + .0001f);
         Assert.Equal(new Vector3(1, 2, 3), doll.Bodies[0].LinearVelocity);
         var activated = new Ragdoll();
         activated.Activate(Pose(3), Pose(3), new(1, 2, 3), new(1, new(25, 50, -75)));
@@ -96,7 +132,7 @@ public sealed class RagdollTests
             Assert.All(doll.Bodies, b => {
                 Assert.True(float.IsFinite(b.Position.LengthSquared()));
                 Assert.True(b.Bottom >= -.00001f, $"Ground penetration: {b.Bottom}");
-                Assert.InRange(b.AngularVelocity.Length(), 0, Ragdoll.MaximumAngularSpeed + .001f);
+                Assert.InRange(b.AngularVelocity.Length(), 0, new TackleAlleyConfig().RagdollMaximumAngularSpeed + .001f);
             });
             Assert.All(doll.Joints, j => {
                 Vector3 a = doll.JointAngles(j);

@@ -1,0 +1,91 @@
+{
+  "lowpoly_human_rigged.blend": {
+    "original_geometry_weights_bones_rest_matrices_actions_equipment_preserved": true,
+    "timing_preserved": true,
+    "new_triangles": 1280,
+    "net_export_triangle_change": 92
+  },
+  "lowpoly_human_jog.blend": {
+    "original_geometry_weights_bones_rest_matrices_actions_equipment_preserved": true,
+    "timing_preserved": true,
+    "new_triangles": 1280,
+    "net_export_triangle_change": 92
+  },
+  "lowpoly_human_run.blend": {
+    "original_geometry_weights_bones_rest_matrices_actions_equipment_preserved": true,
+    "timing_preserved": true,
+    "new_triangles": 1280,
+    "net_export_triangle_change": 92
+  },
+  "lowpoly_human_sprint.blend": {
+    "original_geometry_weights_bones_rest_matrices_actions_equipment_preserved": true,
+    "timing_preserved": true,
+    "new_triangles": 1280,
+    "net_export_triangle_change": 92
+  },
+  "football_player.glb": {
+    "baseline": "HEAD:Assets/Models/lowpoly_human_jog_validation.glb",
+    "unchanged_channels": 75,
+    "maximum_difference": 0
+  },
+  "lowpoly_human_jog_validation.glb": {
+    "baseline": "HEAD:Assets/Models/lowpoly_human_jog_validation.glb",
+    "unchanged_channels": 75,
+    "maximum_difference": 0
+  },
+  "lowpoly_human_run_validation.glb": {
+    "baseline": "HEAD:Assets/Models/lowpoly_human_run_validation.glb",
+    "unchanged_channels": 75,
+    "maximum_difference": 0
+  },
+  "lowpoly_human_sprint_validation.glb": {
+    "baseline": "HEAD:Assets/Models/lowpoly_human_sprint_validation.glb",
+    "unchanged_channels": 75,
+    "maximum_difference": 0
+  },
+  "Jog": {
+    "visual_sample_frames": [
+      1,
+      5,
+      10,
+      15,
+      19,
+      24,
+      28
+    ],
+    "views": [
+      "FrontThreeQuarter",
+      "Side"
+    ]
+  },
+  "Run": {
+    "visual_sample_frames": [
+      1,
+      5,
+      9,
+      13,
+      17,
+      21,
+      24
+    ],
+    "views": [
+      "FrontThreeQuarter",
+      "Side"
+    ]
+  },
+  "Sprint": {
+    "visual_sample_frames": [
+      1,
+      4,
+      7,
+      11,
+      14,
+      17,
+      20
+    ],
+    "views": [
+      "FrontThreeQuarter",
+      "Side"
+    ]
+  }
+}
