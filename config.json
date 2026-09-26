@@ -12,6 +12,9 @@
   "PlayerLateralSpeed": 8,
   "PlayerSlowSpeed": 6.5,
   "PlayerSprintSpeed": 11.5,
+  "ReturnerJogSpeedInfluence": 0.05,
+  "ReturnerRunSpeedInfluence": 0.15,
+  "ReturnerSprintSpeedInfluence": 0.3,
   "PlayerEvadeMaximumDistanceScale": 1,
   "PlayerJukeSpeed": 4,
   "PlayerJukeDuration": 0.35,
@@ -23,7 +26,6 @@
   "CameraSpeed3Distance": 4.32,
   "CameraHeight": 4.2,
   "CameraSmoothing": 10,
-  "FieldWidth": 24,
   "FieldLength": 84,
   "EndZoneLength": 12,
   "FieldAssetWidth": 53.333,
@@ -71,6 +73,13 @@
   "OpponentWrapCommitDistance": 1,
   "OpponentWrapContainmentAngleDegrees": 45,
   "OpponentWrapSpeedTolerance": 0.25,
+  "LungeCorrectionWindowFraction": 0.4,
+  "LungeCorrectionRateDegrees": 90,
+  "LungeMaximumCorrectionDegrees": 18,
+  "TackleMinimumPredictionConfidence": 0.2,
+  "TackleAccelerationPredictionLimit": 12,
+  "TacklePredictionIterations": 64,
+  "DrawTackleAimingDebug": false,
   "OpponentLungeReachDistance": 2.75,
   "OpponentLungeAnimationLeadSeconds": 0.28,
   "OpponentMaximumLungeReachDistance": 4.5,
@@ -176,28 +185,6 @@
   "EndZoneStopFraction": 0.5,
   "ContactBroadPhaseDistance": 5,
   "ContactSubstepDistance": 6,
-  "PlayerSpawn": {
-    "X": 0,
-    "Z": 0
-  },
-  "OpponentSpawns": [
-    {
-      "X": -5.5,
-      "Z": -18
-    },
-    {
-      "X": 5.5,
-      "Z": -31
-    },
-    {
-      "X": -4.5,
-      "Z": -46
-    },
-    {
-      "X": 4.5,
-      "Z": -61
-    }
-  ],
   "RagdollTorsoLimits": {
     "MinimumDegrees": [
       -35,
@@ -269,5 +256,30 @@
       70,
       95
     ]
-  }
+  },
+  "BallCarrierProfile": {
+    "Name": "Jordan Reed",
+    "JerseyNumber": 10,
+    "Height": 1.85,
+    "Weight": 95,
+    "Build": -0.25,
+    "Speed": 65,
+    "Acceleration": 75,
+    "Agility": 80,
+    "Strength": 55
+  },
+  "ShowPlayerProfiles": true,
+  "BallCarrierProfileExamples": [
+    {
+      "Name": "Power carrier",
+      "JerseyNumber": 34,
+      "Height": 1.98,
+      "Weight": 135,
+      "Build": 0.5,
+      "Speed": 45,
+      "Acceleration": 50,
+      "Agility": 40,
+      "Strength": 90
+    }
+  ]
 }

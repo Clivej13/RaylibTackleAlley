@@ -1,0 +1,202 @@
+{
+  "preserved_source_sha256": {
+    "Assets\\Models\\field_equipment.glb": "c885f6afcf399d8c7d077c2741768b932aa7ec155d79cea63287fbde689513e1",
+    "Assets\\Models\\football.glb": "cc453f09aabebeb49c7aed5d0c76df61376d8c43c98d164a12455a52350d75f9",
+    "Assets\\Models\\football_field.glb": "57990fca65527f045715ebed80978a24b0826e38b5af4ce7b4957c1d8f0a0d46",
+    "Assets\\Models\\football_player.glb": "b12f0fbe634140748f81188f50ea2d32dd4a79f4076a6ec9aff3fa089620cb2e",
+    "Assets\\Models\\football_player_carry_jog.glb": "8a42999ac02563407dfe37f818a0011eb6d8a52174e3b8910af520f9b4229a15",
+    "Assets\\Models\\football_player_carry_run.glb": "7181cce24a814dc4715189da6ec0b3c348561ecc1fcfa922b99169c461d740b5",
+    "Assets\\Models\\football_player_carry_sprint.glb": "3e4d2d2069eb086fecb87d2c037e3de4afb445d3a287cc1d251ea688d69c5b62",
+    "Assets\\Models\\football_player_cut_left.glb": "29c90b01877a6362ded461c194ca441fdbe7dc72abf36e4a0b7da4f944649fbe",
+    "Assets\\Models\\football_player_cut_right.glb": "2f07a4e96219fd74d4c11bc8afbff6ba5eeb6995605c5631b561d38032b9b38f",
+    "Assets\\Models\\football_player_down.glb": "166bda4bbd421003ed7b8977f0d5cfa43222170f5cac40b172324f8ec62c4c57",
+    "Assets\\Models\\football_player_get_up.glb": "51fec9da9bd4b7877d93cf78f540b884db29e7d6b01eb986a2e280c010008b3b",
+    "Assets\\Models\\football_player_juke_left.glb": "00228b1d855ccf1a689d2ebdd618c2f4f72dfad5ee777fbc61fef0d48c5d8f97",
+    "Assets\\Models\\football_player_juke_right.glb": "3b433764e9bb70d6423296cb19d2b1efe90f6d41242954794b26955c8333f9db",
+    "Assets\\Models\\football_player_lunge_land.glb": "8b085dd6893a0d2b70ed39fb0258d3a7ef083c139cca7d167c6c67a012a2eea6",
+    "Assets\\Models\\football_player_lunge_tackle_forward.glb": "e818ed503199dd6b2146b676700186d796be33c32e10bf957a015e4b5ae41c70",
+    "Assets\\Models\\football_player_lunge_tackle_left.glb": "011708c0d29cf31fe4ff1dff3127ff2e2b9b74ad3ede3b0c642f0d84ef3dc720",
+    "Assets\\Models\\football_player_lunge_tackle_right.glb": "5eaefa24c63c8dbed54b759970388fa3df1d77b66e0759999d3090b2048fe3cd",
+    "Assets\\Models\\football_player_set_wrap_forward.glb": "34b4d3270803dc1d8175c74366836d47cdd41faa2c8ef35e676a388c7ff4b369",
+    "Assets\\Models\\football_player_set_wrap_left.glb": "9458974dd15dc821d49a57d8b6c567a5c666c696c85a8de7678a78d5add49f6e",
+    "Assets\\Models\\football_player_set_wrap_right.glb": "026bea840c5d61b3bc4027c667a1cc2f821ae93d6afac3dba60036e6f00e6ab4",
+    "Assets\\Models\\football_player_spin_left.glb": "541ca60a7681aa15a18f25fbc63964ec35ae33ec7c5f2bf03d35db64abf82549",
+    "Assets\\Models\\football_player_spin_right.glb": "89383fc25bb3898cfc548d45bd02fc5f76ddeae4905e20a3a2597c8ab3b20d3f",
+    "Assets\\Models\\football_player_tackle_ready.glb": "b75349ea4e210553818312cacff2dfee9309a9be4d650c90983bdfc813975b07",
+    "Assets\\Models\\football_player_tackle_ready_backward.glb": "8e10a6ceafb5b3a1f72fb3fe192ae4086108ea140111ece33f1bee3abf28da34",
+    "Assets\\Models\\football_player_tackle_ready_forward.glb": "8869a77ebee94508a592142784e1a53e6b73aff65319f7b24fa03d8bbe9ccf3c",
+    "Assets\\Models\\football_player_tackle_ready_left.glb": "aac51ec6b3496159d5a20a0e596b9d9e1b3dbd93e8b2c0c2727262aab73144aa",
+    "Assets\\Models\\football_player_tackle_ready_right.glb": "c496feb83c3f6546e18cfdc5ef43f8cecd9fa2ee6a019cac332471ff10a5a0f6",
+    "Assets\\Models\\football_player_taunt_bicep_flex.glb": "dcc91403fa164c2e8f047b9f1d2125bd166067bd5a5a5d40d39cead2d5fe1adc",
+    "Assets\\Models\\lowpoly_human_jog_validation.glb": "fcedea9c3d00698071364672980c82acfc91c4c3a7292e56d8c1cf89408f7455",
+    "Assets\\Models\\lowpoly_human_run_validation.glb": "575b74c10c9076977a02c4a52d2eb5e7819208563a56bbea73b2e44948ea0384",
+    "Assets\\Models\\lowpoly_human_sprint_validation.glb": "15445c3b2a45513c7ec301594446fcb6777f797bd0c45038de5e6b97fe766302",
+    "Assets\\Models\\lowpoly_human_stage4.glb": "ed14ce23e8c2877d074fd17798a7aed0fb9ca5863d9b836984db0af6f71fd0c4",
+    "Assets\\Models\\lowpoly_human_stage5.glb": "5e55c34e9a86974f74937fa29e4e91fd62ac7913c2ac2cc09567cd9d3150cbfd",
+    "Assets\\Models\\stadium.glb": "de68c381c45807f6c29c003e33670b2ccd983c4b3539c3300b73fb20ed747002",
+    "Assets\\Models\\football.blend": "3f12c646ec23e7dc852777ff4af1b102b8bfa21b7086acda268ab9794b1c775f",
+    "Assets\\Models\\football_field.blend": "c64e16568a7c34b3e054146eddb71c76e0bf6416063a32e912e3b09e239c55da",
+    "Assets\\Models\\football_player_carry_jog.blend": "daf80e9ec89a1fb951d8ecc11402ee8f33e9e3266bcfb03f0388c69d71233448",
+    "Assets\\Models\\football_player_carry_run.blend": "d92fbccccef6e2b302e9ff58fe7571befa6b1be6adda7b0963ac6ad54c0c644d",
+    "Assets\\Models\\football_player_carry_sprint.blend": "398429688b5b03e24b3a69c67dc2cd992688efa39d1ba6848ca6f14f06b0c9ae",
+    "Assets\\Models\\football_player_cut_left.blend": "61e53ea61fac92c478303a949c5174419945e80a8c4a4dff3a23be21acb4f771",
+    "Assets\\Models\\football_player_cut_right.blend": "c1f3579ba9737c1d184fde72948f2adfb7a06183100cc1227bf2c2db58bbf9e0",
+    "Assets\\Models\\football_player_down.blend": "3e264978ff11ab4c29f7020d0f3f0da0794060c8480d7da54a12da6f74b5596a",
+    "Assets\\Models\\football_player_get_up.blend": "0ae19638e2f50c545ec5fb68330232ecb4269be56f13a906b737446f5526bf15",
+    "Assets\\Models\\football_player_juke_left.blend": "34090057c8eb1cb49ab13813c8c9bfc57ed2e33d8216e8d63ef53186dfed3d63",
+    "Assets\\Models\\football_player_juke_right.blend": "93981a24197a6c22f42efb94e41ee52174f2d47f53c873a4becb98a611b789a2",
+    "Assets\\Models\\football_player_lunge_land.blend": "6239c336ac1fa94b55af97261e0abbbca23502058f62e20c755e0cecac3eb3fd",
+    "Assets\\Models\\football_player_lunge_tackle_forward.blend": "dd866fbdefa5a56af8febf81aeb75f0a3f787c788d1c547c1ac9c3179758d071",
+    "Assets\\Models\\football_player_lunge_tackle_left.blend": "a6b9cc8909987fef3d528f637b85aa5da72d051e38cbae0f1773477f9f9250a1",
+    "Assets\\Models\\football_player_lunge_tackle_right.blend": "7c9df1dd834a6c14c7d39cc55b2d0de0eb93de46d2132784bcfc8359365992d4",
+    "Assets\\Models\\football_player_set_wrap_forward.blend": "cea068fadf3f1534f7781707858fc21f14cb23884d1ac8c0435980792a46d769",
+    "Assets\\Models\\football_player_set_wrap_left.blend": "ac9dff59bf89b547e6112d4a4810236baa420647474a47571d04b41e66e2d6c5",
+    "Assets\\Models\\football_player_set_wrap_right.blend": "2070ff3fc8b33c2ba6780f23136e499ac114b81b77d0ed7bed3fd7aee0626ba1",
+    "Assets\\Models\\football_player_spin_left.blend": "44cca6009ef6fa38df1639c5cc1224d3b5b6ed8c8d7a7a308ffbed353feb3905",
+    "Assets\\Models\\football_player_spin_right.blend": "49fd449f6f50ab30864fd18e0e603a9da31510520e735f082dbe8d2bb0775afe",
+    "Assets\\Models\\football_player_tackle_ready.blend": "e6f17488bd29462b274e1186e5ae6b734acfd5ee31088be60d3bd1f61e1055a9",
+    "Assets\\Models\\football_player_tackle_ready_backward.blend": "ecfb980163f4cf0b488813996d8bfc379f5085329c79f5e7adea4011adda0444",
+    "Assets\\Models\\football_player_tackle_ready_forward.blend": "3b97b4f9c74f9a95053fe014aada7c69484b925364e96445472ea244d63c5413",
+    "Assets\\Models\\football_player_tackle_ready_left.blend": "b5434ee66b81200108483581474e850266e63464823e1e285a94940fe8b90f15",
+    "Assets\\Models\\football_player_tackle_ready_right.blend": "9cd86f0df358561d4b91c0064bffcf2b85c46846e37cf4ebe7cf4257dfc16b71",
+    "Assets\\Models\\football_player_taunt_bicep_flex.blend": "be80926987946d43e819a1143faf76aa370ed81c1fd49eb20d96da85bff5ebee",
+    "Assets\\Models\\football_player_uniform.blend": "06b6fb61f01517fb234047907fc376e1d151c649feea426d09a1506d17a4d700",
+    "Assets\\Models\\lowpoly_human_jog.blend": "59b6f52501203fde62cf137950103249b940d7a9dc2427985ee9eeef8165e7e4",
+    "Assets\\Models\\lowpoly_human_rigged.blend": "0f2b820866b63ccbea7301699d371751b4237dde41cd8521d9605c0ad74f684a",
+    "Assets\\Models\\lowpoly_human_run.blend": "7a43f0eb45717362d6991b5ce9644783dad12d44f3fa9ea14705d7f6b4bd895c",
+    "Assets\\Models\\lowpoly_human_sprint.blend": "0766017a908d2064eda0e593c5624b171ef46f3c4c9add43c5e5c86b46d27f18",
+    "Assets\\Models\\lowpoly_human_stage1.blend": "4fffa8d4786253d55a3ef7771003bab718d81a57e6975a3338078c055fbb2759",
+    "Assets\\Models\\lowpoly_human_stage2.blend": "520f8f77efb5a7ecccfdea2c66610abcc7d8be643e928a0d450a7b148f439ae5",
+    "Assets\\Models\\lowpoly_human_stage3.blend": "fa915a94b6fc02b02af260c39131f0ff333966440426115303afce13c467d920",
+    "Assets\\Models\\lowpoly_human_stage4.blend": "8a03eb87fd30137f1d13e85f72c777ce436722d703daa5961d1e7de472bab0d0",
+    "Assets\\Models\\lowpoly_human_stage5.blend": "a8d20f92b24fe552509045db419204004051502bbf1f69593fc203f8df9fc73b",
+    "Assets\\Models\\lowpoly_human_stage6.blend": "5bef11511113bfbccfd465230a5e3c3f740463d1715f254054c39d07c7ff3830",
+    "Assets\\Models\\stadium.blend": "2dfec4e2a6610e74f9f26e4c2b7622aa3bdda8e88622fa6a7eb6e1fd7da07eb6",
+    "Assets\\Textures\\Uniforms\\offense_uniform.png": "ff4d7cf2a2038d3c786039365e5ba015fce3e82fba5b71d0c59abec7aadd3588",
+    "Assets\\Textures\\Uniforms\\defense_uniform.png": "5b46c31fda0ed2f6fd5e627dd94e72db453eba0b7c763614b33a2f76d98f48d3"
+  },
+  "source_assets_unchanged": true,
+  "atlas_size": [
+    2048,
+    2048
+  ],
+  "uniform_material": "Uniform",
+  "uv_channel": 0,
+  "returners": [
+    {
+      "id": "marcus-reed",
+      "number": 11,
+      "texture": "ReturnerMarcusUniform",
+      "design": [
+        "#102344",
+        "#102344",
+        "#f5f5f5",
+        [
+          [
+            0,
+            1,
+            "#d9ac45"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "eli-brooks",
+      "number": 22,
+      "texture": "ReturnerEliUniform",
+      "design": [
+        "#246b78",
+        "#246b78",
+        "#f5f5f5",
+        [
+          [
+            0,
+            0.35,
+            "#f5f5f5"
+          ],
+          [
+            0.65,
+            1,
+            "#f5f5f5"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "jalen-price",
+      "number": 7,
+      "texture": "ReturnerJalenUniform",
+      "design": [
+        "#f5f5f5",
+        "#102344",
+        "#102344",
+        [
+          [
+            0,
+            0.25,
+            "#d9ac45"
+          ],
+          [
+            0.4,
+            0.6,
+            "#f5f5f5"
+          ],
+          [
+            0.75,
+            1,
+            "#d9ac45"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "darius-stone",
+      "number": 34,
+      "texture": "ReturnerDariusUniform",
+      "design": [
+        "#803247",
+        "#803247",
+        "#102344",
+        [
+          [
+            0,
+            1,
+            "#102344"
+          ],
+          [
+            0.32,
+            0.68,
+            "#d9ac45"
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "noah-grant",
+      "number": 26,
+      "texture": "ReturnerNoahUniform",
+      "design": [
+        "#d9ac45",
+        "#102344",
+        "#f5f5f5",
+        [
+          [
+            0,
+            0.2,
+            "#f5f5f5"
+          ],
+          [
+            0.2,
+            0.8,
+            "#d9ac45"
+          ],
+          [
+            0.8,
+            1,
+            "#f5f5f5"
+          ]
+        ]
+      ]
+    }
+  ]
+}

@@ -18,7 +18,7 @@ public sealed partial class TackleAlleyConfig
     public float PlayerEvadeMaximumDistanceScale { get; set; } = 1f;
 
     // Player movement and gestures
-    public float PlayerVisualHeight { get; set; } = 2f;
+    public float PlayerVisualHeight { get; set; } = PlayerVisualProfile.ReferenceHeight;
     public float PlayerSprintSteeringRate { get; set; } = 2f / 0.6f;
     public float PlayerMaxRunYawDegrees { get; set; } = 45f;
     public float PlayerRunYawResponse { get; set; } = 12f;
@@ -154,8 +154,9 @@ public sealed partial class TackleAlleyConfig
     public float ContactBroadPhaseDistance { get; set; } = 5f;
     public float ContactSubstepDistance { get; set; } = 6f;
 
+    // Legacy/component compatibility only; authored run setup now lives in levels.json.
     public SpawnLocation PlayerSpawn { get; set; } = new();
-    public SpawnLocation[] OpponentSpawns { get; set; } =
+    public DefenderSpawn[] OpponentSpawns { get; set; } =
     [
         new() { X = -5.5f, Z = -18f }, new() { X = 5.5f, Z = -31f },
         new() { X = -4.5f, Z = -46f }, new() { X = 4.5f, Z = -61f }
@@ -176,6 +177,8 @@ public sealed partial class TackleAlleyConfig
 
     public void ValidatePlayer()
     {
+        if (BallCarrierProfile is null) throw new ArgumentException("BallCarrierProfile is required.");
+        BallCarrierProfile.Validate(nameof(BallCarrierProfile));
         Nonnegative(PlayerEvadeMaximumDistanceScale, nameof(PlayerEvadeMaximumDistanceScale));
         Positive(PlayerReversalInputThreshold, nameof(PlayerReversalInputThreshold));
         Unit(PlayerReversalInputThreshold, nameof(PlayerReversalInputThreshold));
@@ -190,6 +193,7 @@ public sealed partial class TackleAlleyConfig
         Nonnegative(PlayerLateralSpeed, nameof(PlayerLateralSpeed));
         Nonnegative(PlayerSlowSpeed, nameof(PlayerSlowSpeed));
         Nonnegative(PlayerSprintSpeed, nameof(PlayerSprintSpeed));
+        ValidateReturnerSpeedScaling();
         Nonnegative(PlayerJukeSpeed, nameof(PlayerJukeSpeed));
         Positive(PlayerJukeDuration, nameof(PlayerJukeDuration));
         Nonnegative(MouseGestureSensitivity, nameof(MouseGestureSensitivity));
@@ -250,6 +254,7 @@ public sealed partial class TackleAlleyConfig
 
     public void ValidateTackle()
     {
+        ValidateTackleAiming();
         ValidateOpponentLocomotion();
         Nonnegative(OpponentJogSpeed, nameof(OpponentJogSpeed));
         Nonnegative(OpponentRunSpeed, nameof(OpponentRunSpeed));
@@ -411,7 +416,13 @@ public sealed partial class TackleAlleyConfig
             throw new ArgumentException("Player boundary radius must fit inside the field.");
         if (OpponentSpawns is null || OpponentSpawns.Any(spawn => spawn is null))
             throw new ArgumentException("OpponentSpawns must be a non-null array of spawn locations.");
-        foreach (var spawn in OpponentSpawns) spawn.Validate();
+        for (int i = 0; i < OpponentSpawns.Length; i++)
+        {
+            var spawn = OpponentSpawns[i];
+            spawn.Validate();
+            if (spawn.Profile is null) throw new ArgumentException($"OpponentSpawns[{i}].Profile is required.");
+            spawn.Profile.Validate($"OpponentSpawns[{i}].Profile");
+        }
     }
 
     public void Validate()
@@ -423,6 +434,11 @@ public sealed partial class TackleAlleyConfig
         ValidatePrediction();
         ValidateRagdollPhysics();
         ValidateField();
+        _ = new PlayerPhysicalAttributes(BallCarrierProfile, this);
+        foreach (var spawn in OpponentSpawns) _ = new PlayerPhysicalAttributes(spawn.Profile, this);
+        if (BallCarrierProfileExamples is null || BallCarrierProfileExamples.Any(p => p is null))
+            throw new ArgumentException("Carrier examples must be non-null profiles.");
+        foreach (var profile in BallCarrierProfileExamples) _ = new PlayerPhysicalAttributes(profile, this);
     }
 
     private static void Finite(float value, string name)
@@ -446,7 +462,12 @@ public sealed partial class TackleAlleyConfig
     }
 }
 
-public sealed class SpawnLocation
+public sealed class DefenderSpawn : SpawnLocation
+{
+    public PlayerProfile Profile { get; set; } = new();
+}
+
+public class SpawnLocation
 {
     public float X { get; set; }
     public float Z { get; set; }

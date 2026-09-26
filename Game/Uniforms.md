@@ -49,6 +49,11 @@ Individual `BallCarrier` and `Opponent` objects expose
 `ModelInstance`, use `PlayerUniform.ApplyUniform(instance, assets, textureKey)`.
 Call on the graphics thread, after visual initialization.
 
+Player objects now generate an owned atlas copy with their profile's jersey number
+on the Chest and Back panels. See [PlayerProfiles.md](PlayerProfiles.md) for layout,
+configuration and texture disposal. The following borrowing rules apply to the
+lower-level unnumbered PlayerUniform.ApplyUniform API and source team textures.
+
 Textures are borrowed from AssetManager, which caches them by asset key.
 Keep each texture required while any instance uses it. Once all users have
 switched away, it can be released with `assets.ReleaseAsset(oldKey)` and the
@@ -68,3 +73,8 @@ image flipping is needed.
 Validation: `dotnet test Tests/Controls.Tests.csproj --filter FullyQualifiedName~UniformTests`
 checks independent swaps, shared texture use, unchanged UVs/vertices/other maps,
 failure without mutation, and asset cleanup (GPU deletion assertions on Windows).
+
+Returner-specific atlas keys are configured by `returners.json` -> `Uniform` and
+used for both preview and selection; `OffenseUniform` remains the fallback.
+See [the five returner variants](../Assets/Textures/Uniforms/Returners/README.md)
+for artwork, asset keys, Blender reproduction and visual review notes.

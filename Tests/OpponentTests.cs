@@ -233,6 +233,8 @@ public sealed class OpponentTests
                 reference.Reset();
                 reference.UpdateLocomotionForTest(new(0, 0, -distance), 0);
                 Field<AnimationPlayer>(reference, "_animation").SeekPhase(phase);
+                // Equal playback now requires equal physical speed as well as clip phase.
+                typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(reference, runner.CurrentSpeed);
                 runner.UpdateLocomotionForTest(runner.Position + new Vector3(0, 0, -distance), 0.15f);
                 reference.UpdateLocomotionForTest(reference.Position + new Vector3(0, 0, -distance), 0.15f);
                 Assert.Equal(Vertices(reference), Vertices(runner));

@@ -7,7 +7,7 @@ namespace RaylibTackleAlley.Game;
 
 public enum OpponentPace { Jog, Run, Sprint }
 
-public sealed partial class Opponent
+public sealed partial class Opponent : IDisposable
 {
     private readonly Vector3 _spawnPosition;
     private readonly TackleAlleyConfig _config;
@@ -17,6 +17,13 @@ public sealed partial class Opponent
     private readonly Dictionary<string, AnimationPlayer> _animations = new();
     private AnimationPlayer? _animation;
     private float _visualScale;
+    private Vector3 _modelScale;
+    public PlayerProfile Profile { get; }
+    public PlayerVisualProfile VisualProfile { get; }
+    public PlayerMovementAttributes Movement { get; }
+    public PlayerPhysicalAttributes Physical { get; }
+    public TackleImpact? LastTackle { get; internal set; }
+    public Vector3 Momentum => Ragdoll.IsActive ? Ragdoll.Momentum : Physical.Momentum(Velocity);
     private float _groundOffset;
     private float _yawDegrees;
 
@@ -24,13 +31,15 @@ public sealed partial class Opponent
     public OpponentPace Pace { get; private set; } = OpponentPace.Jog;
     public Vector3 Position => _position;
     public float CurrentSpeed { get; private set; }
-    public float TargetSpeed => MovementSpeed;
+    private float _readyTargetSpeed;
+    public float TargetSpeed => Ragdoll.IsActive || IsRecovering || State == DefenderState.Taunt ? 0f :
+        State == DefenderState.TackleReady ? _readyTargetSpeed : MovementSpeed;
     public float MovementSpeed => State is DefenderState.LungeTackle or DefenderState.LungeLand ? CurrentSpeed : IsTackleCommitted ? 0f :
         State == DefenderState.TackleReady ? TackleReadySpeed : Pace switch
     {
-        OpponentPace.Jog => _config.OpponentJogSpeed,
-        OpponentPace.Run => _config.OpponentRunSpeed,
-        _ => _config.OpponentSprintSpeed
+        OpponentPace.Jog => Movement.JogSpeed,
+        OpponentPace.Run => Movement.RunningSpeed,
+        _ => Movement.SprintSpeed
     };
 
     public string AnimationName => _tackleAnimation ?? (Pace switch
@@ -42,10 +51,21 @@ public sealed partial class Opponent
     });
 
     /// <summary>Apply a loaded texture asset to this player's Uniform material.</summary>
-    public void ApplyUniform(AssetManager assets, string textureKey) =>
-        PlayerUniform.ApplyUniform(_model ??
+    private Texture2D _numberedUniform;
+    public void ApplyUniform(AssetManager assets, string textureKey)
+    {
+        var next = PlayerUniform.ApplyNumberedUniform(_model ??
             throw new InvalidOperationException("Initialize player visuals before selecting a uniform."),
-            assets, textureKey);
+            assets, textureKey, Profile.JerseyNumber);
+        if (_numberedUniform.Id != 0) Raylib.UnloadTexture(_numberedUniform);
+        _numberedUniform = next;
+    }
+
+    public void Dispose()
+    {
+        if (_numberedUniform.Id != 0) Raylib.UnloadTexture(_numberedUniform);
+        _numberedUniform = default;
+    }
 
     // AssetManager owns instances and borrowed clips; instances are released first.
     public unsafe void InitializeVisual(AssetManager assets)
@@ -74,8 +94,9 @@ public sealed partial class Opponent
             float height = bounds.Max.Y - bounds.Min.Y;
             if (!float.IsFinite(height) || height <= 0f)
                 throw new InvalidDataException("FootballPlayer must have a finite positive height.");
-            _visualScale = _config.OpponentVisualHeight / height;
-            _groundOffset = -bounds.Min.Y * _visualScale;
+            _modelScale = VisualProfile.ModelScale(bounds);
+            _visualScale = _modelScale.Y;
+            _groundOffset = VisualProfile.GroundOffset(bounds);
             _model = model;
             SelectAnimation();
             // A completed headless lunge waits for a real pose rather than fabricating one.
@@ -90,26 +111,38 @@ public sealed partial class Opponent
         }
     }
 
-    public Opponent(Vector3 spawnPosition, TackleAlleyConfig config)
+    public Opponent(Vector3 spawnPosition, TackleAlleyConfig config, PlayerProfile? profile = null,
+        DefenderProfile? behaviorProfile = null)
     {
         config.ValidateOpponentLocomotion();
         config.ValidateTackle();
         config.ValidateRagdollRecovery();
         _spawnPosition = spawnPosition;
         _config = config;
-        Ragdoll = new(config);
-        _contactPose = new(config);
+        BehaviorProfile = behaviorProfile ?? DefenderProfile.Balanced(config);
+        BehaviorProfile.Validate();
+        _aimingConfig = config.ForDefender(BehaviorProfile);
+        Profile = (profile ?? new PlayerProfile()) with { };
+        VisualProfile = new(Profile);
+        Movement = new(Profile, config, defender: true);
+        Physical = new(Profile, config);
+        _defaultCarrierPhysical = new(config.BallCarrierProfile, config);
+        Ragdoll = new(config, Physical);
+        _contactPose = new(config, Physical);
         Reset();
     }
 
     public void Reset()
     {
+        LastTackle = null;
+        ContactCooldown = WrapRemaining = 0;
         _tauntRequested = false; _tauntElapsed = 0f;
         Ragdoll.Deactivate();
         _recovery = null;
         _position = _spawnPosition;
         _movementDirection = Vector3.Zero;
-        _observedCarrierVelocity = null;
+        ResetAiming();
+        ResetDecisions();
         State = DefenderState.Locomotion;
         _tackleAnimation = null;
         _tackleRemaining = 0f;
@@ -146,13 +179,13 @@ public sealed partial class Opponent
 
     private OpponentPace SelectPace(float distance)
     {
-        if (HasEngaged || distance <= _config.OpponentSprintDistance)
+        if (HasEngaged || distance <= _config.OpponentSprintDistance * BehaviorProfile.PursuitAggression)
         {
             HasEngaged = true;
             return OpponentPace.Sprint;
         }
         float margin = _config.OpponentPaceHysteresis;
-        float runExit = _config.OpponentRunDistance +
+        float runExit = _config.OpponentRunDistance * BehaviorProfile.PursuitAggression +
             (Pace != OpponentPace.Jog ? margin : 0f);
         return distance <= runExit ? OpponentPace.Run : OpponentPace.Jog;
     }
@@ -165,22 +198,28 @@ public sealed partial class Opponent
             Pace = next;
             SelectAnimation();
         }
-        // Advance the active clip at authored speed; world movement remains game-driven.
-        _animation?.Update(Math.Max(0f, deltaTime));
+        // Locomotion playback follows actual pace; action clocks remain authored.
         var step = SpeedRamp.Advance(CurrentSpeed, TargetSpeed,
-            _config.ForwardAcceleration, _config.ForwardDeceleration, deltaTime);
+            Movement.AccelerationRate, _config.ForwardDeceleration, deltaTime);
         CurrentSpeed = step.Speed;
+        float baseline = Movement.BaselineSpeed(Pace == OpponentPace.Jog ? 1 : Pace == OpponentPace.Sprint ? 3 : 2);
+        _animation?.Update(baseline > 0 ? Math.Clamp(step.Distance / baseline,
+            Math.Max(0, deltaTime) * .35f, Math.Max(0, deltaTime) * 1.5f) : Math.Max(0, deltaTime) * .35f);
         Vector3 direction = (pursuitTarget ?? playerPosition) - _position;
         direction.Y = 0;
         if (direction.LengthSquared() > _config.OpponentPursuitStopDistance * _config.OpponentPursuitStopDistance)
         {
-            _movementDirection = Vector3.Normalize(direction);
+            _movementDirection = Movement.TrackDirection(_movementDirection, Vector3.Normalize(direction), deltaTime);
             _position += _movementDirection * step.Distance;
             // Rotate authored -Z forward to actual movement; clips never move the world position.
             if (MovementSpeed > 0f && deltaTime > 0f)
-                _yawDegrees = MathF.Atan2(-direction.X, -direction.Z) * (180f / MathF.PI);
+                _yawDegrees = MathF.Atan2(-_movementDirection.X, -_movementDirection.Z) * (180f / MathF.PI);
         }
     }
+
+    public float LocomotionPlaybackRate => PlayerMovementAttributes.PlaybackRate(CurrentSpeed,
+        State == DefenderState.TackleReady ? Movement.BaselineReadySpeed :
+        Movement.BaselineSpeed(Pace == OpponentPace.Jog ? 1 : Pace == OpponentPace.Sprint ? 3 : 2));
 
     public bool IsTouching(Vector3 playerPosition) =>
         Vector3.Distance(_position, playerPosition) <= _config.TackleDistance;
@@ -193,6 +232,6 @@ public sealed partial class Opponent
         if (_model is null)
             throw new InvalidOperationException("Initialize opponent visuals after loading assets.");
         Raylib.DrawModelEx(_model.Model, _position + new Vector3(0, _groundOffset, 0),
-            Vector3.UnitY, _yawDegrees, new Vector3(_visualScale), Color.White);
+            Vector3.UnitY, _yawDegrees, _modelScale, Color.White);
     }
 }

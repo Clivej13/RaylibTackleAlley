@@ -4,10 +4,17 @@
     "Main": {
       "Title": "TACKLE ALLEY",
       "Items": [
-        { "Type": "Button", "Text": "Start", "Function": "StartGame" },
+        { "Type": "Button", "Text": "Start", "Function": "OpenMenu", "Target": "Returners" },
         { "Type": "Button", "Text": "Options", "Function": "OpenMenu", "Target": "Options" },
         { "Type": "Button", "Text": "Controls", "Function": "OpenMenu", "Target": "Controls" },
         { "Type": "Button", "Text": "Exit", "Function": "ExitGame" }
+      ]
+    },
+    "Returners": {
+      "Title": "SELECT RETURNER",
+      "Layout": "ListWithDetail",
+      "Items": [
+        { "Type": "Button", "Text": "Back", "Function": "Back" }
       ]
     },
     "Options": {

@@ -16,7 +16,7 @@ public sealed class ControlsTests : IDisposable
     private readonly InputConfig _bindings = InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json"));
     private readonly TackleAlleyConfig _config = new();
     private readonly InputController _input;
-    private readonly BallCarrier _player;
+    private BallCarrier _player;
     private readonly FootballField _field;
     private int _mouseX = 640;
     private int _mouseY = 360;
@@ -306,6 +306,7 @@ public sealed class ControlsTests : IDisposable
         _config.PlayerSpinDuration = .8f;
         _config.PlayerSpinSpeed = 12;
         _config.SpinSpeedRetention = .6f;
+        _player = new BallCarrier(_config); // Derived attributes snapshot global balance at creation.
         _player.Reset();
         TriggerMomentumMove(true);
         Assert.Equal(.8f, Field<float>(_player, "_spinRemaining"));
@@ -573,6 +574,7 @@ public sealed class ControlsTests : IDisposable
         // Non-default rates ensure recovery uses the configured existing ramp.
         _config.ForwardAcceleration = 10f;
         _config.ForwardDeceleration = 4f;
+        _player = new BallCarrier(_config);
         var coarse = Simulate(1);
         var fine = Simulate(fps);
         Assert.Equal(coarse.Speed, fine.Speed, 4);
@@ -1266,7 +1268,8 @@ public sealed class ControlsTests : IDisposable
     {
         _config.AutoRestartDelay = delay;
         var menus = MenuConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "menu.json"));
-        var app = new GameApplication(new GameConfig(), _bindings, menus, new AssetConfig(), _config);
+        var app = new GameApplication(new GameConfig(), _bindings, menus, new AssetConfig(), _config,
+            ReturnerCatalog.Load(Path.Combine(AppContext.BaseDirectory, "returners.json")));
         var game = Field<TackleAlleyGame>(app, "_game");
         var stateField = typeof(GameApplication).GetField("_state", BindingFlags.Instance | BindingFlags.NonPublic)!;
         stateField.SetValue(app, Enum.Parse(stateField.FieldType, state));

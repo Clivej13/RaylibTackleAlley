@@ -27,9 +27,9 @@ public sealed class DefenderRecoveryTests : IDisposable
     private static float Duration(Opponent d) => d.State == DefenderState.LungeTackle
         ? .6f : (Animation(d).FrameCount - 1) / Animation(d).FramesPerSecond;
 
-    private Opponent Lunge(float side = 0, float speed = 6.5f, bool visual = true)
+    private Opponent Lunge(float side = 0, float speed = 6.5f, bool visual = true, DefenderProfile? behaviorProfile = null)
     {
-        var d = new Opponent(new(5, 0, -7), new() { OpponentJogSpeed = speed });
+        var d = new Opponent(new(5, 0, -7), new() { OpponentJogSpeed = speed }, behaviorProfile: behaviorProfile);
         if (visual) d.InitializeVisual(_assets);
         d.Update(d.Position + new Vector3(0, 0, -30), .01f, false, Vector2.Zero, false);
         // Commit from ready so Left/Right are chosen from the same locked facing.
@@ -134,6 +134,37 @@ public sealed class DefenderRecoveryTests : IDisposable
         Assert.True(d.HasEngaged);
         Assert.Equal(OpponentPace.Sprint, d.Pace);
         Assert.Equal(new TackleAlleyConfig().OpponentSprintSpeed, d.TargetSpeed);
+    }
+
+    [Theory]
+    [InlineData("balanced")]
+    [InlineData("aggressive")]
+    [InlineData("contain")]
+    public void EveryBehaviorProfileFinishesTheSamePhysicalRecoveryBeforePursuit(string id)
+    {
+        var profiles = DefenderProfileCatalog.Load(Path.Combine(AppContext.BaseDirectory, "defender-profiles.json"));
+        using var d = Lunge(behaviorProfile: profiles.Resolve(id));
+        Assert.Equal(DefenderAiState.LungeCommitment, d.AiState);
+        d.Update(new(100, 0, 100), .6f);
+        Assert.True(d.Ragdoll.IsActive);
+        Assert.Equal(DefenderAiState.Recovery, d.AiState);
+        bool recovered = false;
+        for (int i = 0; i < 400; i++)
+        {
+            d.Update(new(100, 0, 100), .01f);
+            if (d.Ragdoll.IsActive || d.IsRecovering)
+                Assert.Equal(DefenderAiState.Recovery, d.AiState);
+            else
+            {
+                Assert.Equal(DefenderAiState.Pursuit, d.AiState);
+                recovered = true;
+                break;
+            }
+        }
+        Assert.True(recovered);
+        Assert.Equal(id, d.BehaviorProfile.Id);
+        d.Update(new(100, 0, 100), .1f);
+        Assert.Equal(DefenderState.Locomotion, d.State);
     }
 
     private static Vector3 CentreOfMass(Opponent d) =>

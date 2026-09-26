@@ -37,6 +37,18 @@ public sealed partial class BallCarrier
         return true;
     }
 
+    private Vector3 _contactDrift;
+    internal void ApplyUprightContact(Vector3 impulse)
+    {
+        Vector3 delta = impulse / Physical.TotalMass;
+        _contactDrift += new Vector3(delta.X, 0, 0);
+        Velocity += delta;
+        CurrentForwardSpeed = Math.Max(0, -Velocity.Z);
+        float yaw = MathF.Atan2(Velocity.X, -Velocity.Z) * 180 / MathF.PI;
+        _currentRunYaw = _targetRunYaw = Math.Clamp(yaw, -_config.PlayerMaxRunYawDegrees, _config.PlayerMaxRunYawDegrees);
+        Ragdoll.LastContactImpulse = impulse.Length();
+    }
+
     public void BeginTackleStruggle(int? hitBody = null)
     {
         if (_model is not null && _animations.TryGetValue("CarryRun", out var gait))
@@ -77,7 +89,7 @@ public sealed partial class BallCarrier
                 {
                     EnsureRecoveryAnimations();
                     _recovery = new(_model.Model, _ragdollSkeleton, Ragdoll, _downAnimation!, _getUpAnimation!,
-                        _visualScale, _groundOffset, VisualYawDegrees, _config);
+                        _modelScale, _groundOffset, VisualYawDegrees, _config);
                     Position = _recovery.Position;
                     _currentRunYaw = _targetRunYaw = -_recovery.YawDegrees;
                     CurrentForwardSpeed = 0; Velocity = Vector3.Zero;

@@ -18,8 +18,10 @@ public sealed class GameplayTuningTests
         Assert.Equal(6.5f, shipped.PlayerSlowSpeed);
         Assert.Equal(11.5f, shipped.PlayerSprintSpeed);
         using var document = JsonDocument.Parse(json);
+        string[] migrated = [nameof(TackleAlleyConfig.FieldWidth), nameof(TackleAlleyConfig.PlayerSpawn),
+            nameof(TackleAlleyConfig.OpponentSpawns)];
         foreach (var property in typeof(TackleAlleyConfig).GetProperties())
-            Assert.True(document.RootElement.TryGetProperty(property.Name, out _), property.Name);
+            Assert.Equal(!migrated.Contains(property.Name), document.RootElement.TryGetProperty(property.Name, out _));
         var custom = new TackleAlleyConfig
         {
             PlayerSpinSpeed = 13, ContactMaximumTackleImpulse = 450,

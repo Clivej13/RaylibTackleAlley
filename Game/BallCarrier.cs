@@ -6,7 +6,7 @@ using RaylibGameFramework.ThreeD;
 
 namespace RaylibTackleAlley.Game;
 
-public sealed partial class BallCarrier
+public sealed partial class BallCarrier : IDisposable
 {
     private readonly TackleAlleyConfig _config;
     private readonly RightStickInput _rightStick;
@@ -29,7 +29,7 @@ public sealed partial class BallCarrier
 
     private Matrix4x4 PlayerWorldTransform =>
         Matrix4x4.Transpose(_model?.Model.Transform ?? Matrix4x4.Identity) *
-        Matrix4x4.CreateScale(_visualScale) *
+        Matrix4x4.CreateScale(_modelScale) *
         Matrix4x4.CreateRotationY(VisualYawDegrees * MathF.PI / 180f) *
         Matrix4x4.CreateTranslation(RenderPosition);
 
@@ -45,6 +45,13 @@ public sealed partial class BallCarrier
     private readonly Dictionary<string, AnimationPlayer> _animations = new();
     private AnimationPlayer? _animation;
     private float _visualScale;
+    private Vector3 _modelScale;
+    public PlayerProfile Profile { get; }
+    public PlayerVisualProfile VisualProfile { get; }
+    public PlayerMovementAttributes Movement { get; }
+    public PlayerPhysicalAttributes Physical { get; }
+    public TackleImpact? LastTackle { get; internal set; }
+    public Vector3 Momentum => Ragdoll.IsActive ? Ragdoll.Momentum : Physical.Momentum(Velocity);
     private float _groundOffset;
     // Two input units (-1 to +1) in 0.6 seconds; small corrections settle sooner.
     private float _effectiveLateral;
@@ -81,24 +88,28 @@ public sealed partial class BallCarrier
 
     public bool IsTaunting { get; private set; }
     private float _tauntElapsed;
-    public bool TauntComplete => IsTaunting && _tauntElapsed >= 2.6f;
+    private readonly string _tauntAsset;
+    private string _tauntName = "TauntBicepFlex";
+    private float _tauntDuration = 2.6f;
+    public bool TauntComplete => IsTaunting && _tauntElapsed >= _tauntDuration;
 
     public int SpeedTier { get; private set; } = 2;
     public float CurrentForwardSpeed { get; private set; }
     public float TargetForwardSpeed => Speed;
     public float Speed => SpeedTier switch
     {
-        1 => _config.PlayerSlowSpeed,
-        3 => _config.PlayerSprintSpeed,
-        _ => _config.PlayerForwardSpeed
+        1 => Movement.JogSpeed,
+        3 => Movement.SprintSpeed,
+        _ => Movement.RunningSpeed
     };
 
     // Juke assets use rig labels: Left moves +X, Right moves -X (opposite rear-screen input).
+    public bool IsEvading => _cutName is not null || EvadeAnimationName is not null;
     private string? EvadeAnimationName => _spinRemaining > 0f ? (_spinDirection < 0 ? "SpinLeft" : "SpinRight")
         : _jukeRemaining > 0f ? (_jukeDirection < 0 ? "JukeRight" : "JukeLeft") : null;
 
     // Tier 0 remains reserved; no stationary clip is selected.
-    public string AnimationName => _recovery is not null ? (_recovery.Phase == RecoveryPhase.Down ? "Down" : "GetUp") : IsTaunting ? "TauntBicepFlex" : _cutName ?? EvadeAnimationName ?? (SpeedTier switch
+    public string AnimationName => _recovery is not null ? (_recovery.Phase == RecoveryPhase.Down ? "Down" : "GetUp") : IsTaunting ? _tauntName : _cutName ?? EvadeAnimationName ?? (SpeedTier switch
     {
         1 => "CarryJog",
         2 => "CarryRun",
@@ -107,10 +118,26 @@ public sealed partial class BallCarrier
     });
 
     /// <summary>Apply a loaded texture asset to this player's Uniform material.</summary>
-    public void ApplyUniform(AssetManager assets, string textureKey) =>
-        PlayerUniform.ApplyUniform(_model ??
+    private Texture2D _numberedUniform;
+    public void ApplyUniform(AssetManager assets, string textureKey)
+    {
+        var next = PlayerUniform.ApplyNumberedUniform(_model ??
             throw new InvalidOperationException("Initialize player visuals before selecting a uniform."),
-            assets, textureKey);
+            assets, textureKey, Profile.JerseyNumber);
+        if (_numberedUniform.Id != 0) Raylib.UnloadTexture(_numberedUniform);
+        _numberedUniform = next;
+    }
+
+    public void Dispose()
+    {
+        if (_numberedUniform.Id != 0) Raylib.UnloadTexture(_numberedUniform);
+        _numberedUniform = default;
+        if (_model is not null) _visualAssets?.ReleaseModelInstance(_model);
+        _model = null;
+        _animation = null;
+        _animations.Clear();
+        _football = null;
+    }
 
     // AssetManager owns instances and borrowed clips; instances are released first.
     public unsafe void InitializeVisual(AssetManager assets)
@@ -122,15 +149,21 @@ public sealed partial class BallCarrier
         foreach (string key in new[] { "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
             "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
             "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
-            "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations", "FootballPlayerTauntBicepFlexAnimations" })
+            "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations", _tauntAsset })
             foreach (ModelAnimation clip in assets.GetModelAnimations(key))
                 clips[new string(clip.Name)] = clip;
 
+        var taunts = assets.GetModelAnimations(_tauntAsset);
+        if (taunts.Length != 1 || taunts[0].KeyFrameCount < 2)
+            throw new InvalidDataException("A returner taunt asset must contain exactly one nonempty animation.");
+        ModelAnimation tauntClip = taunts[0];
+        _tauntName = new string(tauntClip.Name);
+        _tauntDuration = (taunts[0].KeyFrameCount - 1) / 60f;
         ModelInstance model = assets.CreateModelInstance("FootballPlayer");
         try
         {
             // Construct the initial CarryRun player last so its starting pose is applied last.
-            foreach (string name in new[] { "TauntBicepFlex", "CutLeft", "CutRight", "JukeLeft", "JukeRight", "SpinLeft", "SpinRight", "CarryJog", "CarrySprint", "CarryRun" })
+            foreach (string name in new[] { _tauntName, "CutLeft", "CutRight", "JukeLeft", "JukeRight", "SpinLeft", "SpinRight", "CarryJog", "CarrySprint", "CarryRun" })
             {
                 if (!clips.TryGetValue(name, out ModelAnimation clip) || clip.KeyFrameCount <= 0 ||
                     !Raylib.IsModelAnimationValid(model.Model, clip))
@@ -143,8 +176,9 @@ public sealed partial class BallCarrier
             float height = bounds.Max.Y - bounds.Min.Y;
             if (!float.IsFinite(height) || height <= 0f)
                 throw new InvalidDataException("FootballPlayer must have a finite positive height.");
-            _visualScale = _config.PlayerVisualHeight / height;
-            _groundOffset = -bounds.Min.Y * _visualScale;
+            _modelScale = VisualProfile.ModelScale(bounds);
+            _visualScale = _modelScale.Y;
+            _groundOffset = VisualProfile.GroundOffset(bounds);
             _football = assets.GetModel("Football");
             _model = model;
             _visualAssets = assets;
@@ -185,19 +219,26 @@ public sealed partial class BallCarrier
         _animation.SeekPhase(phase);
     }
 
-    public BallCarrier(TackleAlleyConfig config)
+    public BallCarrier(TackleAlleyConfig config, PlayerProfile? profile = null, string? tauntAsset = null)
     {
         config.ValidatePlayer();
         config.ValidateRagdollRecovery();
         _config = config;
-        Ragdoll = new(config);
-        _contactPose = new(config);
+        _tauntAsset = tauntAsset ?? "FootballPlayerTauntBicepFlexAnimations";
+        Profile = (profile ?? config.BallCarrierProfile) with { };
+        VisualProfile = new(Profile);
+        Movement = new(Profile, config);
+        Physical = new(Profile, config);
+        Ragdoll = new(config, Physical);
+        _contactPose = new(config, Physical);
         _rightStick = new RightStickInput(config);
         Reset();
     }
 
     public void Reset()
     {
+        LastTackle = null;
+        _contactDrift = Vector3.Zero;
         Ragdoll.Deactivate(); _ragdollSkeleton = null; _recovery = null;
         IsTaunting = false; _tauntElapsed = 0f;
         HasTackleGroundImpact = false; Velocity = Vector3.Zero;
@@ -247,8 +288,8 @@ public sealed partial class BallCarrier
         ObserveSteeringReversal(lateral, deltaTime);
         _effectiveLateral = SpeedTier == 3
             ? _effectiveLateral + Math.Clamp(lateral - _effectiveLateral,
-                -_config.PlayerSprintSteeringRate * deltaTime, _config.PlayerSprintSteeringRate * deltaTime)
-            : lateral;
+                -Movement.SteeringResponse * deltaTime, Movement.SteeringResponse * deltaTime)
+            : _effectiveLateral + (lateral - _effectiveLateral) * Movement.DirectionBlend(deltaTime);
 
         UpdateCutGesture(lateral, deltaTime);
         // Relative cut clips own the turn; retain the incoming external yaw.
@@ -258,7 +299,7 @@ public sealed partial class BallCarrier
             if (sprinting)
                 _currentRunYaw = _targetRunYaw = _effectiveLateral * _config.PlayerMaxRunYawDegrees;
             else
-                UpdateRunYaw(lateral, deltaTime);
+                UpdateRunYaw(_effectiveLateral, deltaTime);
         }
 
         // Keep Cut advancement and heading handoff at their existing point in the frame.
@@ -322,11 +363,14 @@ public sealed partial class BallCarrier
         // stopped runner cannot keep zigzagging at full lateral speed.
         float lateralTime = steeringPenaltyActive
             ? (TargetForwardSpeed > 0 ? forwardDistance / TargetForwardSpeed : 0) : normalTime;
-        position.X += _jukeDirection * _config.PlayerJukeSpeed * _evadeDistanceScale * jukeTime
-            + _spinDirection * _config.PlayerSpinSpeed * _evadeDistanceScale * spinTime
-            + _effectiveLateral * _config.PlayerLateralSpeed * lateralTime;
+        position.X += _jukeDirection * Movement.JukeSpeed * _evadeDistanceScale * jukeTime
+            + _spinDirection * Movement.SpinSpeed * _evadeDistanceScale * spinTime
+            + _effectiveLateral * Movement.LateralSpeed * lateralTime;
         position.Z -= forwardDistance * forwardRetention;
-        Position = field.ClampToOuterBoundary(position, _config.PlayerBoundaryRadius);
+        float driftDecay = 1 - MathF.Exp(-5f * Physical.BalanceSupportMultiplier * deltaTime);
+        position += _contactDrift * (driftDecay / (5f * Physical.BalanceSupportMultiplier));
+        _contactDrift *= 1 - driftDecay;
+        Position = field.ClampToOuterBoundary(position, Physical.BoundaryRadius);
         if (deltaTime > 0f) Velocity = (Position - previousPosition) / deltaTime;
         if (!cutAdvanced) AdvanceEvadeAnimation(deltaTime, evadeName, evadeRemaining);
         UpdateFootballAttachment();
@@ -426,15 +470,18 @@ public sealed partial class BallCarrier
         SelectAnimation();
         // Authored exits: JukeLeft/SpinRight phase 1; JukeRight/SpinLeft phase 13.
         _animation?.SeekPhase(name is "JukeRight" or "SpinLeft" ? 0.5f : 0f);
-        _animation?.Update(deltaTime - remaining);
+        _animation?.Update((deltaTime - remaining) * LocomotionPlaybackRate);
     }
+
+    public float LocomotionPlaybackRate => PlayerMovementAttributes.PlaybackRate(
+        CurrentForwardSpeed, Movement.BaselineSpeed(SpeedTier));
 
     private void AdvanceAnimation(float deltaTime)
     {
         SelectAnimation();
         if (_cutName is null)
         {
-            _animation?.Update(deltaTime);
+            _animation?.Update(deltaTime * LocomotionPlaybackRate);
             return;
         }
 
@@ -451,7 +498,7 @@ public sealed partial class BallCarrier
         _cutName = null;
         SelectAnimation();
         _animation?.SeekPhase(exitPhase);
-        _animation?.Update(deltaTime - cutTime);
+        _animation?.Update((deltaTime - cutTime) * LocomotionPlaybackRate);
     }
 
     private void ResetSteeringPenalty()
@@ -470,15 +517,15 @@ public sealed partial class BallCarrier
             return;
         }
         if (_lastSteeringSide != 0 && side != _lastSteeringSide &&
-            _steeringNeutralTime <= _config.PlayerReversalWindow && _config.PlayerReversalSpeedLoss > 0)
+            _steeringNeutralTime <= _config.PlayerReversalWindow && Movement.ReversalPenalty > 0)
         {
-            CurrentForwardSpeed = Math.Max(0, CurrentForwardSpeed - TargetForwardSpeed * _config.PlayerReversalSpeedLoss);
+            CurrentForwardSpeed = Math.Max(0, CurrentForwardSpeed - TargetForwardSpeed * Movement.ReversalPenalty);
             // Bound the chain counter once further reversals cannot lengthen the delay.
-            float delay = _config.PlayerReversalAccelerationDelay +
-                _reversalChain * _config.PlayerReversalAdditionalDelay;
-            if (_reversalChain == 0 || (_config.PlayerReversalAdditionalDelay > 0 &&
-                delay < _config.PlayerReversalMaximumDelay)) _reversalChain++;
-            _reversalDelay = Math.Min(delay, _config.PlayerReversalMaximumDelay);
+            float delay = Movement.ReversalDelay +
+                _reversalChain * Movement.ReversalAdditionalDelay;
+            if (_reversalChain == 0 || (Movement.ReversalAdditionalDelay > 0 &&
+                delay < Movement.ReversalMaximumDelay)) _reversalChain++;
+            _reversalDelay = Math.Min(delay, Movement.ReversalMaximumDelay);
         }
         _lastSteeringSide = side;
         _steeringNeutralTime = 0;
@@ -488,8 +535,8 @@ public sealed partial class BallCarrier
     {
         // Snapshot physical pace before the move's own speed penalty. Recovery during
         // the animation must not lengthen an evade started slowly or at a standstill.
-        _evadeDistanceScale = _config.PlayerForwardSpeed > 0
-            ? Math.Clamp(CurrentForwardSpeed / _config.PlayerForwardSpeed, 0,
+        _evadeDistanceScale = Movement.RunningSpeed > 0
+            ? Math.Clamp(CurrentForwardSpeed / Movement.RunningSpeed, 0,
                 _config.PlayerEvadeMaximumDistanceScale) : 0;
     }
 
@@ -504,10 +551,10 @@ public sealed partial class BallCarrier
         // Split at the lockout boundary so catch-up frames cannot accelerate early.
         float heldTime = Math.Min(deltaTime, _reversalDelay);
         var held = SpeedRamp.Advance(CurrentForwardSpeed, Math.Min(CurrentForwardSpeed, TargetForwardSpeed),
-            _config.ForwardAcceleration, _config.ForwardDeceleration, heldTime);
+            Movement.AccelerationRate, _config.ForwardDeceleration, heldTime);
         _reversalDelay = Math.Max(0, _reversalDelay - heldTime);
         var step = SpeedRamp.Advance(held.Speed, TargetForwardSpeed,
-            _config.ForwardAcceleration, _config.ForwardDeceleration, deltaTime - heldTime);
+            Movement.AccelerationRate, _config.ForwardDeceleration, deltaTime - heldTime);
         CurrentForwardSpeed = step.Speed;
         if (_reversalDelay <= 0 && CurrentForwardSpeed >= TargetForwardSpeed) _reversalChain = 0;
         return held.Distance + step.Distance;
@@ -560,7 +607,7 @@ public sealed partial class BallCarrier
     private void UpdateRunYaw(float lateral, float deltaTime)
     {
         _targetRunYaw = lateral * _config.PlayerMaxRunYawDegrees;
-        float blend = 1f - MathF.Exp(-_config.PlayerRunYawResponse * deltaTime);
+        float blend = 1f - MathF.Exp(-Movement.FacingResponse * deltaTime);
         _currentRunYaw += (_targetRunYaw - _currentRunYaw) * blend;
     }
 
@@ -575,7 +622,7 @@ public sealed partial class BallCarrier
         }
         else if (_recovery is not null) _recovery.Draw();
         else Raylib.DrawModelEx(_model.Model, RenderPosition,
-            Vector3.UnitY, VisualYawDegrees, new Vector3(_visualScale), Color.White);
+            Vector3.UnitY, VisualYawDegrees, _modelScale, Color.White);
         if (_football is not { } football)
             throw new InvalidOperationException("Initialize the standalone football asset.");
         // Model is a value copy; transpose only at the System.Numerics -> native Raylib boundary.

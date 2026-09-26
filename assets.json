@@ -1,5 +1,15 @@
 {
   "Assets": [
+    { "Key": "FootballPlayerTauntSpeedSaluteAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_taunt_speed_salute.glb" },
+    { "Key": "FootballPlayerTauntBurstPumpAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_taunt_burst_pump.glb" },
+    { "Key": "FootballPlayerTauntHeelFlourishAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_taunt_heel_flourish.glb" },
+    { "Key": "FootballPlayerTauntPowerFlexAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_taunt_power_flex.glb" },
+    { "Key": "FootballPlayerTauntCaptainSaluteAnimations", "Type": "ModelAnimations", "Path": "Assets/Models/football_player_taunt_captain_salute.glb" },
+    { "Key": "ReturnerMarcusUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/Returners/marcus-reed.png" },
+    { "Key": "ReturnerEliUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/Returners/eli-brooks.png" },
+    { "Key": "ReturnerJalenUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/Returners/jalen-price.png" },
+    { "Key": "ReturnerDariusUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/Returners/darius-stone.png" },
+    { "Key": "ReturnerNoahUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/Returners/noah-grant.png" },
     { "Key": "OffenseUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/offense_uniform.png" },
     { "Key": "DefenseUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/defense_uniform.png" },
     { "Key": "PlayerUniform", "Type": "Texture", "Path": "Assets/Textures/Uniforms/test_uniform.png" },

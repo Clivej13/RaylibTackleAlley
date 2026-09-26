@@ -2,6 +2,9 @@ namespace RaylibTackleAlley.Game;
 
 public sealed partial class TackleAlleyConfig
 {
+    public PlayerProfile BallCarrierProfile { get; set; } = new();
+    public PlayerProfile[] BallCarrierProfileExamples { get; set; } = [];
+    public bool ShowPlayerProfiles { get; set; }
     public string OffenseUniform { get; set; } = "OffenseUniform";
     public string DefenseUniform { get; set; } = "DefenseUniform";
     public float PlayerForwardSpeed { get; set; } = 6.5f;
@@ -25,7 +28,19 @@ public sealed partial class TackleAlleyConfig
     public float CameraLookSmoothing { get; set; } = 12f;
     public float CameraLookBackThreshold { get; set; } = .55f;
     public float CameraLookBackReleaseThreshold { get; set; } = .35f;
+    // Compatibility values for standalone components/legacy callers.
+    // Authored games project these from LevelDefinition; config.json no longer owns them.
     public float FieldWidth { get; set; } = 24f;
+
+    internal TackleAlleyConfig ForLevel(LevelDefinition level)
+    {
+        var copy = (TackleAlleyConfig)MemberwiseClone();
+        copy.FieldWidth = level.FieldWidth;
+        copy.PlayerSpawn = new() { X = level.PlayerSpawn.X, Z = level.PlayerSpawn.Z };
+        copy.OpponentSpawns = level.Defenders.Select(d => new DefenderSpawn
+        { X = d.Position.X, Z = d.Position.Z, Profile = d.Profile }).ToArray();
+        return copy;
+    }
     // Gameplay corridor; the visual field and stadium have independent dimensions below.
     public float FieldLength { get; set; } = 84f;
     public float EndZoneLength { get; set; } = 12f;

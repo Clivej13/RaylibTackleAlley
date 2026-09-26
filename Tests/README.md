@@ -15,6 +15,10 @@ capture, auto-forward assist/speed, juke/spin timing, head-fake cancellation, co
 neutral cancellation, Controls names/descriptions, native drawing/scrolling/navigation,
 pause/back bindings and the 2.5-second end-state restart.
 
+Physical tackle aiming, correction and continuous capsule tests are documented in
+[Game/TackleAiming.md](../Game/TackleAiming.md). Enable DrawTackleAimingDebug in config.json
+to inspect candidate points, correction limits, capsule paths and time of impact.
+
 Manual follow-up:
 - Visually inspect all three Controls columns and scrolling at your usual resolution.
 - Rebind both device columns, return to play and verify the selected bindings.

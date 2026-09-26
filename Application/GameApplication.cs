@@ -11,6 +11,7 @@ namespace RaylibTackleAlley.Application;
 public sealed class GameApplication
 {
     private readonly GameConfig _config;
+    private readonly ReturnerCatalog _returners;
     private readonly TackleAlleyConfig _tuning;
     private readonly InputController _input;
     private readonly InputConfig _inputConfig;
@@ -18,13 +19,17 @@ public sealed class GameApplication
     private readonly MenuManager _pauseMenu;
     private readonly AssetManager _assets;
     private readonly TackleAlleyGame _game;
+    private readonly ReturnerPreview _returnerPreview;
+    private readonly ReturnerSelectionView _returnerSelection;
     private GameState _state = GameState.MainMenu;
     private bool _exitRequested;
     private bool _mouseCaptured;
 
-    public GameApplication(GameConfig config, InputConfig input, MenuConfig menus, AssetConfig assets, TackleAlleyConfig tuning)
+    public GameApplication(GameConfig config, InputConfig input, MenuConfig menus, AssetConfig assets, TackleAlleyConfig tuning, ReturnerCatalog returners, LevelDefinition? level = null)
     {
         _config = config;
+        assets = returners.PrepareAssets(assets, tuning.OffenseUniform);
+        _returners = returners = returners.ResolveAvailableAssets(assets, tuning.OffenseUniform);
         _tuning = tuning;
         _input = new InputController(input);
         _inputConfig = input;
@@ -35,10 +40,26 @@ public sealed class GameApplication
             else if (item.Function == "SetVSync")
                 item.Value = JsonSerializer.SerializeToElement(config.VSync);
         }
+        menus.Menus["Returners"].Items.Clear();
+        foreach (var entry in returners.Returners)
+            menus.Menus["Returners"].Items.Add(new MenuItemDefinition
+            {
+                Type = "Button",
+                Text = $"#{entry.Profile.JerseyNumber} {entry.Profile.Name}",
+                Function = "SelectReturner",
+                Value = JsonSerializer.SerializeToElement(entry.Id)
+            });
+        menus.Menus["Returners"].Items.Add(new MenuItemDefinition
+        {
+            Type = "Button", Text = "Back", Function = "Back"
+        });
         _mainMenu = new MenuManager(menus, _input, input);
         _pauseMenu = new MenuManager(new MenuConfig { StartMenu = "Pause", Menus = menus.Menus }, _input, input);
         _assets = new AssetManager(assets);
-        _game = new TackleAlleyGame(tuning, _input, _assets);
+        _returnerPreview = new ReturnerPreview(_assets, tuning.OffenseUniform);
+        _returnerSelection = new(returners, menus.Menus["Returners"], _returnerPreview);
+        _game = level is null ? new TackleAlleyGame(tuning, _input, _assets)
+            : new TackleAlleyGame(tuning, _input, _assets, level);
     }
 
     public void Run()
@@ -59,6 +80,10 @@ public sealed class GameApplication
                 "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations");
             _assets.RequireAssets(Opponent.AnimationAssetKeys);
             _assets.RequireAssets(_tuning.OffenseUniform, _tuning.DefenseUniform);
+            foreach (var uniform in _returners.Returners.Select(r => r.Uniform).OfType<string>().Distinct())
+                _assets.RequireAsset(uniform);
+            foreach (var taunt in _returners.Returners.Select(r => r.Taunt).OfType<string>().Distinct())
+                _assets.RequireAsset(taunt);
             while (!_assets.ProcessNext())
             {
                 // Models must be loaded after the graphics context is initialized.
@@ -90,23 +115,31 @@ public sealed class GameApplication
                     MenuDisplay.Draw(_pauseMenu, _inputConfig);
                 }
                 else
-                    MenuDisplay.Draw(_mainMenu, _inputConfig);
+                {
+                    if (_mainMenu.CurrentMenuName != "Returners")
+                        MenuDisplay.Draw(_mainMenu, _inputConfig);
+                    DrawReturnerDetail();
+                }
                 Raylib.EndDrawing();
             }
         }
         finally
         {
+            _returnerPreview.Dispose();
+            _game.Dispose();
             _assets.UnloadAll();
             Raylib.CloseWindow();
         }
     }
+
+    private void DrawReturnerDetail() => _returnerSelection.Draw(_mainMenu);
 
     private void Update(float deltaTime)
     {
         switch (_state)
         {
             case GameState.MainMenu:
-                HandleMenu(_mainMenu.Update());
+                HandleMenu(_returnerSelection.Update(_mainMenu));
                 break;
             case GameState.Playing:
                 if (_input.WasPressed("Pause")) { _pauseMenu.ReturnToStartMenu(); _state = GameState.Paused; break; }
@@ -134,7 +167,10 @@ public sealed class GameApplication
     {
         switch (action?.Function)
         {
-            case "StartGame": _game.ResetRun(); _state = GameState.Playing; break;
+            case "SelectReturner" when action.Value is JsonElement { ValueKind: JsonValueKind.String } value:
+                _game.SelectReturner(_returners, value.GetString()!);
+                _state = GameState.Playing;
+                break;
             case "ExitGame": _exitRequested = true; break;
             case "SetFullscreen" when action.Value is bool fullscreen:
                 if (Raylib.IsWindowFullscreen() != fullscreen) Raylib.ToggleFullscreen();

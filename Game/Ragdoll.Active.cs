@@ -65,7 +65,7 @@ public sealed partial class Ragdoll
         // cannot erase the animation's small velocity impulse on every iteration.
         Vector3 correction = ClampLength(error * _config.RagdollMotorPoseResponse * FixedStep / SolverIterations,
             _config.RagdollMaximumMotorCorrectionSpeed * FixedStep / SolverIterations) *
-            ActiveDriveWeight * _motorStrength[joint.Child];
+            ActiveDriveWeight * _motorStrength[joint.Child] * (Physical?.ActiveMotorMultiplier ?? 1f);
         float inverse = a.InverseInertia + b.InverseInertia;
         a.Orientation = Quaternion.Normalize(Exp(-correction * a.InverseInertia / inverse) * a.Orientation);
         b.Orientation = Quaternion.Normalize(Exp(correction * b.InverseInertia / inverse) * b.Orientation);
@@ -95,7 +95,7 @@ public sealed partial class Ragdoll
             Quaternion desired = Quaternion.Normalize(a.Orientation * _driveTargets[i]);
             Vector3 acceleration = ClampLength(
                 Log(desired * Quaternion.Inverse(b.Orientation)) * _config.RagdollMotorStiffness -
-                (b.AngularVelocity - a.AngularVelocity) * _config.RagdollMotorDamping, _config.RagdollMaximumMotorAcceleration) * ActiveDriveWeight * _motorStrength[j.Child];
+                (b.AngularVelocity - a.AngularVelocity) * _config.RagdollMotorDamping, _config.RagdollMaximumMotorAcceleration) * ActiveDriveWeight * _motorStrength[j.Child] * (Physical?.ActiveMotorMultiplier ?? 1f);
             // Equal/opposite internal torque: animation works against the collision, never teleports bones.
             Vector3 angularImpulse = acceleration * FixedStep / (a.InverseInertia + b.InverseInertia);
             a.AngularVelocity -= angularImpulse * a.InverseInertia;
@@ -107,10 +107,10 @@ public sealed partial class Ragdoll
         var root = _bodies[0];
         float tilt = Log(root.Orientation * Quaternion.Inverse(_driveRoot)).Length();
         float balance = Math.Clamp(1 - tilt / _config.RagdollBalanceTiltLimitRadians, 0, 1);
-        bool supported = (_motorStrength[8] > _config.RagdollMinimumSupportStrength && _bodies[8].Bottom <= GroundHeight + _config.RagdollFootSupportDistance) ||
-            (_motorStrength[10] > _config.RagdollMinimumSupportStrength && _bodies[10].Bottom <= GroundHeight + _config.RagdollFootSupportDistance);
+        bool supported = (_motorStrength[8] > _config.RagdollMinimumSupportStrength && _bodies[8].Bottom <= GroundHeight + _config.RagdollFootSupportDistance * (Physical?.HeightRatio ?? 1f)) ||
+            (_motorStrength[10] > _config.RagdollMinimumSupportStrength && _bodies[10].Bottom <= GroundHeight + _config.RagdollFootSupportDistance * (Physical?.HeightRatio ?? 1f));
         if (!supported || _torsoHit) return;
-        float weight = ActiveDriveWeight * balance;
+        float weight = ActiveDriveWeight * balance * (Physical?.BalanceSupportMultiplier ?? 1f);
         float support = Math.Clamp(_config.RagdollGravity + _config.RagdollSupportStiffness * (_driveHeight - (root.Position.Y - GroundHeight)) -
             _config.RagdollSupportDamping * root.LinearVelocity.Y, 0, _config.RagdollMaximumSupportAcceleration) * weight;
         foreach (var body in _bodies) body.LinearVelocity += Vector3.UnitY * support * FixedStep;

@@ -13,6 +13,8 @@ public sealed class RagdollRecovery
     private readonly AnimationPlayer _down, _getUp;
     private readonly int[] _parents;
     private readonly Transform[] _startLocal, _native;
+    private readonly Matrix4x4[] _startResidual;
+    private readonly bool _affineBlend;
     private readonly float _downDuration, _blendDuration, _getUpSpeed;
     private float _elapsed;
     public RecoveryPhase Phase { get; private set; } = RecoveryPhase.Down;
@@ -23,16 +25,17 @@ public sealed class RagdollRecovery
     public AnimationPlayer Animation => Phase == RecoveryPhase.Down ? _down : _getUp;
 
     public unsafe RagdollRecovery(Model model, RagdollSkeleton skeleton, Ragdoll ragdoll,
-        AnimationPlayer down, AnimationPlayer getUp, float scale, float groundOffset,
+        AnimationPlayer down, AnimationPlayer getUp, Vector3 scale, float groundOffset,
         float previousYaw, TackleAlleyConfig config, bool defender = false)
     {
         config.ValidateRagdollRecovery();
         _model = model; _down = down; _getUp = getUp;
+        _affineBlend = Math.Abs(scale.X - scale.Y) > .000001f || Math.Abs(scale.Z - scale.Y) > .000001f;
         if (defender) config.ValidateTackle();
         _blendDuration = defender ? config.OpponentRecoveryBlendDuration : config.RagdollDownBlendDuration;
         // Defenders only spend enough time down to blend continuously from physics.
         _downDuration = defender ? _blendDuration : config.RagdollDownDuration;
-        _getUpSpeed = defender ? config.OpponentGetUpPlaybackSpeed : 1f;
+        _getUpSpeed = (defender ? config.OpponentGetUpPlaybackSpeed : 1f) * (ragdoll.Physical?.RecoveryRate ?? 1f);
         skeleton.Evaluate(ragdoll);
         var settled = skeleton.ModelPose.Select(p => p * skeleton.ModelWorld).ToArray();
         _parents = new int[settled.Length];
@@ -64,7 +67,16 @@ public sealed class RagdollRecovery
         var start = settled.Select(p => p * inverseWorld).ToArray();
         _startLocal = new Transform[start.Length]; _native = new Transform[start.Length];
         ModelPose = new Matrix4x4[start.Length];
-        for (int i = 0; i < start.Length; i++) _startLocal[i] = RagdollPose.Transform(Local(start, i));
+        _startResidual = new Matrix4x4[start.Length];
+        for (int i = 0; i < start.Length; i++)
+        {
+            _startResidual[i] = Local(start, i);
+            if (!Matrix4x4.Decompose(_startResidual[i], out _, out _, out _)) _affineBlend = true;
+            AffinePose.Decompose(_startResidual[i], out var s, out var q, out var p);
+            _startLocal[i] = new() { Scale = s, Rotation = q, Translation = p };
+            Matrix4x4.Invert(RagdollPose.Matrix(_startLocal[i]), out var inverseTrs);
+            _startResidual[i] *= inverseTrs;
+        }
         Evaluate(); // blend weight zero: exact settled pose, even on the first Down draw
     }
 
@@ -107,12 +119,16 @@ public sealed class RagdollRecovery
                 Scale = Vector3.Lerp(start.Scale, end.Scale, blend)
             };
             ModelPose[i] = RagdollPose.Matrix(t) * (_parents[i] >= 0 ? ModelPose[_parents[i]] : Matrix4x4.Identity);
-            _native[i] = RagdollPose.Transform(ModelPose[i]);
+            if (_affineBlend)
+                ModelPose[i] = Matrix4x4.Lerp(_startResidual[i], Matrix4x4.Identity, blend) * RagdollPose.Matrix(t) *
+                    (_parents[i] >= 0 ? ModelPose[_parents[i]] : Matrix4x4.Identity);
+            else _native[i] = RagdollPose.Transform(ModelPose[i]);
         }
     }
     public void Draw()
     {
-        RagdollSkeleton.ApplyPose(_model, _native);
+        if (_affineBlend) AffinePose.Apply(_model, ModelPose);
+        else RagdollSkeleton.ApplyPose(_model, _native);
         var model = _model; model.Transform = Matrix4x4.Transpose(World);
         Raylib.DrawModelEx(model, Vector3.Zero, Vector3.UnitY, 0, Vector3.One, Color.White);
     }

@@ -4,7 +4,7 @@ using Xunit;
 
 public sealed class RagdollContactTests
 {
-    internal static Ragdoll Create(Vector3 position, Vector3 velocity, TackleAlleyConfig? config = null)
+    internal static Ragdoll Create(Vector3 position, Vector3 velocity, TackleAlleyConfig? config = null, PlayerPhysicalAttributes? physical = null)
     {
         var points = new Dictionary<string, Vector3> {
             ["Hips"] = new(0, 1, 0), ["Chest"] = new(0, 1.4f, 0),
@@ -19,8 +19,9 @@ public sealed class RagdollContactTests
             points["LowerLeg." + side] = new(x * .5f, .55f, .05f);
             points["Foot." + side] = new(x * .5f, .1f, 0);
         }
-        var pose = points.ToDictionary(p => p.Key, p => Matrix4x4.CreateTranslation(p.Value + position));
-        var doll = new Ragdoll(config);
+        var pose = points.ToDictionary(p => p.Key, p => Matrix4x4.CreateScale(physical?.HeightRatio ?? 1f) *
+            Matrix4x4.CreateTranslation(p.Value * (physical?.HeightRatio ?? 1f) + position));
+        var doll = new Ragdoll(config, physical);
         doll.Activate(pose, pose, velocity);
         return doll;
     }
@@ -203,15 +204,17 @@ public sealed class RagdollContactTests
     [Theory]
     [InlineData(-1f)]
     [InlineData(1f)]
-    public void ConfirmedSideHitCombinesLateralAndForwardMomentum(float side)
+    public void ConfirmedSideHitPreservesUnrelatedForwardMomentum(float side)
     {
         var defender = Create(new(side * .65f, 10, 0), new(-side * 8, 0, 0));
         var carrier = Create(new(0, 10, 0), new(0, 0, -6));
         RagdollContact.Resolve(defender, carrier, true);
-        foreach (var doll in new[] { defender, carrier })
-            Assert.All(doll.Bodies, body =>
-                Assert.True(Vector3.Distance(new(-side * 4, 0, -3), body.LinearVelocity) < .001f));
-        Assert.True(Math.Abs(carrier.Bodies[1].AngularVelocity.Y) > .01f);
+        Assert.All(defender.Bodies, body => Assert.Equal(0, body.LinearVelocity.Z, 5));
+        Assert.All(carrier.Bodies, body => Assert.Equal(-6, body.LinearVelocity.Z, 5));
+        Assert.True(Momentum(carrier).X * side < 0);
+        Assert.True((Momentum(defender) + Momentum(carrier) -
+            new Vector3(-side * 8, 0, -6) * defender.Bodies.Sum(b => b.Mass)).Length() < .001f);
+        Assert.True(carrier.Bodies[1].AngularVelocity.Length() > .01f);
     }
 
     [Fact]
@@ -224,8 +227,8 @@ public sealed class RagdollContactTests
         float beforeEnergy = TotalEnergy(defender) + TotalEnergy(carrier);
         RagdollContact.Resolve(defender, carrier, true);
         Assert.True((Momentum(defender) + Momentum(carrier) - expectedMomentum).Length() < .001f);
-        Assert.True(Vector3.Distance(Momentum(defender) / defender.Bodies.Sum(b => b.Mass),
-            Momentum(carrier) / carrier.Bodies.Sum(b => b.Mass)) < .001f);
+        Assert.True(carrier.LastContactImpulse > 0);
+        Assert.InRange(carrier.LastContactImpulse, 0, new TackleAlleyConfig().ContactMaximumTackleImpulse);
         Assert.True(TotalEnergy(defender) + TotalEnergy(carrier) <= beforeEnergy + .001f);
     }
 

@@ -139,7 +139,7 @@ public sealed class BallCarrierAnimationTests
                 Vector3 before = player.Position;
                 float speedBefore = player.CurrentForwardSpeed;
                 Tick(0.025f);
-                Assert.Equal(time + 0.025f, clocks[name].CurrentTime, 5);
+                Assert.Equal(time + 0.025f * player.LocomotionPlaybackRate, clocks[name].CurrentTime, 5);
                 float travel = before.Z - player.Position.Z;
                 Assert.InRange(travel,
                     Math.Min(speedBefore, player.CurrentForwardSpeed) * 0.025f - 0.00001f,
@@ -172,11 +172,12 @@ public sealed class BallCarrierAnimationTests
                 Assert.Equal(cut, player.AnimationName);
                 Tick(0.1f);
                 Assert.Equal(cut, player.AnimationName);
+                float exitPlaybackRate = PlayerMovementAttributes.PlaybackRate(player.CurrentForwardSpeed, config.PlayerSprintSpeed);
                 Tick(0.08f);
                 Assert.Equal("CarrySprint", player.AnimationName);
                 Assert.Same(clocks["CarrySprint"], Field<AnimationPlayer>(player, "_animation"));
                 float expectedTime = exitPhase * (clocks["CarrySprint"].FrameCount /
-                    clocks["CarrySprint"].FramesPerSecond) + 0.38f - 22f / 60f;
+                    clocks["CarrySprint"].FramesPerSecond) + (0.38f - 22f / 60f) * exitPlaybackRate;
                 Assert.Equal(expectedTime, clocks["CarrySprint"].CurrentTime, 5);
                 Assert.Equal(otherPose, Vertices(opponent));
                 Key(to, false); Key(KeyboardKey.LeftShift, false);
@@ -242,7 +243,7 @@ public sealed class BallCarrierAnimationTests
                 Assert.Equal(carry, player.AnimationName);
                 Assert.Same(clocks[carry], Field<AnimationPlayer>(player, "_animation"));
                 float exitPhase = name is "JukeRight" or "SpinLeft" ? 0.5f : 0f;
-                Assert.Equal(exitPhase * clocks[carry].FrameCount / clocks[carry].FramesPerSecond + 0.01f,
+                Assert.Equal(exitPhase * clocks[carry].FrameCount / clocks[carry].FramesPerSecond + 0.01f * player.LocomotionPlaybackRate,
                     clocks[carry].CurrentTime, 5);
                 float completedTime = clocks[name].CurrentTime;
                 Tick(0.02f); // A held gesture cannot loop or restart the clip.

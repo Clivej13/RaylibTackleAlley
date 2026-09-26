@@ -155,19 +155,18 @@ public sealed class LungeInterceptionTests
     }
 
     [Fact]
-    public void CommittedDiveKeepsItsLeadDirectionAfterTheCarrierTurns()
+    public void UnreachableEarlyReversalDoesNotRedirectCommittedDive()
     {
         var defender = new Opponent(Vector3.Zero, new());
         defender.Update(new(0, 0, -20), .01f, false, Vector2.Zero, false);
         defender.Update(defender.Position + new Vector3(0, 0, -4), 0, true, Vector2.Zero, false);
         Vector3 carrier = defender.Position + new Vector3(1, 0, -2);
         Vector3 velocity = new(0, 0, 2f); // Approaching and reachable before the dive ends.
-        float launchSpeed = Math.Max(defender.CurrentSpeed, 4);
-        Vector3 target = LungeInterception.Target(defender.Position, carrier, velocity, launchSpeed);
         defender.Update(carrier, 0, null, velocity);
         Assert.Equal(DefenderState.LungeTackle, defender.State);
         Vector3 launched = defender.Velocity; launched.Y = 0;
-        Assert.True(Vector3.Distance(Vector3.Normalize(target - defender.Position), Vector3.Normalize(launched)) < .0001f);
+        Assert.True(defender.InitialContactSolution.Reachable);
+        Assert.True(Vector3.Distance(defender.InitialContactSolution.LaunchDirection, Vector3.Normalize(launched)) < .0001f);
         Vector3 start = defender.Position;
         defender.Update(carrier + Vector3.UnitX * 10, .1f, null, Vector3.UnitX * 8);
         Vector3 after = defender.Velocity; after.Y = 0;

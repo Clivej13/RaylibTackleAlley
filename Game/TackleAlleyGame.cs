@@ -4,11 +4,14 @@ using RaylibGameFramework.Input;
 
 namespace RaylibTackleAlley.Game;
 
-public sealed class TackleAlleyGame
+public sealed class TackleAlleyGame : IDisposable
 {
     private readonly TackleAlleyConfig _config;
     private readonly FootballField _field;
-    private readonly BallCarrier _player;
+    private BallCarrier _player;
+    private AssetManager? _visualAssets;
+    public string? SelectedReturnerId { get; private set; }
+    public PlayerProfile SelectedProfile => _player.Profile;
     private readonly Opponent[] _opponents;
     private readonly ThirdPersonCamera _camera;
     private readonly InputController _input;
@@ -25,21 +28,41 @@ public sealed class TackleAlleyGame
         _celebratingDefender?.TauntComplete ?? true;
     public int SuccessfulRuns { get; private set; }
 
+    public LevelDefinition CurrentLevel { get; }
+
+    // Preserve standalone callers, including tests with intentionally empty practice setups.
     public TackleAlleyGame(TackleAlleyConfig config, InputController input, AssetManager assets)
+        : this(config, input, assets, LevelDefinition.FromLegacyConfiguration(config), false) { }
+
+    public TackleAlleyGame(TackleAlleyConfig config, InputController input, AssetManager assets, LevelDefinition level)
+        : this(config, input, assets, level, true) { }
+
+    private TackleAlleyGame(TackleAlleyConfig config, InputController input, AssetManager assets,
+        LevelDefinition level, bool applyLevel)
     {
+        ArgumentNullException.ThrowIfNull(level);
+        if (applyLevel)
+        {
+            level.ValidateGeometry(config);
+            // Field and carrier retain their established component APIs; this private
+            // projection gives them level geometry without mutating the shared tuning.
+            config = config.ForLevel(level);
+        }
         config.Validate();
+        CurrentLevel = level;
         _config = config;
         _pursuitPrediction = new(config);
         _input = input;
         _field = new FootballField(config, assets);
         _player = new BallCarrier(config);
-        _opponents = config.OpponentSpawns.Select(spawn => new Opponent(spawn.Position, config)).ToArray();
+        _opponents = level.Defenders.Select(spawn => new Opponent(spawn.Position, config, spawn.Profile, spawn.BehaviorProfile)).ToArray();
         _camera = new ThirdPersonCamera(config);
         ResetRun();
     }
 
     public void InitializeVisuals(AssetManager assets)
     {
+        _visualAssets = assets;
         _player.InitializeVisual(assets);
         foreach (Opponent opponent in _opponents)
             opponent.InitializeVisual(assets);
@@ -52,6 +75,27 @@ public sealed class TackleAlleyGame
     {
         foreach (Opponent opponent in _opponents)
             opponent.ApplyUniform(assets, textureKey);
+    }
+
+    public void SelectReturner(ReturnerCatalog catalog, string id)
+    {
+        var selected = catalog.Resolve(id);
+        // Build a complete replacement before releasing the previous carrier.
+        // Highlighting uses a separate lightweight preview, never this path.
+        var replacement = new BallCarrier(_config, selected.Profile, selected.Taunt);
+        try
+        {
+            if (_visualAssets is { } assets)
+            {
+                replacement.InitializeVisual(assets);
+                replacement.ApplyUniform(assets, selected.Uniform ?? _config.OffenseUniform);
+            }
+        }
+        catch { replacement.Dispose(); throw; }
+        _player.Dispose();
+        _player = replacement;
+        SelectedReturnerId = selected.Id;
+        ResetRun();
     }
 
     public void ResetRun()
@@ -77,12 +121,12 @@ public sealed class TackleAlleyGame
         RagdollDebugControls.Update(_opponents, _player.Position);
         // Tighter capsules need short motion steps to catch fast head-on contact.
         if (!TacklePendingGroundImpact && !GameOver && !Touchdown && deltaTime > Ragdoll.FixedStep &&
-            _opponents.Any(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position) < _config.ContactSubstepDistance * _config.ContactSubstepDistance))
+            _opponents.Any(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position) < MathF.Pow(_config.ContactSubstepDistance * PlayerPhysicalAttributes.MaximumHeightRatio, 2)))
         {
             float remaining = Math.Min(deltaTime, .25f);
             while (remaining > 0)
             {
-                float step = Math.Min(remaining, Ragdoll.FixedStep);
+                float step = remaining <= Ragdoll.FixedStep + 1e-7f ? remaining : Ragdoll.FixedStep;
                 UpdateStep(step);
                 remaining = Math.Max(0, remaining - step);
             }
@@ -120,6 +164,8 @@ public sealed class TackleAlleyGame
             return;
         }
 
+        var previousCarrierCapsules = ContactCapsule.Capture(_player.ContactPose());
+        foreach (var opponent in _opponents) opponent.CaptureTackleStart(previousCarrierCapsules);
         _player.Update(_input, deltaTime, _field);
         if (_field.IsOutOfBounds(_player.Position))
         {
@@ -129,17 +175,19 @@ public sealed class TackleAlleyGame
             _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
             return;
         }
-        var predictedTarget = _pursuitPrediction.Observe(_player.Position, _player.SpeedTier, deltaTime);
+        var predictedTarget = _pursuitPrediction.Observe(_player.Position, _player.SpeedTier, deltaTime,
+            _player.Movement.TierSpeed(_player.SpeedTier));
         foreach (Opponent opponent in _opponents)
         {
             // Test the animated capsules, including the final lunge handoff pose.
             // Existing ragdolls remain excluded from starting another tackle.
             bool controlledAtStart = !opponent.Ragdoll.IsActive && !opponent.IsRecovering;
             opponent.Update(_player.Position, deltaTime, predictedTarget, _player.Velocity,
-                predictedTarget - _player.Position);
-            if (controlledAtStart && opponent.HasBodyContact(_player))
+                predictedTarget - _player.Position, _player.Physical, _player.ContactPose(), _player.IsEvading);
+            var swept = opponent.SweepTackle(ContactCapsule.Capture(_player.ContactPose()), deltaTime);
+            if (controlledAtStart && (swept.HasValue || opponent.HasBodyContact(_player)))
             {
-                if (LungeTackleOutcome.Confirm(opponent, _player))
+                if (LungeTackleOutcome.Confirm(opponent, _player, swept))
                 {
                     _tackleDefender = opponent;
                     _celebratingDefender = opponent;
@@ -185,7 +233,14 @@ public sealed class TackleAlleyGame
         {
             float step = Math.Min(physicsRemaining, Ragdoll.FixedStep);
             if (_tackleDefender is { } contact)
+            {
                 RagdollContact.Resolve(contact.Ragdoll, _player.Ragdoll);
+                if (contact.WrapRemaining > 0)
+                {
+                    contact.WrapRemaining = Math.Max(0, contact.WrapRemaining - step);
+                    if (!RagdollContact.MaintainWrap(contact.Ragdoll, _player.Ragdoll, step)) contact.WrapRemaining = 0;
+                }
+            }
             _player.UpdatePhysicsAndRecovery(step);
             foreach (var defender in _opponents) defender.UpdateLungeAfterOutcome(step);
             if (_tackleDefender is { } active)
@@ -199,6 +254,50 @@ public sealed class TackleAlleyGame
             if (!defender.Ragdoll.IsActive) defender.UpdateLungeAfterOutcome(remaining);
     }
 
+    public void Dispose()
+    {
+        _player.Dispose();
+        foreach (var opponent in _opponents) opponent.Dispose();
+    }
+
+    private void DrawProfiles()
+    {
+        if (!_config.ShowPlayerProfiles) return;
+        var entries = new[] { ("CARRIER", _player.VisualProfile,
+            _player.Ragdoll.IsActive ? _player.Ragdoll.Bodies[0].LinearVelocity.Length() : _player.CurrentForwardSpeed,
+            _player.Ragdoll.IsActive || _player.IsRecovering || _player.IsTaunting ? 0f : _player.TargetForwardSpeed) }
+            .Concat(_opponents.Select((o, i) => ($"DEFENDER {i + 1}", o.VisualProfile,
+                o.Ragdoll.IsActive ? o.Ragdoll.Bodies[0].LinearVelocity.Length() : o.CurrentSpeed, o.TargetSpeed))).ToArray();
+        int width = Math.Min(520, Raylib.GetScreenWidth() - 36);
+        int x = Raylib.GetScreenWidth() - width - 18, y = Raylib.GetScreenWidth() < 940 ? 100 : 18;
+        Raylib.DrawRectangle(x, y, width, 28 + entries.Length * 62, new Color(0, 0, 0, 180));
+        Raylib.DrawText("PLAYER PROFILES", x + 12, y + 8, 16, Color.SkyBlue);
+        y += 30;
+        foreach (var (role, visual, current, target) in entries)
+        {
+            var p = visual.Profile;
+            string title = $"{role}  #{p.JerseyNumber} {p.Name}";
+            int fontSize = 16;
+            while (fontSize > 8 && Raylib.MeasureText(title, fontSize) > width - 24) fontSize--;
+            Raylib.DrawText(title, x + 12, y, fontSize, Color.White);
+            Raylib.DrawText($"{p.Height:0.00} m   {p.Weight:0} kg   {visual.BuildDescription} ({p.Build:+0.00;-0.00;0.00})",
+                x + 12, y + 19, 14, Color.SkyBlue);
+            Raylib.DrawText($"SPD {p.Speed}  ACC {p.Acceleration}  AGI {p.Agility}   {current:0.0} / {target:0.0} m/s",
+                x + 12, y + 37, 14, Color.White);
+            y += 62;
+        }
+    }
+
+    private static void DrawPhysical(string role, PlayerProfile p, PlayerPhysicalAttributes physical,
+        System.Numerics.Vector3 momentum, TackleImpact? tackle, float impulse, int y)
+    {
+        Raylib.DrawRectangle(18, y - 2, 850, 50, new Color(0, 0, 0, 180));
+        Raylib.DrawText($"{role} {p.Name}: {p.Height:0.00}m {p.Weight:0}kg STR {p.Strength} MASS {physical.TotalMass:0.0}kg  P ({momentum.X:0},{momentum.Y:0},{momentum.Z:0}) kg m/s",
+            24, y, 14, Color.SkyBlue);
+        Raylib.DrawText($"Impact {tackle?.ImpactScore ?? 0:0} Resistance {tackle?.ResistanceScore ?? 0:0}  {tackle?.Outcome.ToString() ?? "No contact"}  Impulse {impulse:0.0} Ns",
+            24, y + 22, 14, Color.White);
+    }
+
     public void Draw()
     {
         Raylib.BeginMode3D(_camera.Camera);
@@ -206,9 +305,22 @@ public sealed class TackleAlleyGame
         _player.Draw();
         foreach (Opponent opponent in _opponents)
             opponent.Draw();
+        foreach (var opponent in _opponents) opponent.DrawTackleAiming();
         _field.DrawOutOfBounds();
         Raylib.EndMode3D();
         RagdollDebugControls.Draw(_opponents);
+        DrawProfiles();
+        if (_config.DrawTackleAimingDebug) Opponent.DrawTackleAimingLegend();
+        for (int i = 0; i < _opponents.Length; i++) _opponents[i].DrawTackleAimingLabel(122 + i * 36);
+        if (_config.DrawGameplayDebug || _config.ShowPlayerProfiles)
+        {
+            var defender = _tackleDefender ?? _opponents.MinBy(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position));
+            int y = Raylib.GetScreenHeight() - 112;
+            DrawPhysical("CARRIER", _player.Profile, _player.Physical, _player.Momentum,
+                _player.LastTackle, _player.Ragdoll.LastContactImpulse, y);
+            if (defender is not null) DrawPhysical("DEFENDER", defender.Profile, defender.Physical,
+                defender.Momentum, defender.LastTackle, defender.Ragdoll.LastContactImpulse, y + 52);
+        }
 
         Raylib.DrawRectangle(18, 18, 360, 70, new Color(0, 0, 0, 180));
         Raylib.DrawText($"RUNS {SuccessfulRuns}   SPEED {_player.SpeedTier}", 32, 32, 20, Color.White);
