@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace RaylibTackleAlley.Game;
 
-/// <summary>Predict one launch target from observed velocity; the airborne dive never homes.</summary>
+/// <summary>Legacy bounded point prediction for standalone callers. Gameplay tackles use TackleAiming.</summary>
 public static class LungeInterception
 {
 

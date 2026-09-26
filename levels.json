@@ -1,0 +1,97 @@
+{
+  "DefenderProfiles": [
+    {
+      "Id": "marcus-hill",
+      "Profile": {
+        "Name": "Marcus Hill",
+        "JerseyNumber": 24,
+        "Height": 1.65,
+        "Weight": 75,
+        "Build": -1,
+        "Speed": 85,
+        "Acceleration": 90,
+        "Agility": 90,
+        "Strength": 35
+      }
+    },
+    {
+      "Id": "devon-brooks",
+      "Profile": {
+        "Name": "Devon Brooks",
+        "JerseyNumber": 52,
+        "Height": 1.88,
+        "Weight": 108,
+        "Build": 0,
+        "Speed": 60,
+        "Acceleration": 65,
+        "Agility": 60,
+        "Strength": 65
+      }
+    },
+    {
+      "Id": "andre-cole",
+      "Profile": {
+        "Name": "Andre Cole",
+        "JerseyNumber": 90,
+        "Height": 2.05,
+        "Weight": 145,
+        "Build": 0.6,
+        "Speed": 45,
+        "Acceleration": 40,
+        "Agility": 35,
+        "Strength": 95
+      }
+    },
+    {
+      "Id": "sam-taylor",
+      "Profile": {
+        "Name": "Sam Taylor",
+        "JerseyNumber": 97,
+        "Height": 1.78,
+        "Weight": 150,
+        "Build": 1,
+        "Speed": 30,
+        "Acceleration": 30,
+        "Agility": 25,
+        "Strength": 85
+      }
+    }
+  ],
+  "Levels": [
+    {
+      "Id": "level-1",
+      "Name": "Level 1",
+      "FieldWidth": 24,
+      "PlayerSpawn": {
+        "X": 0,
+        "Z": 0
+      },
+      "Defenders": [
+        {
+          "X": -5.5,
+          "Z": -18,
+          "Profile": "marcus-hill",
+          "BehaviorProfile": "balanced"
+        },
+        {
+          "X": 5.5,
+          "Z": -31,
+          "Profile": "devon-brooks",
+          "BehaviorProfile": "balanced"
+        },
+        {
+          "X": -4.5,
+          "Z": -46,
+          "Profile": "andre-cole",
+          "BehaviorProfile": "balanced"
+        },
+        {
+          "X": 4.5,
+          "Z": -61,
+          "Profile": "sam-taylor",
+          "BehaviorProfile": "balanced"
+        }
+      ]
+    }
+  ]
+}

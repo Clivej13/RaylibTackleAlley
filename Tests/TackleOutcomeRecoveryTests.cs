@@ -49,6 +49,8 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         // Advance actual carrier motion before contact, then place it inside the existing distance test.
         _carrier.Update(_input, .1f, new FootballField(_config, _assets));
         Position(_carrier, _defender.Position + new Vector3(0, 0, -.3f));
+        // A decisive rear tackle needs genuine closing momentum, not mere overlap.
+        typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(_defender, 14f);
     }
 
     [Fact]
@@ -122,10 +124,18 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         _config.ContactTorsoRadius = .9f;
         _config.ContactPelvisRadius = .9f;
         _config.RagdollChestMass = 45;
-        Assert.True(_defender.HasBodyContact(_carrier));
-        Assert.True(LungeTackleOutcome.Confirm(_defender, _carrier));
-        Assert.Equal(45, _carrier.Ragdoll.Bodies[1].Mass);
-        Assert.Equal(45, _defender.Ragdoll.Bodies[1].Mass);
+        // Existing players retain their construction-time physical attributes.
+        Assert.False(_defender.HasBodyContact(_carrier));
+        using var newCarrier = new BallCarrier(_config);
+        using var newDefender = new Opponent(_defender.Position, _config);
+        newCarrier.InitializeVisual(_assets); newDefender.InitializeVisual(_assets);
+        Position(newCarrier, newDefender.Position + new Vector3(.5f, 0, 0));
+        Assert.True(newDefender.HasBodyContact(newCarrier));
+        Assert.True(newCarrier.ActivateRagdoll());
+        Assert.True(newDefender.ActivateRagdoll());
+        Assert.Equal(110f * 45 / 107, newCarrier.Ragdoll.Bodies[1].Mass, 4);
+        Assert.Equal(newCarrier.Physical.TotalMass, newCarrier.Ragdoll.Bodies.Sum(b => b.Mass), 4);
+        Assert.Equal(newDefender.Physical.BodyPartMasses[1], newDefender.Ragdoll.Bodies[1].Mass);
     }
 
     [Fact]
@@ -164,9 +174,9 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         for (int i = 0; i < 11; i++)
         {
             var d = _defender.Ragdoll.Bodies[i]; var c = _carrier.Ragdoll.Bodies[i];
-            Vector3 expected = (dv + cv) * .5f; // The loaded characters have equal total mass.
-            Assert.True(Vector3.Distance(expected, d.LinearVelocity) < .001f, $"Body {i}: expected {expected}, defender {d.LinearVelocity}, incoming {dv}/{cv}");
-            Assert.True(Vector3.Distance(expected, c.LinearVelocity) < .001f);
+            // Translation changes only through the contact normal; total momentum is conserved.
+            Assert.True(Vector3.Distance(d.LinearVelocity - dv, - (c.LinearVelocity - cv)) < .001f);
+            Assert.True(Vector3.Distance(d.LinearVelocity, _defender.Ragdoll.Bodies[0].LinearVelocity) < .001f);
             totalChange += (d.LinearVelocity - dv) * d.Mass + (c.LinearVelocity - cv) * c.Mass;
         }
         Assert.True(totalChange.Length() < .001f);
@@ -196,6 +206,7 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
             _defender.Update(Vector3.Zero, .6f - lunge.CurrentTime - .01f);
             // The dive extends forward of its root; align actual torso positions
             // instead of relying on the old upright endpoint at the same origin.
+            Position(_carrier, _defender.Position);
             _defender.HasBodyContact(_carrier);
             var defenderPose = Field<Ragdoll>(_defender, "_contactPose");
             var carrierPose = Field<Ragdoll>(_carrier, "_contactPose");
@@ -280,6 +291,24 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
             CheckPose([grip * bridge.ModelPose[hand] * bridge.ModelWorld], [Field<Matrix4x4>(_carrier, "_footballWorldTransform")]);
         }
         Raylib.BeginDrawing(); _carrier.Draw(); _defender.Draw(); Raylib.EndDrawing();
+    }
+
+    [Fact]
+    public void WeakRearContactLeavesCarrierUprightAndReportsScores()
+    {
+        Launch();
+        typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(_defender, 4f);
+        Assert.False(LungeTackleOutcome.Confirm(_defender, _carrier));
+        Assert.NotNull(_carrier.LastTackle);
+        Assert.True(_carrier.LastTackle.Value.Severity < .85f);
+        Assert.False(_carrier.Ragdoll.IsActive);
+        Assert.False(_game.TacklePendingGroundImpact);
+        var before = _carrier.Position;
+        _carrier.Update(_input, .05f, new FootballField(_config, _assets));
+        Assert.True(_carrier.Position.Z < before.Z);
+        _game.ResetRun();
+        Assert.Null(_carrier.LastTackle);
+        Assert.Null(_defender.LastTackle);
     }
 
     [Fact]

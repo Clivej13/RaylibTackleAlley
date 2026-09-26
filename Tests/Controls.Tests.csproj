@@ -12,6 +12,6 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
     <ProjectReference Include="../RaylibTackleAlley.csproj" />
-    <None Include="../input.json;../menu.json;../config.json;../assets.json" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../input.json;../menu.json;../config.json;../assets.json;../returners.json;../levels.json;../defender-profiles.json" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

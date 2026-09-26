@@ -91,7 +91,9 @@ public sealed class DefenderReadyConeTests
             var defender = new Opponent(Vector3.Zero, new() { OpponentInitialYawDegrees = 0 });
             defender.Update(new(0, 0, 4), 0, carrierPredictedDirection: -Vector3.UnitZ);
             Assert.Equal(DefenderState.TackleReady, defender.State);
-            defender.Update(new(0, 0, -distance), 0, carrierPredictedDirection: -Vector3.UnitZ);
+            // Match relative movement: a carrier escaping a backwards-moving defender cannot be wrapped.
+            defender.Update(new(0, 0, -distance), 0, carrierVelocity: defender.Velocity,
+                carrierPredictedDirection: -Vector3.UnitZ);
             Assert.Equal(distance < 1 ? DefenderState.SetWrap : DefenderState.LungeTackle, defender.State);
         }
     }

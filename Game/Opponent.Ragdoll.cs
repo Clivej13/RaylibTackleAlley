@@ -12,19 +12,24 @@ public sealed partial class Opponent
     {
         if (IsRecovering || carrier.IsRecovering) return false;
         // Only a broad-phase rejection; distance alone never confirms body contact.
-        if (Vector3.DistanceSquared(_position, carrier.Position) > _config.ContactBroadPhaseDistance * _config.ContactBroadPhaseDistance) return false;
-        Ragdoll defenderPose = Ragdoll;
-        if (!Ragdoll.IsActive)
-        {
-            if (_model is null || _animation is null) return false;
-            var world = Matrix4x4.Transpose(_model.Model.Transform) * Matrix4x4.CreateScale(_visualScale) *
-                Matrix4x4.CreateRotationY(_yawDegrees * MathF.PI / 180f) *
-                Matrix4x4.CreateTranslation(_position + Vector3.UnitY * _groundOffset);
-            RagdollPose.RefreshContactPose(_animation, world, _contactPose);
-            defenderPose = _contactPose;
-        }
-        return carrier.ContactPose() is { } playerPose && RagdollContact.Overlaps(defenderPose, playerPose);
+        if (Vector3.DistanceSquared(_position, carrier.Position) > MathF.Pow(_config.ContactBroadPhaseDistance * PlayerPhysicalAttributes.MaximumHeightRatio, 2)) return false;
+        return RefreshContactPose() is { } defenderPose &&
+            carrier.ContactPose() is { } playerPose && RagdollContact.Overlaps(defenderPose, playerPose);
     }
+
+    internal Ragdoll? RefreshContactPose()
+    {
+        if (Ragdoll.IsActive) return Ragdoll;
+        if (_model is null || _animation is null || IsRecovering) return null;
+        var world = Matrix4x4.Transpose(_model.Model.Transform) * Matrix4x4.CreateScale(_modelScale) *
+            Matrix4x4.CreateRotationY(_yawDegrees * MathF.PI / 180f) *
+            Matrix4x4.CreateTranslation(_position + Vector3.UnitY * _groundOffset);
+        RagdollPose.RefreshContactPose(_animation, world, _contactPose);
+        return _contactPose;
+    }
+    internal Ragdoll ContactRagdoll => Ragdoll.IsActive ? Ragdoll : _contactPose;
+    internal float ContactCooldown { get; set; }
+    internal float WrapRemaining { get; set; }
     private RagdollSkeleton? _ragdollSkeleton;
     private RagdollRecovery? _recovery;
     private float _groundedRecoveryTime;
@@ -38,11 +43,29 @@ public sealed partial class Opponent
         _groundedRecoveryTime = 0;
         // Ensure the final animated frame is applied before capturing the ragdoll pose.
         _animation.SeekTime(_animation.CurrentTime);
-        var world = Matrix4x4.Transpose(_model.Model.Transform) * Matrix4x4.CreateScale(_visualScale) *
+        var world = Matrix4x4.Transpose(_model.Model.Transform) * Matrix4x4.CreateScale(_modelScale) *
             Matrix4x4.CreateRotationY(_yawDegrees * MathF.PI / 180f) *
             Matrix4x4.CreateTranslation(_position + Vector3.UnitY * _groundOffset);
         _ragdollSkeleton = RagdollPose.Activate(_model.Model, _animation, world, Ragdoll, Velocity, impulse, _spawnPosition.Y);
         return true;
+    }
+
+    internal void ApplyContactImpulse(Vector3 impulse)
+    {
+        if (Ragdoll.IsActive)
+        {
+            for (int i = 0; i < Ragdoll.Bodies.Count; i++)
+                Ragdoll.ApplyImpulse(new(i, impulse * Ragdoll.Bodies[i].Mass / Physical.TotalMass));
+        }
+        else
+        {
+            Vector3 velocity = Velocity + impulse / Physical.TotalMass;
+            VerticalVelocity = velocity.Y;
+            velocity.Y = 0;
+            CurrentSpeed = velocity.Length();
+            _movementDirection = CurrentSpeed > .0001f ? velocity / CurrentSpeed : Vector3.Zero;
+        }
+        Ragdoll.LastContactImpulse = impulse.Length();
     }
 
     public void BeginTackleStruggle(int? hitBody = null)
@@ -67,7 +90,7 @@ public sealed partial class Opponent
                 _model is not null && _ragdollSkeleton is not null)
             {
                 _recovery = new(_model.Model, _ragdollSkeleton, Ragdoll, _animations["Down"],
-                    _animations["GetUp"], _visualScale, _groundOffset, _yawDegrees, _config, defender: true);
+                    _animations["GetUp"], _modelScale, _groundOffset, _yawDegrees, _config, defender: true);
                 _position = _recovery.Position; _yawDegrees = _recovery.YawDegrees;
                 CurrentSpeed = VerticalVelocity = 0; _movementDirection = Vector3.Zero;
                 _tackleRemaining = 0; State = DefenderState.Down; _tackleAnimation = "Down";
@@ -83,6 +106,7 @@ public sealed partial class Opponent
         if (_recovery.Phase == RecoveryPhase.Complete)
         {
             _recovery = null; State = DefenderState.Locomotion; _tackleAnimation = null;
+            ResetDecisions();
             SelectAnimation();
             if (_model is not null && _animation is not null)
                 Raylib.UpdateModelAnimation(_model.Model, _animation.Animation, _animation.CurrentFrame);

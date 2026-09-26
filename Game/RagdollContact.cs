@@ -11,12 +11,25 @@ public static class RagdollContact
     public const int SeparationIterations = 8;
 
     private static readonly int[] CollisionBodies = [0, 1, 3, 4, 5, 6, 7, 8, 9, 10];
-    public static float Radius(RagdollBody body) => body.Bone switch
+    public static float Radius(RagdollBody body) => body.ContactRadius;
+
+    public static RagdollHit FindContact(Ragdoll defender, Ragdoll carrier, Vector3? relativeVelocity = null)
     {
-        "Chest" => body.Config.ContactTorsoRadius * body.Scale,
-        "Hips" => body.Config.ContactPelvisRadius * body.Scale,
-        _ => body.Radius * body.Config.ContactLimbRadiusScale
-    };
+        int ai = 0, bi = 0;
+        float nearest = float.PositiveInfinity;
+        bool foundClosing = false;
+        Vector3 relative = relativeVelocity ?? (CentreVelocity(defender) - CentreVelocity(carrier));
+        foreach (int a in CollisionBodies)
+        foreach (int b in CollisionBodies)
+        {
+            float gap = SurfaceGap(defender.Bodies[a], carrier.Bodies[b]);
+            bool closing = Vector3.Dot(relative, Geometry(defender.Bodies[a], carrier.Bodies[b], relative).Normal) > 1e-5f;
+            if ((!foundClosing || closing) && (closing && !foundClosing || gap < nearest))
+            { nearest = gap; ai = a; bi = b; foundClosing = closing; }
+        }
+        var geometry = Geometry(defender.Bodies[ai], carrier.Bodies[bi], relative);
+        return new(ai, bi, geometry.Point, geometry.Normal);
+    }
 
     public static bool Overlaps(Ragdoll a, Ragdoll b)
     {
@@ -66,7 +79,7 @@ public static class RagdollContact
 
     // Gameplay validates animated capsule overlap before confirming a tackle.
     // The explicit confirmedContact flag also supports isolated handoff simulations.
-    public static RagdollHit? Resolve(Ragdoll defender, Ragdoll carrier, bool confirmedContact = false)
+    public static RagdollHit? Resolve(Ragdoll defender, Ragdoll carrier, bool confirmedContact = false, TackleImpact? tackle = null, RagdollHit? impactContact = null)
     {
         var _config = defender.Config;
         if (!defender.IsActive || !carrier.IsActive || ReferenceEquals(defender, carrier)) return null;
@@ -90,8 +103,8 @@ public static class RagdollContact
             if (!confirmedContact) Contact(defender, carrier, a, b);
         }
         var hitGeometry = Geometry(defender.Bodies[nearestA], carrier.Bodies[nearestB], closingVelocity);
-        var hit = new RagdollHit(nearestA, nearestB, hitGeometry.Point, hitGeometry.Normal);
-        if (confirmedContact) TackleMomentum(defender, carrier, nearestA, nearestB);
+        var hit = impactContact ?? new RagdollHit(nearestA, nearestB, hitGeometry.Point, hitGeometry.Normal);
+        if (confirmedContact) TackleMomentum(defender, carrier, hit.DefenderBody, hit.CarrierBody, tackle, impactContact);
 
         // Split positional correction: never turn spawn overlap into kinetic energy.
         // Translate whole articulated poses so existing joints and angular limits are preserved.
@@ -116,26 +129,25 @@ public static class RagdollContact
     private static Vector3 CentreOfMass(Ragdoll doll) =>
         doll.Bodies.Aggregate(Vector3.Zero, (sum, b) => sum + b.Mass * b.Position) / Mass(doll);
 
-    private static void TackleMomentum(Ragdoll a, Ragdoll b, int ai, int bi)
+    private static void TackleMomentum(Ragdoll a, Ragdoll b, int ai, int bi, TackleImpact? tackle, RagdollHit? impactContact)
     {
         var _config = a.Config;
         float ma = Mass(a), mb = Mass(b);
         Vector3 va = CentreVelocity(a), vb = CentreVelocity(b);
         var ab = a.Bodies[ai]; var bb = b.Bodies[bi];
-        var (normal, point) = Geometry(ab, bb, va - vb);
+        var (normal, point) = impactContact is { } contact
+            ? (contact.Normal, contact.Point) : Geometry(ab, bb, va - vb);
         if (Vector3.Dot(vb - va, normal) >= -1e-5f) return;
 
-        // Inelastic tackle: both COM velocities become (ma*va + mb*vb)/(ma+mb).
-        // Vector addition already subtracts opposing momentum and retains angled momentum.
-        // Transmit translation through every body's mass; torso-only kicks leave the
-        // remaining mass running forward and spend most of the response on bending joints.
+        // Equal/opposite normal impulse preserves tangential motion and total momentum.
         float inverseMass = 1 / ma + 1 / mb;
-        Vector3 impulse = (va - vb) / inverseMass;
-        if (impulse.Length() > _config.ContactMaximumTackleImpulse)
-            impulse = Vector3.Normalize(impulse) * _config.ContactMaximumTackleImpulse;
+        float closing = Math.Max(0, Vector3.Dot(va - vb, normal));
+        float limit = _config.ContactMaximumTackleImpulse * LimitScale(a, b);
+        Vector3 impulse = normal * Math.Min(limit, closing / inverseMass * (tackle?.Transfer ?? 1f));
+        a.LastContactImpulse = b.LastContactImpulse = impulse.Length();
         float lostEnergy = Math.Max(0, Vector3.Dot(impulse, va - vb) -
             .5f * inverseMass * impulse.LengthSquared());
-        float angularBudget = lostEnergy * _config.ContactTackleAngularEnergyShare * .5f;
+        float angularBudget = lostEnergy * Math.Min(1f, _config.ContactTackleAngularEnergyShare * (tackle?.AngularScale ?? 1f)) * .5f;
         ApplyTackleImpulse(a, -impulse, point, angularBudget, ai);
         ApplyTackleImpulse(b, impulse, point, angularBudget, bi);
     }
@@ -187,7 +199,8 @@ public static class RagdollContact
         Vector3 relative = Velocity(b, bi, point) - Velocity(a, ai, point);
         float closing = Vector3.Dot(relative, normal);
         if (closing >= -1e-5f) return; // Never attract separating bodies or reapply a canned kick.
-        float impulse = Math.Min(_config.ContactMaximumImpulse,
+        float limit = _config.ContactMaximumImpulse * LimitScale(a, b);
+        float impulse = Math.Min(limit,
             -(1 + _config.ContactRestitution) * closing * _config.ContactImpulseScale / (EffectiveInverseMass(a, ai, point, normal) + EffectiveInverseMass(b, bi, point, normal)));
         Vector3 total = normal * impulse;
         Vector3 tangent = relative - normal * closing;
@@ -198,7 +211,8 @@ public static class RagdollContact
                 (EffectiveInverseMass(a, ai, point, direction) + EffectiveInverseMass(b, bi, point, direction)));
             total -= direction * friction;
         }
-        if (total.Length() > _config.ContactMaximumImpulse) total = Vector3.Normalize(total) * _config.ContactMaximumImpulse;
+        if (total.Length() > limit) total = Vector3.Normalize(total) * limit;
+        a.LastContactImpulse = b.LastContactImpulse = total.Length();
         Apply(a, ai, -total, point);
         Apply(b, bi, total, point);
         a.ReactToContact(ai, -closing);
@@ -244,6 +258,34 @@ public static class RagdollContact
     {
         if (hit >= 3) { doll.ApplyImpulse(new(hit, impulse, point)); return; }
         for (int i = 0; i < 2; i++) doll.ApplyImpulse(new(i, impulse * Share(i, doll.Config), point));
+    }
+
+    private static float LimitScale(Ragdoll a, Ragdoll b) =>
+        Math.Min(a.Physical?.ImpulseLimitScale ?? 1f, b.Physical?.ImpulseLimitScale ?? 1f);
+
+    // A short-lived velocity constraint models wrap control without teleporting joints.
+    // Only removes relative kinetic energy; separating poses beyond reach break the hold.
+    public static bool MaintainWrap(Ragdoll defender, Ragdoll carrier, float dt)
+    {
+        if (!defender.IsActive || !carrier.IsActive || dt <= 0 ||
+            defender.HasMeaningfulGroundContact || carrier.HasMeaningfulGroundContact) return false;
+        float reach = defender.Physical?.WrapReach ?? defender.Config.OpponentWrapCommitDistance;
+        if (Vector3.Distance(defender.Bodies[1].Position, carrier.Bodies[1].Position) > reach * 1.5f) return false;
+        float control = (defender.Physical?.TackleForceMultiplier ?? 1f) /
+            (carrier.Physical?.TackleResistanceMultiplier ?? 1f);
+        Vector3 relative = CentreVelocity(defender) - CentreVelocity(carrier);
+        float inverse = 1 / Mass(defender) + 1 / Mass(carrier);
+        Vector3 impulse = relative / inverse * (1 - MathF.Exp(-6 * control * dt));
+        float limit = defender.Config.ContactMaximumImpulse * LimitScale(defender, carrier) * Math.Min(1, dt / Ragdoll.FixedStep);
+        if (impulse.Length() > limit) impulse = Vector3.Normalize(impulse) * limit;
+        foreach (var doll in new[] { defender, carrier })
+        {
+            Vector3 signed = ReferenceEquals(doll, defender) ? -impulse : impulse;
+            for (int i = 0; i < doll.Bodies.Count; i++)
+                doll.ApplyImpulse(new(i, signed * doll.Bodies[i].Mass / Mass(doll)));
+            doll.LastContactImpulse = impulse.Length();
+        }
+        return true;
     }
 
     private static float Mass(Ragdoll doll) => doll.Bodies.Sum(b => b.Mass);

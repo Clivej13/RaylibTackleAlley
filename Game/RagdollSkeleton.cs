@@ -11,6 +11,8 @@ public sealed class RagdollSkeleton
     private readonly Matrix4x4[] _offsets, _modelPose;
     private readonly Transform[] _nativePose;
     private readonly Matrix4x4 _inverseWorld;
+    private bool _needsAffineSkinning;
+    private readonly bool _sizedWorld;
     public Matrix4x4 ModelWorld { get; }
     public IReadOnlyList<int> BodyIndices { get; }
     public IReadOnlyList<Matrix4x4> ModelPose { get; }
@@ -23,6 +25,10 @@ public sealed class RagdollSkeleton
             names.Distinct().Count() != count || !Matrix4x4.Invert(modelWorld, out _inverseWorld))
             throw new ArgumentException("A complete skeleton, invertible world transform and active ragdoll are required.");
         ModelWorld = modelWorld;
+        float sx = new Vector3(modelWorld.M11, modelWorld.M12, modelWorld.M13).Length();
+        float sy = new Vector3(modelWorld.M21, modelWorld.M22, modelWorld.M23).Length();
+        float sz = new Vector3(modelWorld.M31, modelWorld.M32, modelWorld.M33).Length();
+        _sizedWorld = Math.Abs(sx - sy) > .000001f || Math.Abs(sz - sy) > .000001f;
         _parents = parents.ToArray();
         _bodyIndices = Enumerable.Repeat(-1, count).ToArray();
         _offsets = new Matrix4x4[count]; _modelPose = new Matrix4x4[count]; _nativePose = new Transform[count];
@@ -75,6 +81,7 @@ public sealed class RagdollSkeleton
 
     public void Evaluate(Ragdoll ragdoll)
     {
+        _needsAffineSkinning = _sizedWorld;
         foreach (int i in _order)
         {
             int body = _bodyIndices[i];
@@ -82,7 +89,11 @@ public sealed class RagdollSkeleton
                 ? _offsets[i] * BodyWorld(ragdoll.Bodies[body]) * _inverseWorld
                 : _parents[i] >= 0 ? _offsets[i] * _modelPose[_parents[i]] : _offsets[i];
             if (!Matrix4x4.Decompose(_modelPose[i], out var scale, out var rotation, out var translation))
-                throw new InvalidOperationException("Ragdoll produced a non-decomposable bone pose.");
+            {
+                _needsAffineSkinning = true;
+                if (!AffinePose.Decompose(_modelPose[i], out scale, out rotation, out translation))
+                    throw new InvalidOperationException("Ragdoll produced an invalid bone pose.");
+            }
             _nativePose[i] = new Transform {
                 Translation = translation, Rotation = Quaternion.Normalize(rotation), Scale = scale
             };
@@ -94,7 +105,8 @@ public sealed class RagdollSkeleton
         if (!ragdoll.IsActive) throw new InvalidOperationException("Animation owns an inactive ragdoll.");
         if (model.Skeleton.BoneCount != _nativePose.Length) throw new ArgumentException("Skeleton mismatch.");
         Evaluate(ragdoll);
-        ApplyPose(model, _nativePose);
+        if (_needsAffineSkinning) AffinePose.Apply(model, _modelPose);
+        else ApplyPose(model, _nativePose);
     }
 
     public static unsafe void ApplyPose(Model model, Transform[] nativePose)

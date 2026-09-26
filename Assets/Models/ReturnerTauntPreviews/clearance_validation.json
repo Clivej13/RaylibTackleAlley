@@ -1,0 +1,27 @@
+{
+  "marcus-reed": {
+    "minimum_cleat_y": 0.004232555627822876,
+    "clearance_intersections": [],
+    "finite_sampled_geometry": true
+  },
+  "eli-brooks": {
+    "minimum_cleat_y": 0.004232554696500301,
+    "clearance_intersections": [],
+    "finite_sampled_geometry": true
+  },
+  "jalen-price": {
+    "minimum_cleat_y": 0.0025203609839081764,
+    "clearance_intersections": [],
+    "finite_sampled_geometry": true
+  },
+  "darius-stone": {
+    "minimum_cleat_y": 0.004232555627822876,
+    "clearance_intersections": [],
+    "finite_sampled_geometry": true
+  },
+  "noah-grant": {
+    "minimum_cleat_y": 0.004232555627822876,
+    "clearance_intersections": [],
+    "finite_sampled_geometry": true
+  }
+}

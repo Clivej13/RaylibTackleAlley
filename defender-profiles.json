@@ -1,0 +1,55 @@
+{
+  "Profiles": [
+    {
+      "Id": "balanced",
+      "Name": "Balanced",
+      "ReactionTime": 0.15,
+      "PursuitPredictionStrength": 1,
+      "PursuitAggression": 1,
+      "ContainBias": 0,
+      "ApproachDistance": 8,
+      "BreakdownDistance": 4,
+      "BreakdownExitDistance": 5,
+      "TackleCommitDistance": 4.5,
+      "WrapPreference": 1,
+      "LungePreference": 1,
+      "CorrectionWindowFraction": 0.4,
+      "CorrectionRateDegrees": 90,
+      "MaximumCorrectionDegrees": 18
+    },
+    {
+      "Id": "aggressive",
+      "Name": "Aggressive",
+      "ReactionTime": 0.1,
+      "PursuitPredictionStrength": 1.2,
+      "PursuitAggression": 1.2,
+      "ContainBias": 0,
+      "ApproachDistance": 8,
+      "BreakdownDistance": 3.5,
+      "BreakdownExitDistance": 4.5,
+      "TackleCommitDistance": 4.5,
+      "WrapPreference": 0.4,
+      "LungePreference": 1,
+      "CorrectionWindowFraction": 0.4,
+      "CorrectionRateDegrees": 110,
+      "MaximumCorrectionDegrees": 22
+    },
+    {
+      "Id": "contain",
+      "Name": "Contain",
+      "ReactionTime": 0.25,
+      "PursuitPredictionStrength": 0.65,
+      "PursuitAggression": 0.85,
+      "ContainBias": 0.6,
+      "ApproachDistance": 10,
+      "BreakdownDistance": 5,
+      "BreakdownExitDistance": 6,
+      "TackleCommitDistance": 3,
+      "WrapPreference": 1,
+      "LungePreference": 0.35,
+      "CorrectionWindowFraction": 0.3,
+      "CorrectionRateDegrees": 65,
+      "MaximumCorrectionDegrees": 12
+    }
+  ]
+}

@@ -10,6 +10,7 @@ public sealed class RagdollBody
 {
     internal TackleAlleyConfig Config { get; }
     internal float Scale { get; }
+    internal float ContactRadius { get; init; }
     public string Bone { get; }
     public Vector3 Position { get; internal set; }
     public Quaternion Orientation { get; internal set; }
@@ -43,9 +44,14 @@ public sealed partial class Ragdoll
     public const int SolverIterations = 24;
     internal TackleAlleyConfig Config { get; }
     private TackleAlleyConfig _config => Config;
-    public Ragdoll(TackleAlleyConfig? config = null)
+    public PlayerPhysicalAttributes? Physical { get; }
+    public Vector3 Momentum => _bodies.Aggregate(Vector3.Zero, (sum, b) => sum + b.Mass * b.LinearVelocity);
+    public float LastContactImpulse { get; internal set; }
+    public Ragdoll(TackleAlleyConfig? config = null, PlayerPhysicalAttributes? physical = null)
     {
         Config = config ?? new();
+        Physical = physical;
+        physical?.Validate();
         Config.ValidateRagdollPhysics();
     }
     private RagdollBody[] _bodies = [];
@@ -95,18 +101,22 @@ public sealed partial class Ragdoll
         for (int i = 0; i < layout.Length; i++)
         {
             var part = layout[i];
-            Matrix4x4.Decompose(pose[part.Bone], out var scale, out var rotation, out var start);
+            AffinePose.Decompose(pose[part.Bone], out var scale, out var rotation, out var start);
             rotation = Quaternion.Normalize(rotation);
             Vector3 end = part.End is { } name ? pose[name].Translation :
                 start + Vector3.Transform(Vector3.UnitY * _config.RagdollHeadSegmentLength * scale.Y, rotation);
             Vector3 centre = (start + end) * .5f;
             // Keep rounded ends within the bone span where possible.
             Vector3 half = (end - start) * .5f;
-            float radius = part.Radius * Math.Abs(scale.Y);
+            float radiusScale = Math.Abs(scale.Y) * (Physical is null ? 1f : Physical.RadiusScale / Physical.HeightRatio);
+            float radius = Physical is null ? part.Radius * radiusScale : Physical.BodyPartRadii[i] * Math.Abs(scale.Y) / Physical.HeightRatio;
             if (half.Length() > radius) half *= (half.Length() - radius) / half.Length();
             else half = Vector3.Zero;
             bodies[i] = new(part.Bone, centre, rotation,
-                Vector3.Transform(half, Quaternion.Inverse(rotation)), radius, part.Mass, _config, Math.Abs(scale.Y)) { LinearVelocity = velocity };
+                Vector3.Transform(half, Quaternion.Inverse(rotation)), radius, Physical?.BodyPartMasses[i] ?? part.Mass, _config, radiusScale) { LinearVelocity = velocity,
+                    ContactRadius = Physical is not null ? Physical.BodyPartContactRadii[i] * Math.Abs(scale.Y) / Physical.HeightRatio :
+                        i == 0 ? _config.ContactPelvisRadius * radiusScale :
+                        i == 1 ? _config.ContactTorsoRadius * radiusScale : radius * _config.ContactLimbRadiusScale };
             if (part.Parent < 0) continue;
             var parent = bodies[part.Parent];
             Vector3 anchor = start;
@@ -158,6 +168,7 @@ public sealed partial class Ragdoll
     public void Deactivate()
     {
         StopActiveDrive();
+        LastContactImpulse = 0;
         State = RagdollState.Inactive; _accumulator = _quietTime = _torsoContactTime = 0f;
         HasMeaningfulGroundContact = false; HasDownGroundContact = false;
         foreach (var b in _bodies) b.LinearVelocity = b.AngularVelocity = Vector3.Zero;
@@ -312,8 +323,8 @@ public sealed partial class Ragdoll
     public float JointSeparation(RagdollJoint joint) => Vector3.Distance(
         _bodies[joint.Parent].Position + Vector3.Transform(joint.ParentAnchor, _bodies[joint.Parent].Orientation),
         _bodies[joint.Child].Position + Vector3.Transform(joint.ChildAnchor, _bodies[joint.Child].Orientation));
-    private static Quaternion Rotation(Matrix4x4 m) { Matrix4x4.Decompose(m, out _, out var q, out _); return Quaternion.Normalize(q); }
-    private static bool ValidTransform(Matrix4x4 m) => Matrix4x4.Decompose(m, out var s, out var q, out var p) &&
+    private static Quaternion Rotation(Matrix4x4 m) { AffinePose.Decompose(m, out _, out var q, out _); return Quaternion.Normalize(q); }
+    private static bool ValidTransform(Matrix4x4 m) => AffinePose.Decompose(m, out var s, out var q, out var p) &&
         Finite(p) && Finite(s) && s.X > 0 && s.Y > 0 && s.Z > 0 && float.IsFinite(q.LengthSquared()) && q.LengthSquared() > 1e-8f;
     private static bool Finite(Vector3 v) => float.IsFinite(v.X) && float.IsFinite(v.Y) && float.IsFinite(v.Z);
     private static void ValidateImpulse(RagdollImpulse i, int count)

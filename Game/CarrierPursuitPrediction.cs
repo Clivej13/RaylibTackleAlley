@@ -23,7 +23,7 @@ public sealed class CarrierPursuitPrediction
         _hasSample = true;
     }
 
-    public Vector3 Observe(Vector3 position, int carrierSpeedTier, float deltaTime)
+    public Vector3 Observe(Vector3 position, int carrierSpeedTier, float deltaTime, float? maximumTierSpeed = null)
     {
         if (!_hasSample || !float.IsFinite(deltaTime) || deltaTime <= 0f)
         {
@@ -60,6 +60,11 @@ public sealed class CarrierPursuitPrediction
             3 => _config.PlayerSprintSpeed,
             _ => 0f
         };
+        if (maximumTierSpeed is { } maximum)
+        {
+            if (!float.IsFinite(maximum) || maximum < 0) throw new ArgumentOutOfRangeException(nameof(maximumTierSpeed));
+            tierSpeed = maximum;
+        }
         // A sudden turn reduces confidence immediately, then earns lead back as
         // observed motion stabilizes. Slow movement cannot retain sprint-sized lead.
         float confidence = Math.Max(0, Vector3.Dot(Vector3.Normalize(_smoothedDirection), direction));

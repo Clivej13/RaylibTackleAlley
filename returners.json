@@ -1,0 +1,89 @@
+{
+  "Returners": [
+    {
+      "Id": "marcus-reed",
+      "Taunt": "FootballPlayerTauntSpeedSaluteAnimations",
+      "Uniform": "ReturnerMarcusUniform",
+      "Profile": {
+        "Name": "Marcus Reed",
+        "JerseyNumber": 11,
+        "Height": 1.84,
+        "Weight": 82,
+        "Build": -0.55,
+        "Strength": 30,
+        "Speed": 98,
+        "Acceleration": 62,
+        "Agility": 58,
+        "Juke": 52
+      }
+    },
+    {
+      "Id": "eli-brooks",
+      "Taunt": "FootballPlayerTauntBurstPumpAnimations",
+      "Uniform": "ReturnerEliUniform",
+      "Profile": {
+        "Name": "Eli Brooks",
+        "JerseyNumber": 22,
+        "Height": 1.72,
+        "Weight": 80,
+        "Build": -0.2,
+        "Strength": 40,
+        "Speed": 74,
+        "Acceleration": 99,
+        "Agility": 72,
+        "Juke": 64
+      }
+    },
+    {
+      "Id": "jalen-price",
+      "Taunt": "FootballPlayerTauntHeelFlourishAnimations",
+      "Uniform": "ReturnerJalenUniform",
+      "Profile": {
+        "Name": "Jalen Price",
+        "JerseyNumber": 7,
+        "Height": 1.78,
+        "Weight": 86,
+        "Build": -0.35,
+        "Strength": 38,
+        "Speed": 78,
+        "Acceleration": 78,
+        "Agility": 99,
+        "Juke": 99
+      }
+    },
+    {
+      "Id": "darius-stone",
+      "Taunt": "FootballPlayerTauntPowerFlexAnimations",
+      "Uniform": "ReturnerDariusUniform",
+      "Profile": {
+        "Name": "Darius Stone",
+        "JerseyNumber": 34,
+        "Height": 2.02,
+        "Weight": 138,
+        "Build": 0.75,
+        "Strength": 99,
+        "Speed": 44,
+        "Acceleration": 38,
+        "Agility": 32,
+        "Juke": 30
+      }
+    },
+    {
+      "Id": "noah-grant",
+      "Taunt": "FootballPlayerTauntCaptainSaluteAnimations",
+      "Uniform": "ReturnerNoahUniform",
+      "Profile": {
+        "Name": "Noah Grant",
+        "JerseyNumber": 26,
+        "Height": 1.9,
+        "Weight": 104,
+        "Build": 0.05,
+        "Strength": 70,
+        "Speed": 70,
+        "Acceleration": 70,
+        "Agility": 70,
+        "Juke": 70
+      }
+    }
+  ]
+}
