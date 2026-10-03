@@ -53,7 +53,8 @@ public sealed class DefenderProfileCatalog
                             // Authored presets must be explicit so a typo/omission cannot
                             // silently revert one tuning knob to a code default.
                             if (type.Type == typeof(DefenderProfile))
-                                foreach (var property in type.Properties) property.IsRequired = true;
+                                foreach (var property in type.Properties)
+                                    property.IsRequired = property.Name != nameof(DefenderProfile.ApproachTuning);
                         }
                     }
                 }

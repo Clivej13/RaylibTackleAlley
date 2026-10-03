@@ -42,9 +42,9 @@ public sealed partial class Opponent
 
     private ContactSolution SolveContact(float duration, float elapsed, Vector3 facing) =>
         TackleAiming.Solve(_position, Velocity, facing, _aimCarrierPosition, _aimCarrierVelocity,
-            _tackleObservation.Acceleration, Physical, _aimTarget, Movement.AccelerationRate,
+            _tackleObservation.Acceleration, Physical, _aimTarget, Movement.TierAcceleration(State == DefenderState.TackleReady ? 1 : (int)Pace + 1),
             Math.Max(CurrentSpeed, Movement.JogSpeed), duration, PredictionConfidence, _config, elapsed,
-            _config.DrawTackleAimingDebug ? _aimCandidates : null, CurrentSpeed);
+            _config.DrawGameplayDebug && _config.DrawTackleAimingDebug ? _aimCandidates : null, CurrentSpeed);
 
     private void AdvanceAimedLunge(float dt)
     {
@@ -88,7 +88,7 @@ public sealed partial class Opponent
 
     public void DrawTackleAiming()
     {
-        if (!_config.DrawTackleAimingDebug) return;
+        if (!_config.DrawGameplayDebug || !_config.DrawTackleAimingDebug) return;
         DrawDecisionDebug();
         Vector3 origin = _position + Vector3.UnitY * Physical.TackleContactHeight;
         Raylib.DrawLine3D(_aimTarget.Point, _aimTarget.Point + _aimCarrierVelocity * .2f, Color.SkyBlue);

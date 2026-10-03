@@ -22,7 +22,8 @@
       "Items": [
         { "Type": "Toggle", "Text": "Fullscreen", "Function": "SetFullscreen", "Value": false },
         { "Type": "Toggle", "Text": "VSync", "Function": "SetVSync", "Value": true },
-        { "Type": "Label", "Text": "Changes apply for this session." },
+        { "Type": "Toggle", "Text": "Debug", "Function": "SetDebug", "Value": false },
+        { "Type": "Label", "Text": "Settings are saved automatically.", "Function": "SettingsStatus" },
         { "Type": "Button", "Text": "Back", "Function": "Back" }
       ]
     },

@@ -12,9 +12,14 @@
   "PlayerLateralSpeed": 8,
   "PlayerSlowSpeed": 6.5,
   "PlayerSprintSpeed": 11.5,
-  "ReturnerJogSpeedInfluence": 0.05,
-  "ReturnerRunSpeedInfluence": 0.15,
-  "ReturnerSprintSpeedInfluence": 0.3,
+  "ReturnerMovementScaling": {
+    "SpeedTierInfluence": { "Jog": 0.05, "Run": 0.15, "Sprint": 0.3 },
+    "AccelerationTierInfluence": { "Jog": 0.25, "Run": 0.25, "Sprint": 0.25 }
+  },
+  "DefenderMovementScaling": {
+    "SpeedTierInfluence": { "Jog": 0.2, "Run": 0.2, "Sprint": 0.2 },
+    "AccelerationTierInfluence": { "Jog": 0.25, "Run": 0.25, "Sprint": 0.25 }
+  },
   "PlayerEvadeMaximumDistanceScale": 1,
   "PlayerJukeSpeed": 4,
   "PlayerJukeDuration": 0.35,

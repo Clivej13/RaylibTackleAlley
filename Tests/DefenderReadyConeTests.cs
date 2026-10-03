@@ -75,9 +75,9 @@ public sealed class DefenderReadyConeTests
     {
         var defender = new Opponent(Vector3.Zero, new()
         {
-            OpponentInitialYawDegrees = 0,
-            OpponentJogSpeed = 9
+            OpponentInitialYawDegrees = 0
         });
+        typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(defender, 9f);
         defender.Update(new(0, 0, -1.8f), 0,
             carrierPredictedDirection: predictionStopped ? Vector3.Zero : -Vector3.UnitZ);
         Assert.Equal(DefenderState.LungeTackle, defender.State);

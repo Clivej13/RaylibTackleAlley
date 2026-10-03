@@ -8,9 +8,9 @@ public sealed class AiTackleSelectionTests
     {
         var defender = new Opponent(Vector3.Zero, new()
         {
-            OpponentJogSpeed = speed,
             OpponentSprintDistance = 0f
         });
+        typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(defender, speed);
         defender.Update(new(0, 0, -10), 0.01f, false, Vector2.Zero, false);
         Assert.Equal(OpponentPace.Run, defender.Pace);
         return defender;

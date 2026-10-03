@@ -25,12 +25,13 @@ public sealed class DefenderDebugRenderingTests
                 using var d = new Opponent(Vector3.Zero, config, behaviorProfile: profile);
                 d.Update(new(0, 0, -30), .01f, false, Vector2.Zero, false);
                 d.Update(d.Position + new Vector3(0, 0, -4), 0, true, Vector2.Zero, false);
+                typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(d, 9f);
                 d.Update(d.Position + new Vector3(0, 0, -1.8f), 0);
                 d.Update(d.Position + new Vector3(0, 0, -1.8f), .25f);
                 Assert.True(d.DirectionLocked);
                 foreach (bool enabled in new[] { false, true })
                 {
-                    config.DrawTackleAimingDebug = enabled;
+                    config.DrawGameplayDebug = enabled;
                     Raylib.BeginDrawing();
                     Raylib.BeginTextureMode(target);
                     Color background = new(12, 22, 32, 255);

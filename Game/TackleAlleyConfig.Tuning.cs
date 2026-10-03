@@ -193,7 +193,7 @@ public sealed partial class TackleAlleyConfig
         Nonnegative(PlayerLateralSpeed, nameof(PlayerLateralSpeed));
         Nonnegative(PlayerSlowSpeed, nameof(PlayerSlowSpeed));
         Nonnegative(PlayerSprintSpeed, nameof(PlayerSprintSpeed));
-        ValidateReturnerSpeedScaling();
+        ValidateMovementScaling();
         Nonnegative(PlayerJukeSpeed, nameof(PlayerJukeSpeed));
         Positive(PlayerJukeDuration, nameof(PlayerJukeDuration));
         Nonnegative(MouseGestureSensitivity, nameof(MouseGestureSensitivity));

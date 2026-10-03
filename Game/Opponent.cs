@@ -200,7 +200,7 @@ public sealed partial class Opponent : IDisposable
         }
         // Locomotion playback follows actual pace; action clocks remain authored.
         var step = SpeedRamp.Advance(CurrentSpeed, TargetSpeed,
-            Movement.AccelerationRate, _config.ForwardDeceleration, deltaTime);
+            Movement.TierAcceleration((int)Pace + 1), _config.ForwardDeceleration, deltaTime);
         CurrentSpeed = step.Speed;
         float baseline = Movement.BaselineSpeed(Pace == OpponentPace.Jog ? 1 : Pace == OpponentPace.Sprint ? 3 : 2);
         _animation?.Update(baseline > 0 ? Math.Clamp(step.Distance / baseline,

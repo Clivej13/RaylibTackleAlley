@@ -120,7 +120,7 @@ public sealed partial class Opponent
             throw new InvalidOperationException("Activate through the visual ragdoll adapter before drawing.");
         _ragdollSkeleton.Apply(_model.Model, Ragdoll);
         _ragdollSkeleton.Draw(_model.Model);
-        if (RagdollDebugControls.ShowBodies) DrawRagdollBodies();
+        if (_config.DrawGameplayDebug && RagdollDebugControls.ShowBodies) DrawRagdollBodies();
     }
 
     private void RestoreAnimatedOwnership()
