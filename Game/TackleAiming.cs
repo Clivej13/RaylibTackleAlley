@@ -157,10 +157,13 @@ public static class TackleAiming
         float window = duration * config.LungeCorrectionWindowFraction;
         if (window <= 0 || elapsed >= window - 1e-7f || dt <= 0 || desired.LengthSquared() < 1e-8f ||
             Vector3.DistanceSquared(current, desired) < 1e-12f) return current;
-        float end = Math.Min(window, elapsed + dt);
-        // Exact integral of the linear fade makes the angular budget independent of frame partition.
-        float budget = config.LungeCorrectionRateDegrees * PlayerMovementAttributes.RatingMultiplier(agility, .9f, 1.1f) *
-            ((end - elapsed) - (end * end - elapsed * elapsed) / (2 * window));
+        double end = Math.Min(window, (double)elapsed + dt);
+        // Integrate the linear fade as a trapezoid using remaining time.
+        // Subtracting squared timestamps loses precision near the window boundary
+        // and can produce a negative budget (reversed Math.Clamp bounds).
+        double fadeIntegral = (end - elapsed) * (((double)window - elapsed) + (window - end)) / (2 * window);
+        float budget = (float)Math.Max(0, config.LungeCorrectionRateDegrees *
+            PlayerMovementAttributes.RatingMultiplier(agility, .9f, 1.1f) * fadeIntegral);
         float origin = MathF.Atan2(initial.X, initial.Z);
         float from = MathF.IEEERemainder(MathF.Atan2(current.X, current.Z) - origin, MathF.Tau);
         float to = Math.Clamp(MathF.IEEERemainder(MathF.Atan2(desired.X, desired.Z) - origin, MathF.Tau),

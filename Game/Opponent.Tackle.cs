@@ -97,7 +97,7 @@ public sealed partial class Opponent
         float amount = movement.Length();
         _readyTargetSpeed = TackleReadySpeed * amount;
         var step = SpeedRamp.Advance(CurrentSpeed, _readyTargetSpeed,
-            Movement.AccelerationRate, _config.ForwardDeceleration, dt);
+            Movement.TierAcceleration(1), _config.ForwardDeceleration, dt);
         CurrentSpeed = Math.Max(0f, step.Speed);
         if (amount > 0f)
         {
@@ -272,6 +272,7 @@ public sealed partial class Opponent
             CurrentSpeed = 0f;
             _movementDirection = Vector3.Zero;
         }
+        _commitmentReason = _decisionReason;
         _selectedTackleTarget = target;
         _decisionReason = action == DefenderState.SetWrap ? "Wrap committed" : "Lunge committed";
         InitialContactSolution = CurrentContactSolution;

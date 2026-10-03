@@ -17,7 +17,7 @@ public sealed class FootballField
     private readonly float _surfaceLength;
     private readonly float _stadiumWidth;
     private readonly float _stadiumLength;
-    private readonly bool _drawGameplayDebug;
+    private readonly TackleAlleyConfig _config;
     private readonly AssetManager _assets;
     private Vector3 _fieldScale;
     private Vector3 _stadiumScale;
@@ -36,7 +36,7 @@ public sealed class FootballField
         _surfaceLength = config.FieldAssetLength;
         _stadiumWidth = config.StadiumAssetWidth;
         _stadiumLength = config.StadiumAssetLength;
-        _drawGameplayDebug = config.DrawGameplayDebug;
+        _config = config;
     }
 
     private void AlignMeshes()
@@ -148,7 +148,7 @@ public sealed class FootballField
         Raylib.DrawModelEx(_assets.GetModel("Stadium"), _stadiumPosition, Vector3.UnitY, 0f, _stadiumScale, Color.White);
         // Optional debug lines supplement the translucent danger overlay.
 
-        if (_drawGameplayDebug)
+        if (_config.DrawGameplayDebug)
         {
             float half = HalfWidth;
             Raylib.DrawLine3D(new Vector3(-half, 0.05f, 0), new Vector3(-half, 0.05f, FinishLineZ), Color.Yellow);

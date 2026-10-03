@@ -1,5 +1,19 @@
 # Shared defender decision pipeline
 
+> Updated after playtesting feedback: the patient approach described below is now
+> reserved as `offball-linebacker` for future off-ball run defense. No current level
+> uses that preset. Tackle Alley `balanced` omits ApproachTuning and restores
+> PursuitPredictionStrength=1, BreakdownDistance=4, BreakdownExitDistance=5 and
+> LungePreference=1. It retains the shorter correction window/rate/cap
+> (0.2 / 60 / 8), so reachable dives commit without waiting for a projected wrap.
+> The historical candidate measurements below describe the preserved linebacker
+> behavior, not the active Tackle Alley preset. Its regression coverage is now
+> OffballLinebackerFlowTests; TackleAlleyCommitmentTests checks level assignments
+> and #52's commitment and post-lock lateral escape at 30/60/120 Hz.
+> Player ratings, movement scaling, aggressive/contain, physical reach, swept contact
+> and recovery are unchanged. No run-game mode or new level is added.
+
+
 Every defender uses the same DefenderDecision functions and Opponent executor.
 No profile ID/name switches, AI subclasses, random preset-specific rules or new
 progression are involved. All four Level 1 defenders still use Balanced.
@@ -44,7 +58,8 @@ windows, facing gates and relative motion still determine reachability.
 ## Data and references
 
 defender-profiles.json has a required Profiles array of DefenderProfile objects.
-All properties must be explicit. IDs are unique lowercase hyphenated keys, names
+The original scalar properties must be explicit. Optional ApproachTuning opts into
+refined pursuit/braking/wrap decisions; all of its fields must be explicit when present. IDs are unique lowercase hyphenated keys, names
 are nonblank, values are finite, unknown fields fail startup, and all ranges and
 relationships are validated. Example Balanced profile:
 
@@ -53,18 +68,24 @@ relationships are validated. Example Balanced profile:
   "Id": "balanced",
   "Name": "Balanced",
   "ReactionTime": 0.15,
-  "PursuitPredictionStrength": 1,
+  "PursuitPredictionStrength": 0.85,
   "PursuitAggression": 1,
   "ContainBias": 0,
   "ApproachDistance": 8,
-  "BreakdownDistance": 4,
-  "BreakdownExitDistance": 5,
+  "BreakdownDistance": 4.5,
+  "BreakdownExitDistance": 5.5,
   "TackleCommitDistance": 4.5,
   "WrapPreference": 1,
-  "LungePreference": 1,
-  "CorrectionWindowFraction": 0.4,
-  "CorrectionRateDegrees": 90,
-  "MaximumCorrectionDegrees": 18
+  "LungePreference": 0.65,
+  "CorrectionWindowFraction": 0.2,
+  "CorrectionRateDegrees": 60,
+  "MaximumCorrectionDegrees": 8,
+  "ApproachTuning": {
+    "MaximumPredictionSeconds": 0.35,
+    "ReadyHalfAngleDegrees": 60,
+    "WrapLookAheadSeconds": 0.3,
+    "SquareUpHalfAngleDegrees": 25
+  }
 }
 ```
 
@@ -95,8 +116,9 @@ every reference before native assets/window initialization.
 | CorrectionRateDegrees | degrees/sec, 0–360 | Existing fading correction angular budget, still bounded by the agility modifier. |
 | MaximumCorrectionDegrees | degrees, 0–45 | Maximum deviation from the original launch direction. |
 
-Balanced mirrors the pre-refactor thresholds. Aggressive and Contain are initial
-parameter examples, added after the common pipeline; they are not a balance pass.
+Balanced now opts into the approach refinements documented in [BalancedDefenderTuning.md](BalancedDefenderTuning.md).
+Aggressive and Contain retain their original scalar values and omit ApproachTuning,
+so they continue through the legacy decision rules.
 Aggressive engages earlier and prefers a lunge when both actions are eligible.
 Contain enters controlled approach earlier, reduces lead, favors wrap, and limits
 commit/correction ranges. To try either, edit one level spawn's BehaviorProfile
@@ -110,17 +132,23 @@ physics, aim reach/confidence, deceleration and locomotion baselines.
 ## Diagnostics
 
 Enable DrawTackleAimingDebug in config.json. Both world graphics and compact
-two-line per-defender HUD rows use the existing debug switch.
+three-line per-defender HUD rows use the existing debug switch.
 
 - Cyan: actual planned pursuit target; blue: scaled predicted target before cap.
 - White: approach direction. Gold rings: breakdown entry/exit.
-- Orange ring: profile commit cap. Green ring: reference physical wrap range.
+- Orange ring: profile commit cap. Green ring: reference physical wrap range; purple: dive range.
 - Magenta: selected wrap/lunge target retained through commitment.
 - Red: locked lunge direction. Existing yellow/lime launch/correction vectors,
   reachable candidates, body targets, swept capsules and time-of-impact markers remain.
 - HUD: AI stage and execution state, behavior profile, decision/rejection reason,
   last evaluated wrap/lunge reachability, required stopping distance, contact time,
-  prediction confidence, lock status and swept time of impact.
+  prediction confidence, lock status and swept time of impact. The third line adds
+  carrier distance, signed relative closing speed, estimated time to wrap range,
+  body-scaled wrap/dive reach, correction seconds/angular budget remaining, and the
+  original commitment reason (retained while execution owns motion). TTC is only
+  a constant-relative-velocity estimate; a separating target displays '-'.
+  DecisionDebug also exposes the live body aim point separately from the selected
+  commitment point and pursuit target.
 
 Opponent.DecisionDebug exposes the same data for automated scenarios without
 rendering. During commitment, reachability flags describe the last selection;
@@ -143,4 +171,5 @@ Manual tuning still needed:
 - Multiple defenders converging on the same lane; no squad coordination or avoidance was added.
 - Debug readability with all defenders and the profile/physics HUD enabled.
 
-Keep Balanced as the comparison baseline; change one profile parameter at a time.
+Use the recorded original Balanced profile in the regression matrix for before/after
+comparison. The shipped candidate still needs subjective hands-on evaluation.

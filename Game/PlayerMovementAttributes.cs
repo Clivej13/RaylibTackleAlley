@@ -8,7 +8,10 @@ public sealed class PlayerMovementAttributes
     public float JogSpeedMultiplier { get; }
     public float RunningSpeedMultiplier { get; }
     public float SprintSpeedMultiplier { get; }
+    public float JogAccelerationMultiplier { get; }
+    // Compatibility accessor: the normal run tier.
     public float AccelerationMultiplier { get; }
+    public float SprintAccelerationMultiplier { get; }
     public float SteeringMultiplier { get; }
     public float ReversalMultiplier { get; }
     public float EvadeMultiplier { get; }
@@ -21,7 +24,9 @@ public sealed class PlayerMovementAttributes
     public float RunningSpeed { get; }
     public float SprintSpeed { get; }
     public float ReadySpeed { get; }
+    public float JogAccelerationRate { get; }
     public float AccelerationRate { get; }
+    public float SprintAccelerationRate { get; }
     public float LateralSpeed { get; }
     public float SteeringResponse { get; }
     public float FacingResponse { get; }
@@ -37,15 +42,14 @@ public sealed class PlayerMovementAttributes
     public PlayerMovementAttributes(PlayerProfile profile, TackleAlleyConfig config, bool defender = false)
     {
         profile.Validate();
-        if (!defender) config.ValidateReturnerSpeedScaling();
-        float defenderSpeedMultiplier = RatingMultiplier(profile.Speed, .8f, 1.2f);
-        JogSpeedMultiplier = defender ? defenderSpeedMultiplier :
-            ReturnerSpeedMultiplier(profile.Speed, config.ReturnerJogSpeedInfluence);
-        RunningSpeedMultiplier = defender ? defenderSpeedMultiplier :
-            ReturnerSpeedMultiplier(profile.Speed, config.ReturnerRunSpeedInfluence);
-        SprintSpeedMultiplier = defender ? defenderSpeedMultiplier :
-            ReturnerSpeedMultiplier(profile.Speed, config.ReturnerSprintSpeedInfluence);
-        AccelerationMultiplier = RatingMultiplier(profile.Acceleration, .75f, 1.25f);
+        config.ValidateMovementScaling();
+        var scaling = defender ? config.DefenderMovementScaling : config.ReturnerMovementScaling;
+        JogSpeedMultiplier = InfluenceMultiplier(profile.Speed, scaling.SpeedTierInfluence.Jog);
+        RunningSpeedMultiplier = InfluenceMultiplier(profile.Speed, scaling.SpeedTierInfluence.Run);
+        SprintSpeedMultiplier = InfluenceMultiplier(profile.Speed, scaling.SpeedTierInfluence.Sprint);
+        JogAccelerationMultiplier = InfluenceMultiplier(profile.Acceleration, scaling.AccelerationTierInfluence.Jog);
+        AccelerationMultiplier = InfluenceMultiplier(profile.Acceleration, scaling.AccelerationTierInfluence.Run);
+        SprintAccelerationMultiplier = InfluenceMultiplier(profile.Acceleration, scaling.AccelerationTierInfluence.Sprint);
         SteeringMultiplier = RatingMultiplier(profile.Agility, .85f, 1.15f);
         ReversalMultiplier = RatingMultiplier(profile.Agility, 1.15f, .85f);
         EvadeMultiplier = RatingMultiplier(profile.Agility, .9f, 1.1f);
@@ -60,7 +64,9 @@ public sealed class PlayerMovementAttributes
         ReadySpeed = BaselineReadySpeed * JogSpeedMultiplier;
         // Speed never boosts the acceleration ramp: a larger sprint-speed gap takes
         // longer to cover. The separate Acceleration rating still owns this rate.
+        JogAccelerationRate = config.ForwardAcceleration * JogAccelerationMultiplier;
         AccelerationRate = config.ForwardAcceleration * AccelerationMultiplier;
+        SprintAccelerationRate = config.ForwardAcceleration * SprintAccelerationMultiplier;
         LateralSpeed = config.PlayerLateralSpeed * SteeringMultiplier;
         SteeringResponse = config.PlayerSprintSteeringRate * SteeringMultiplier;
         FacingResponse = config.PlayerRunYawResponse * SteeringMultiplier;
@@ -76,7 +82,7 @@ public sealed class PlayerMovementAttributes
         SpinSpeed = config.PlayerSpinSpeed * EvadeMultiplier;
     }
 
-    public static float ReturnerSpeedMultiplier(int rating, float influence)
+    public static float InfluenceMultiplier(int rating, float influence)
     {
         if (rating is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(rating));
         if (!float.IsFinite(influence) || influence < 0 || influence >= 1)
@@ -92,6 +98,9 @@ public sealed class PlayerMovementAttributes
         return rating <= 50 ? atOne + (1f - atOne) * ((rating - 1) / 49f)
             : 1f + (atHundred - 1f) * ((rating - 50) / 50f);
     }
+
+    // Acceleration follows the requested tier, including recovery from rest or a penalty.
+    public float TierAcceleration(int tier) => tier switch { 1 => JogAccelerationRate, 3 => SprintAccelerationRate, _ => AccelerationRate };
 
     public float BaselineSpeed(int tier) => tier switch { 1 => BaselineJogSpeed, 3 => BaselineSprintSpeed, _ => BaselineRunSpeed };
     public float TierSpeed(int tier) => tier switch { 1 => JogSpeed, 3 => SprintSpeed, _ => RunningSpeed };

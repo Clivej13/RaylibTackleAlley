@@ -551,10 +551,10 @@ public sealed partial class BallCarrier : IDisposable
         // Split at the lockout boundary so catch-up frames cannot accelerate early.
         float heldTime = Math.Min(deltaTime, _reversalDelay);
         var held = SpeedRamp.Advance(CurrentForwardSpeed, Math.Min(CurrentForwardSpeed, TargetForwardSpeed),
-            Movement.AccelerationRate, _config.ForwardDeceleration, heldTime);
+            Movement.TierAcceleration(SpeedTier), _config.ForwardDeceleration, heldTime);
         _reversalDelay = Math.Max(0, _reversalDelay - heldTime);
         var step = SpeedRamp.Advance(held.Speed, TargetForwardSpeed,
-            Movement.AccelerationRate, _config.ForwardDeceleration, deltaTime - heldTime);
+            Movement.TierAcceleration(SpeedTier), _config.ForwardDeceleration, deltaTime - heldTime);
         CurrentForwardSpeed = step.Speed;
         if (_reversalDelay <= 0 && CurrentForwardSpeed >= TargetForwardSpeed) _reversalChain = 0;
         return held.Distance + step.Distance;

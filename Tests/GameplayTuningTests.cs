@@ -138,7 +138,7 @@ public sealed class GameplayTuningTests
         var config = new TackleAlleyConfig {
             OpponentInitialYawDegrees = 0, OpponentLungeReachDistance = 5,
             OpponentMaximumLungeReachDistance = 5, OpponentLungeLaunchVerticalSpeed = 7,
-            OpponentFallGravity = 4, OpponentJogSpeed = 8
+            OpponentFallGravity = 4, OpponentJogSpeed = 8, OpponentRunSpeed = 9, OpponentSprintSpeed = 10
         };
         var defender = new Opponent(Vector3.Zero, config);
         defender.Update(new(0, 0, -10), 0, true, Vector2.Zero, false);

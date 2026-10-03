@@ -83,7 +83,7 @@ public sealed class MovementAttributesTests : IDisposable
         using var normal = Carrier(new());
         using var fast = Carrier(new() { Speed = 100 });
         Assert.Equal(normal.Movement.AccelerationRate, fast.Movement.AccelerationRate);
-        Assert.Equal(normal.Speed * (1 + _config.ReturnerRunSpeedInfluence), fast.Speed);
+        Assert.Equal(normal.Speed * (1 + _config.ReturnerMovementScaling.SpeedTierInfluence.Run), fast.Speed);
         Speed(normal, 0); Speed(fast, 0);
         Tick(normal, .1f); Tick(fast, .1f);
         Assert.Equal(normal.CurrentForwardSpeed, fast.CurrentForwardSpeed);
@@ -91,6 +91,43 @@ public sealed class MovementAttributesTests : IDisposable
         Assert.Equal(normal.TargetForwardSpeed, normal.CurrentForwardSpeed);
         Assert.Equal(fast.TargetForwardSpeed, fast.CurrentForwardSpeed, 5);
         Assert.True(fast.CurrentForwardSpeed > normal.CurrentForwardSpeed);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void BothRolesApplyTargetTierAccelerationToActualTravel(int tier)
+    {
+        var config = new TackleAlleyConfig();
+        config.ReturnerMovementScaling.AccelerationTierInfluence = new() { Jog = .1f, Run = .3f, Sprint = .5f };
+        config.DefenderMovementScaling.AccelerationTierInfluence = new() { Jog = .05f, Run = .15f, Sprint = .25f };
+        var profile = new PlayerProfile { Acceleration = 100 };
+        using var carrier = new BallCarrier(config, profile);
+        Speed(carrier, 0);
+        Key(KeyboardKey.S, tier == 1);
+        Key(KeyboardKey.LeftShift, tier == 3);
+        Tick(carrier, .1f);
+        Assert.Equal(tier, carrier.SpeedTier);
+        Assert.Equal(carrier.Movement.TierAcceleration(tier) * .1f, carrier.CurrentForwardSpeed, 5);
+        Assert.Equal(.5f * carrier.Movement.TierAcceleration(tier) * .01f, -carrier.Position.Z, 5);
+        Key(KeyboardKey.S, false);
+        Key(KeyboardKey.LeftShift, false);
+        Tick(carrier, 0);
+
+        using var defender = new Opponent(Vector3.Zero, config, profile);
+        Speed(defender, 0);
+        float distance = tier == 1 ? 30 : tier == 2 ? 15 : 6;
+        defender.Update(new(0, 0, -distance), .1f, false, Vector2.Zero, false);
+        Assert.Equal(tier, (int)defender.Pace + 1);
+        Assert.Equal(defender.Movement.TierAcceleration(tier) * .1f, defender.CurrentSpeed, 5);
+        Assert.Equal(.5f * defender.Movement.TierAcceleration(tier) * .01f, -defender.Position.Z, 5);
+
+        // Ready movement uses jog influence even though engagement retains Sprint pace.
+        Speed(defender, 0);
+        defender.Update(new(0, 0, -4), .1f, true, Vector2.UnitY, false);
+        Assert.Equal(OpponentPace.Sprint, defender.Pace);
+        Assert.Equal(defender.Movement.JogAccelerationRate * .1f, defender.CurrentSpeed, 5);
     }
 
     [Fact]

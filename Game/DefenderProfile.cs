@@ -22,9 +22,12 @@ public sealed record DefenderProfile
     public float CorrectionWindowFraction { get; init; } = .4f;
     public float CorrectionRateDegrees { get; init; } = 90;
     public float MaximumCorrectionDegrees { get; init; } = 18;
+    // Opt-in tuning for the existing approach stages; omitted presets retain legacy behavior.
+    public DefenderApproachTuning? ApproachTuning { get; init; }
 
     public void Validate()
     {
+        ApproachTuning?.Validate();
         if (Id is null || !Regex.IsMatch(Id, @"\A[a-z0-9]+(?:-[a-z0-9]+)*\z"))
             throw new ArgumentException("DefenderProfile.Id needs a stable lowercase ID.");
         if (string.IsNullOrWhiteSpace(Name)) throw new ArgumentException($"DefenderProfile '{Id}' needs a Name.");

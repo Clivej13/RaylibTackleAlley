@@ -131,8 +131,9 @@ after changing configuration; resetting a run is not a tuning reload.
 
 | Modifier | Rating 1 | Rating 50 | Rating 100 |
 | --- | --- | --- | --- |
-| Speed | 0.80 | 1.00 | 1.20 |
-| Acceleration | 0.75 | 1.00 | 1.25 |
+| Returner Speed: jog / run / sprint | 0.95 / 0.85 / 0.70 | 1.00 | 1.05 / 1.15 / 1.30 |
+| Defender Speed (all tiers by default) | 0.80 | 1.00 | 1.20 |
+| Acceleration (all tiers by default) | 0.75 | 1.00 | 1.25 |
 | Steering, facing and lateral response | 0.85 | 1.00 | 1.15 |
 | Reversal speed loss | 1.15 | 1.00 | 0.85 |
 | Reversal recovery delays | 1.15 | 1.00 | 0.85 |
@@ -142,17 +143,19 @@ All mappings share piecewise linear interpolation through (1, low), (50, 1)
 and (100, high). The lower interval has 49 steps and the upper 50 steps, keeping
 50 exactly neutral. The existing configuration remains the baseline balance.
 
-Speed multiplies the carrier's jog/run/sprint targets and the defender's
-jog/run/engaged-sprint/ready targets by the same amount. It does not multiply
-acceleration or deceleration. Recovered defenders still pursue using their
+Speed uses each role's SpeedTierInfluence for jog/run/sprint targets; defender
+ready movement uses its own jog influence with the existing PlayerSlowSpeed baseline.
+It does not multiply acceleration or deceleration. Recovered defenders still pursue using their
 engaged sprint target. Lunge interception uses the defender's actual current
 speed and its own rated jog minimum, with the observed carrier velocity.
 Pursuit lead uses measured displacement and the carrier's rated tier maximum
 rather than assuming the global tier speed.
 
-Acceleration multiplies ForwardAcceleration for every existing ramp: tier
-changes, acceleration from rest, post-reversal recovery, cut/evade recovery,
-pursuit and resuming after getting up. Deceleration stays at the baseline value.
+Acceleration multiplies ForwardAcceleration through the requested tier's
+AccelerationTierInfluence for every existing ramp: tier changes, acceleration from
+rest, post-reversal recovery, cut/evade recovery, pursuit and resuming after getting
+up. Ready movement uses jog influence. Both roles use PlayerMovementAttributes;
+only the role config and speed baselines differ. Deceleration stays at the baseline value.
 Existing start/reset speed is preserved (players start at their selected pace);
 ratings do not introduce a new start-from-rest state.
 

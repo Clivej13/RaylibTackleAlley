@@ -29,9 +29,10 @@ public sealed class DefenderRecoveryTests : IDisposable
 
     private Opponent Lunge(float side = 0, float speed = 6.5f, bool visual = true, DefenderProfile? behaviorProfile = null)
     {
-        var d = new Opponent(new(5, 0, -7), new() { OpponentJogSpeed = speed }, behaviorProfile: behaviorProfile);
+        var d = new Opponent(new(5, 0, -7), new(), behaviorProfile: behaviorProfile);
         if (visual) d.InitializeVisual(_assets);
         d.Update(d.Position + new Vector3(0, 0, -30), .01f, false, Vector2.Zero, false);
+        typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(d, speed);
         // Commit from ready so Left/Right are chosen from the same locked facing.
         d.Update(d.Position + new Vector3(0, 0, -4), 0, true, Vector2.Zero, false);
         d.Update(d.Position + new Vector3(side, 0, -1.8f), 0);
@@ -143,7 +144,8 @@ public sealed class DefenderRecoveryTests : IDisposable
     public void EveryBehaviorProfileFinishesTheSamePhysicalRecoveryBeforePursuit(string id)
     {
         var profiles = DefenderProfileCatalog.Load(Path.Combine(AppContext.BaseDirectory, "defender-profiles.json"));
-        using var d = Lunge(behaviorProfile: profiles.Resolve(id));
+        // Late sprint momentum leaves insufficient time for a controlled wrap.
+        using var d = Lunge(speed: 9, behaviorProfile: profiles.Resolve(id));
         Assert.Equal(DefenderAiState.LungeCommitment, d.AiState);
         d.Update(new(100, 0, 100), .6f);
         Assert.True(d.Ragdoll.IsActive);

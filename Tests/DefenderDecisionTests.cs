@@ -6,8 +6,10 @@ public sealed class DefenderDecisionTests
 {
     private static Opponent Running(DefenderProfile? profile = null, float speed = 6.5f)
     {
-        var defender = new Opponent(Vector3.Zero, new() { OpponentJogSpeed = speed }, behaviorProfile: profile);
+        var defender = new Opponent(Vector3.Zero, new(), behaviorProfile: profile);
         defender.Update(new(0, 0, -30), .01f, false, Vector2.Zero, false);
+        // Seed approach momentum without making the configured tiers unordered.
+        typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(defender, speed);
         return defender;
     }
 
@@ -49,7 +51,8 @@ public sealed class DefenderDecisionTests
     {
         var profiles = DefenderProfileCatalog.Load(Path.Combine(AppContext.BaseDirectory, "defender-profiles.json"));
         var profile = profiles.Resolve(id);
-        using var defender = Running(profile, 4);
+        // A late fast approach requires a dive even for the wrap-preferring preset.
+        using var defender = Running(profile, 9);
         defender.Update(defender.Position + new Vector3(0, 0, -4), 0, true, Vector2.Zero, false);
         defender.Update(defender.Position + new Vector3(0, 0, -1.8f), 0);
         Assert.Equal(DefenderAiState.LungeCommitment, defender.AiState);

@@ -15,15 +15,19 @@ public sealed class DefenderProfileTests
             new(1, 0, -distance - 1), null, speed, 4, 1, false);
 
     [Fact]
-    public void BalancedDefaultsMatchLegacyDecisionAndCorrectionTuning()
+    public void TackleAlleyBalancedLeavesPatientApproachToLinebacker()
     {
         var config = new TackleAlleyConfig();
-        Assert.Equal(DefenderProfile.Balanced(config), Profiles().Resolve("balanced"));
+        var legacy = DefenderProfile.Balanced(config);
+        Assert.Null(legacy.ApproachTuning);
+        Assert.Null(Profiles().Resolve("balanced").ApproachTuning);
+        Assert.NotNull(Profiles().Resolve("offball-linebacker").ApproachTuning);
         foreach (float speed in new[] { 4f, 6.5f, 9f })
         {
-            config.OpponentJogSpeed = speed;
             using var previous = new Opponent(Vector3.Zero, config);
-            using var balanced = new Opponent(Vector3.Zero, config, behaviorProfile: Profiles().Resolve("balanced"));
+            using var balanced = new Opponent(Vector3.Zero, config, behaviorProfile: legacy);
+            typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(previous, speed);
+            typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(balanced, speed);
             foreach (float distance in new[] { 30f, 8f, 4f, 2.6f, 1.8f, .9f, 30f })
             {
                 var target = previous.Position + new Vector3(0, 0, -distance);
@@ -42,7 +46,7 @@ public sealed class DefenderProfileTests
     public void EveryProfileUsesTheSamePipelineRegardlessOfIdOrName()
     {
         var profiles = Profiles();
-        Assert.Equal(3, profiles.Profiles.Count);
+        Assert.Equal(4, profiles.Profiles.Count);
         foreach (var profile in profiles.Profiles)
         {
             var renamed = profile with { Id = "custom", Name = "Custom" };
@@ -67,8 +71,8 @@ public sealed class DefenderProfileTests
     public void ParametersIndependentlyChangeApproachWithoutChangingBodyOrPhysics()
     {
         var balanced = Profiles().Resolve("balanced");
-        Assert.NotEqual(Plan(balanced).PursuitTarget, Plan(balanced with { PursuitPredictionStrength = 0 }).PursuitTarget);
-        Assert.NotEqual(Plan(balanced).PursuitTarget, Plan(balanced with { ContainBias = .8f }).PursuitTarget);
+        Assert.NotEqual(Plan(balanced, 6).PursuitTarget, Plan(balanced with { PursuitPredictionStrength = 0 }, 6).PursuitTarget);
+        Assert.NotEqual(Plan(balanced, 6).PursuitTarget, Plan(balanced with { ContainBias = .8f }, 6).PursuitTarget);
         Assert.True(Plan(balanced with { ReactionTime = .6f }).RequiredStoppingDistance > Plan(balanced).RequiredStoppingDistance);
         Assert.True(Plan(balanced).Ready);
         Assert.False(Plan(balanced with { BreakdownDistance = 3 }).Ready);

@@ -11,7 +11,8 @@ at construction; restart the game after editing ratings or baseline movement set
 
 Gameplay tuning is loaded from the existing root config.json into TackleAlleyConfig.
 The base file retains existing settings; TackleAlleyConfig.Tuning.cs adds the migrated
-settings and validation without changing the JSON's flat structure. Missing properties
+settings and validation. Role movement scaling uses nested config blocks described
+in [MovementScaling.md](MovementScaling.md). Missing properties
 use code defaults. The shipped file retains its existing player speed overrides
 (6.5 / 9 / 11.5); the class defaults remain 4 / 6.5 / 9.
 

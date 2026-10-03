@@ -13,9 +13,32 @@
       "TackleCommitDistance": 4.5,
       "WrapPreference": 1,
       "LungePreference": 1,
-      "CorrectionWindowFraction": 0.4,
-      "CorrectionRateDegrees": 90,
-      "MaximumCorrectionDegrees": 18
+      "CorrectionWindowFraction": 0.2,
+      "CorrectionRateDegrees": 60,
+      "MaximumCorrectionDegrees": 8
+    },
+    {
+      "Id": "offball-linebacker",
+      "Name": "Off-ball linebacker",
+      "ReactionTime": 0.15,
+      "PursuitPredictionStrength": 0.85,
+      "PursuitAggression": 1,
+      "ContainBias": 0,
+      "ApproachDistance": 8,
+      "BreakdownDistance": 4.5,
+      "BreakdownExitDistance": 5.5,
+      "TackleCommitDistance": 4.5,
+      "WrapPreference": 1,
+      "LungePreference": 0.65,
+      "CorrectionWindowFraction": 0.2,
+      "CorrectionRateDegrees": 60,
+      "MaximumCorrectionDegrees": 8,
+      "ApproachTuning": {
+        "MaximumPredictionSeconds": 0.35,
+        "ReadyHalfAngleDegrees": 60,
+        "WrapLookAheadSeconds": 0.3,
+        "SquareUpHalfAngleDegrees": 25
+      }
     },
     {
       "Id": "aggressive",

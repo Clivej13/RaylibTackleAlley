@@ -5,7 +5,18 @@ namespace RaylibTackleAlley.Game;
 public readonly record struct DefenderDecisionDebug(
     DefenderAiState State, string Profile, string Reason, Vector3 PursuitTarget, Vector3 PredictedTarget,
     Vector3 ApproachDirection, float BrakingDistance, float RequiredStoppingDistance,
-    bool WrapReachable, bool LungeReachable, Vector3? SelectedTackleTarget, Vector3 LockedDirection);
+    bool WrapReachable, bool LungeReachable, Vector3? SelectedTackleTarget, Vector3 LockedDirection)
+{
+    public float CarrierDistance { get; init; }
+    public float RelativeClosingSpeed { get; init; }
+    public float EstimatedTimeToContact { get; init; }
+    public Vector3 TackleAimTarget { get; init; }
+    public float WrapReach { get; init; }
+    public float LungeReach { get; init; }
+    public string? CommitmentReason { get; init; }
+    public float CorrectionSecondsRemaining { get; init; }
+    public float CorrectionDegreesRemaining { get; init; }
+}
 
 public sealed partial class Opponent
 {
@@ -15,6 +26,7 @@ public sealed partial class Opponent
     private bool _wrapReachable, _lungeReachable;
     private Vector3? _selectedTackleTarget;
     private string _decisionReason = "Reset";
+    private string? _commitmentReason;
 
     public DefenderAiState AiState => Ragdoll.IsActive || IsRecovering ||
         State is DefenderState.Down or DefenderState.GetUp or DefenderState.LungeLand ? DefenderAiState.Recovery :
@@ -28,7 +40,49 @@ public sealed partial class Opponent
         AiState == DefenderAiState.Recovery ? "Physics/recovery owns motion" : _decisionReason,
         _approach.PursuitTarget, _approach.PredictedTarget, _approach.Direction,
         _approach.BrakingDistance, _approach.RequiredStoppingDistance, _wrapReachable, _lungeReachable,
-        _selectedTackleTarget, DirectionLocked ? _movementDirection : Vector3.Zero);
+        _selectedTackleTarget, DirectionLocked ? _movementDirection : Vector3.Zero)
+    {
+        CarrierDistance = Vector2.Distance(new(_position.X, _position.Z), new(_aimCarrierPosition.X, _aimCarrierPosition.Z)),
+        RelativeClosingSpeed = RelativeClosingSpeed,
+        EstimatedTimeToContact = RelativeClosingSpeed > .001f
+            ? Math.Max(0, Vector2.Distance(new(_position.X, _position.Z),
+                new(_aimCarrierPosition.X, _aimCarrierPosition.Z)) - Physical.WrapReach) / RelativeClosingSpeed
+            : float.PositiveInfinity,
+        TackleAimTarget = _aimTarget.Point,
+        WrapReach = Physical.WrapReach,
+        LungeReach = Physical.DiveReach,
+        CommitmentReason = _commitmentReason,
+        CorrectionSecondsRemaining = CorrectionSecondsRemaining,
+        CorrectionDegreesRemaining = CorrectionDegreesRemaining
+    };
+
+    private float RelativeClosingSpeed
+    {
+        get
+        {
+            Vector3 offset = _aimCarrierPosition - _position;
+            offset.Y = 0;
+            return offset.LengthSquared() > .0001f
+                ? Vector3.Dot(Velocity - _aimCarrierVelocity, Vector3.Normalize(offset)) : 0;
+        }
+    }
+
+    private float CorrectionSecondsRemaining => State == DefenderState.LungeTackle
+        ? Math.Max(0, _committedDuration * BehaviorProfile.CorrectionWindowFraction - _lungeElapsed) : 0;
+
+    private float CorrectionDegreesRemaining
+    {
+        get
+        {
+            float window = _committedDuration * BehaviorProfile.CorrectionWindowFraction;
+            if (window <= 0 || CorrectionSecondsRemaining <= 0) return 0;
+            // Remaining integral of the fading rate; direction deviation is separately capped.
+            float budget = BehaviorProfile.CorrectionRateDegrees *
+                PlayerMovementAttributes.RatingMultiplier(Profile.Agility, .9f, 1.1f) *
+                CorrectionSecondsRemaining * CorrectionSecondsRemaining / (2 * window);
+            return Math.Min(BehaviorProfile.MaximumCorrectionDegrees, budget);
+        }
+    }
 
     private void ResetDecisions()
     {
@@ -36,6 +90,7 @@ public sealed partial class Opponent
         _wrapReachable = _lungeReachable = false;
         _selectedTackleTarget = null;
         _decisionReason = "Reset";
+        _commitmentReason = null;
     }
 
     // AI senses and chooses intent; Opponent.Tackle executes that intent. Reachable
@@ -51,7 +106,7 @@ public sealed partial class Opponent
             carrierPose, carrierEvading, dt);
         _approach = DefenderDecision.PlanApproach(BehaviorProfile, _config, _position, playerPosition,
             pursuitTarget, carrierPredictedDirection, CurrentSpeed, TackleReadySpeed, Physical.WrapReach,
-            State != DefenderState.Locomotion);
+            State != DefenderState.Locomotion, carrierVelocity, PredictionConfidence);
 
         if (IsTackleCommitted)
         {
@@ -64,11 +119,23 @@ public sealed partial class Opponent
         }
 
         _selectedTackleTarget = null;
+        _commitmentReason = null;
         Vector3 facing = Vector3.Transform(-Vector3.UnitZ, Matrix4x4.CreateRotationY(_yawDegrees * MathF.PI / 180));
         var waist = TackleAiming.Target(playerPosition, carrierPhysical ?? _defaultCarrierPhysical,
             TackleBodyRegion.Waist, carrierPose);
         _wrapReachable = CurrentSpeed <= TackleReadySpeed + _config.OpponentWrapSpeedTolerance &&
             TackleAiming.TryWrap(_position, Velocity, facing, _aimCarrierVelocity, Physical, waist, _config, out _);
+        if (BehaviorProfile.ApproachTuning is { } tuning)
+        {
+            Vector3 toCarrier = playerPosition - _position;
+            toCarrier.Y = 0;
+            bool squared = toCarrier.LengthSquared() < .0001f || Vector3.Dot(facing, Vector3.Normalize(toCarrier)) >=
+                MathF.Cos(tuning.SquareUpHalfAngleDegrees * MathF.PI / 180);
+            _wrapReachable &= squared;
+        }
+        bool wrapSoon = DefenderDecision.CanApproachWrap(BehaviorProfile, _config, _approach,
+            _position, facing, playerPosition, _aimCarrierVelocity, CurrentSpeed, TackleReadySpeed,
+            Physical.WrapReach, Movement.ReadyFacingResponse);
         CurrentContactSolution = SolveContact(SupportedLungeDuration, 0, facing);
         _lungeReachable = CurrentContactSolution.Reachable;
         Vector3 offset = playerPosition - _position;
@@ -79,19 +146,19 @@ public sealed partial class Opponent
             closing * _config.OpponentLungeAnimationLeadSeconds;
         var choice = DefenderDecision.SelectTackle(BehaviorProfile, _approach,
             State == DefenderState.TackleReady, _wrapReachable, _lungeReachable,
-            Physical.WrapReach, Physical.HeightRatio, urgentDistance, out string tackleReason);
+            Physical.WrapReach, Physical.HeightRatio, urgentDistance, out string tackleReason, wrapSoon);
         _decisionReason = _approach.Reason;
         if (choice == DefenderTackleChoice.Wrap)
         {
             TackleAiming.TryWrap(_position, Velocity, facing, _aimCarrierVelocity, Physical, waist, _config, out var point);
             _aimTarget = waist;
             CurrentContactSolution = new(true, point, 0, facing, TackleBodyRegion.Waist, PredictionConfidence);
-            _decisionReason = "Reachable wrap selected";
+            _decisionReason = tackleReason;
             CommitTackle(point, DefenderState.SetWrap);
         }
         else if (choice == DefenderTackleChoice.Lunge)
         {
-            _decisionReason = "Reachable lunge selected";
+            _decisionReason = tackleReason;
             CommitTackle(CurrentContactSolution.ContactPoint, DefenderState.LungeTackle);
         }
         else if (_approach.State != DefenderAiState.Pursuit)

@@ -114,11 +114,13 @@ public sealed class TackleAlleyGame : IDisposable
         EndStateElapsed = 0;
     }
 
+    public void SetDebugEnabled(bool enabled) => _config.DrawGameplayDebug = enabled;
+
     public void IgnoreNextMouseDelta() => _player.IgnoreNextMouseDelta();
 
     public void Update(float deltaTime)
     {
-        RagdollDebugControls.Update(_opponents, _player.Position);
+        if (_config.DrawGameplayDebug) RagdollDebugControls.Update(_opponents, _player.Position);
         // Tighter capsules need short motion steps to catch fast head-on contact.
         if (!TacklePendingGroundImpact && !GameOver && !Touchdown && deltaTime > Ragdoll.FixedStep &&
             _opponents.Any(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position) < MathF.Pow(_config.ContactSubstepDistance * PlayerPhysicalAttributes.MaximumHeightRatio, 2)))
@@ -262,7 +264,7 @@ public sealed class TackleAlleyGame : IDisposable
 
     private void DrawProfiles()
     {
-        if (!_config.ShowPlayerProfiles) return;
+        if (!_config.DrawGameplayDebug || !_config.ShowPlayerProfiles) return;
         var entries = new[] { ("CARRIER", _player.VisualProfile,
             _player.Ragdoll.IsActive ? _player.Ragdoll.Bodies[0].LinearVelocity.Length() : _player.CurrentForwardSpeed,
             _player.Ragdoll.IsActive || _player.IsRecovering || _player.IsTaunting ? 0f : _player.TargetForwardSpeed) }
@@ -308,11 +310,11 @@ public sealed class TackleAlleyGame : IDisposable
         foreach (var opponent in _opponents) opponent.DrawTackleAiming();
         _field.DrawOutOfBounds();
         Raylib.EndMode3D();
-        RagdollDebugControls.Draw(_opponents);
+        if (_config.DrawGameplayDebug) RagdollDebugControls.Draw(_opponents);
         DrawProfiles();
-        if (_config.DrawTackleAimingDebug) Opponent.DrawTackleAimingLegend();
-        for (int i = 0; i < _opponents.Length; i++) _opponents[i].DrawTackleAimingLabel(122 + i * 36);
-        if (_config.DrawGameplayDebug || _config.ShowPlayerProfiles)
+        if (_config.DrawGameplayDebug && _config.DrawTackleAimingDebug) Opponent.DrawTackleAimingLegend();
+        for (int i = 0; i < _opponents.Length; i++) _opponents[i].DrawTackleAimingLabel(122 + i * 54);
+        if (_config.DrawGameplayDebug)
         {
             var defender = _tackleDefender ?? _opponents.MinBy(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position));
             int y = Raylib.GetScreenHeight() - 112;

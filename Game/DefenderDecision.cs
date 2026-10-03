@@ -16,7 +16,8 @@ public static class DefenderDecision
 {
     public static DefenderApproach PlanApproach(DefenderProfile profile, TackleAlleyConfig config,
         Vector3 position, Vector3 carrierPosition, Vector3? predictedTarget, Vector3? carrierForward,
-        float speed, float readySpeed, float wrapReach, bool wasPreparing)
+        float speed, float readySpeed, float wrapReach, bool wasPreparing,
+        Vector3? carrierVelocity = null, float predictionConfidence = 1)
     {
         Vector3 offset = carrierPosition - position;
         offset.Y = 0;
@@ -25,30 +26,72 @@ public static class DefenderDecision
         lead.Y = 0;
         lead *= profile.PursuitPredictionStrength;
         Vector3 prediction = carrierPosition + lead;
+        var tuning = profile.ApproachTuning;
+        Vector3 velocity = carrierVelocity ?? Vector3.Zero;
+        velocity.Y = 0;
+        if (tuning is not null && carrierVelocity.HasValue)
+        {
+            // Never steer toward stale lead after a reversal. The observed confidence
+            // suppresses prediction immediately; it earns distance back as motion settles.
+            if (Vector3.Dot(lead, velocity) <= 0) lead = Vector3.Zero;
+            float horizon = Math.Min(tuning.MaximumPredictionSeconds, distance / Math.Max(speed, .01f));
+            lead = TackleAiming.Limit(lead, velocity.Length() * horizon);
+            lead *= Math.Clamp(predictionConfidence, 0, 1);
+        }
         float cap = distance * Math.Clamp(distance / config.LungeFullPredictionDistance, 0, 1) * .5f;
         lead = TackleAiming.Limit(lead, cap);
-        bool inCone = carrierForward is not { } forward || InReadyCone(offset, forward, config.OpponentReadyHalfAngleDegrees);
+        // A suppressed prediction is not evidence that the carrier stopped facing us.
+        // Tuned preparation follows observed velocity; a stationary body can be approached from any side.
+        Vector3? approachForward = tuning is not null && carrierVelocity.HasValue
+            ? velocity.LengthSquared() > config.PursuitStationarySpeed * config.PursuitStationarySpeed ? velocity : null
+            : carrierForward;
+        bool inCone = approachForward is not { } forward ||
+            InReadyCone(offset, forward, tuning?.ReadyHalfAngleDegrees ?? config.OpponentReadyHalfAngleDegrees);
         bool approaching = distance <= profile.ApproachDistance;
         if (approaching)
         {
             // Blend away from chasing the lead toward the goal-side lane. This affects
             // approach only; a tackle always aims at the reachable physical carrier.
             lead *= 1 - profile.ContainBias;
-            if (inCone && carrierForward is { } heading)
+            if (inCone && approachForward is { } heading)
             {
                 heading.Y = 0;
                 if (heading.LengthSquared() > .0001f)
                     lead += Vector3.Normalize(heading) * profile.ContainBias * Math.Min(distance * .25f, wrapReach);
             }
         }
-        Vector3 pursuit = inCone ? carrierPosition + lead : carrierPosition;
+        // The preparation cone must not erase useful lateral interception during pursuit.
+        if (tuning is not null && wasPreparing)
+            lead = TackleAiming.Limit(lead, Math.Max(0, distance - wrapReach) * .25f);
+        Vector3 pursuit = inCone || tuning is not null ? carrierPosition + lead : carrierPosition;
         float braking = speed <= readySpeed ? 0 :
             config.ForwardDeceleration > 0 ? (speed * speed - readySpeed * readySpeed) /
                 (2 * config.ForwardDeceleration) : float.PositiveInfinity;
         float stopping = wrapReach + speed * profile.ReactionTime + braking;
+        if (tuning is not null)
+        {
+            float carrierClosing = distance > .0001f ? -Vector3.Dot(velocity, offset / distance) : 0;
+            float closing = Math.Max(0, speed + carrierClosing);
+            float brakeTime = speed <= readySpeed ? 0 : config.ForwardDeceleration > 0
+                ? (speed - readySpeed) / config.ForwardDeceleration : float.PositiveInfinity;
+            // Include carrier travel while slowing. Faster approaches change timing,
+            // never the wrap/dive envelope. Avoid 0 * infinity for a stationary carrier.
+            float carrierTravel = carrierClosing > 0 ? carrierClosing * brakeTime : 0;
+            stopping = wrapReach + closing * profile.ReactionTime + braking + carrierTravel;
+        }
         bool canBreakDown = distance >= stopping;
         bool ready = inCone && (wasPreparing && distance <= profile.BreakdownExitDistance ||
             distance <= profile.BreakdownDistance && canBreakDown);
+        if (tuning is not null)
+        {
+            float entry = Math.Min(profile.ApproachDistance, Math.Max(profile.BreakdownDistance, stopping));
+            float exit = Math.Min(profile.ApproachDistance,
+                Math.Max(profile.BreakdownExitDistance, entry + profile.BreakdownExitDistance - profile.BreakdownDistance));
+            // If already late, braking is still preferable to continuing at sprint speed.
+            ready = inCone && (distance <= (wasPreparing ? exit : entry) ||
+                predictionConfidence < .5f && distance <= profile.BreakdownExitDistance);
+        }
+        if (tuning is not null && ready) pursuit = carrierPosition;
         Vector3 targetOffset = pursuit - position;
         targetOffset.Y = 0;
         if (targetOffset.LengthSquared() < config.OpponentPredictionArrivalDistance * config.OpponentPredictionArrivalDistance)
@@ -60,6 +103,36 @@ public static class DefenderDecision
             ? "Braking to ready pace" : "Controlled approach" : !canBreakDown && approaching
             ? "Insufficient braking space" : approaching ? "Closing approach" : "Pursuing";
         return new(state, pursuit, prediction, direction, distance, braking, stopping, inCone, canBreakDown, ready, reason);
+    }
+
+    /// <summary>Can a grounded approach enter wrap range soon, with time to brake and square up?
+    /// This only defers a dive. TryWrap must still prove actual body reach before commitment.</summary>
+    public static bool CanApproachWrap(DefenderProfile profile, TackleAlleyConfig config,
+        DefenderApproach approach, Vector3 position, Vector3 facing, Vector3 carrierPosition,
+        Vector3 carrierVelocity, float speed, float readySpeed, float wrapReach, float turnRate)
+    {
+        var tuning = profile.ApproachTuning;
+        if (tuning is null || profile.WrapPreference <= 0 || !approach.Ready) return false;
+        Vector3 offset = carrierPosition - position;
+        offset.Y = carrierVelocity.Y = 0;
+        if (offset.LengthSquared() < .0001f) return true;
+        Vector3 direction = Vector3.Normalize(offset);
+        float closing = readySpeed - Vector3.Dot(carrierVelocity, direction);
+        if (closing <= .001f) return false;
+        float time = Math.Max(0, approach.Distance - wrapReach) / closing;
+        if (time > tuning.WrapLookAheadSeconds) return false;
+        float brakeTime = speed <= readySpeed ? 0 : config.ForwardDeceleration > 0
+            ? (speed - readySpeed) / config.ForwardDeceleration : float.PositiveInfinity;
+        float angle = MathF.Acos(Math.Clamp(Vector3.Dot(facing, direction), -1, 1)) * 180 / MathF.PI;
+        float turnTime = angle <= tuning.SquareUpHalfAngleDegrees ? 0 : turnRate > 0
+            ? (angle - tuning.SquareUpHalfAngleDegrees) / turnRate : float.PositiveInfinity;
+        // Already in arm range: square up while the body remains within reach,
+        // rather than diving merely because the current facing fails the wrap gate.
+        if (approach.Distance <= wrapReach && brakeTime == 0 && turnTime <= tuning.WrapLookAheadSeconds)
+            return (offset + carrierVelocity * turnTime).Length() <= wrapReach;
+        Vector3 lateral = carrierVelocity - direction * Vector3.Dot(carrierVelocity, direction);
+        return time >= Math.Max(brakeTime, turnTime) &&
+            lateral.Length() * (time + config.OpponentLungeAnimationLeadSeconds) <= wrapReach;
     }
 
     public static bool InReadyCone(Vector3 toCarrier, Vector3 carrierForward, float halfAngle)
@@ -77,14 +150,20 @@ public static class DefenderDecision
 
     public static DefenderTackleChoice SelectTackle(DefenderProfile profile, DefenderApproach approach,
         bool wasReady, bool wrapReachable, bool lungeReachable, float wrapReach, float heightRatio,
-        float urgentLungeDistance, out string reason)
+        float urgentLungeDistance, out string reason, bool wrapSoon = false)
     {
         if (approach.Distance > profile.TackleCommitDistance * heightRatio)
         {
             reason = "Outside profile commit range";
             return DefenderTackleChoice.None;
         }
-        bool wrap = wasReady && wrapReachable && profile.WrapPreference > 0;
+        bool wrap = (wasReady || profile.ApproachTuning is not null) && wrapReachable && profile.WrapPreference > 0;
+        if (profile.ApproachTuning is not null && profile.WrapPreference >= profile.LungePreference &&
+            profile.WrapPreference > 0 && (wrap || wrapSoon))
+        {
+            reason = wrap ? "Reachable aligned wrap selected" : "Closing for reachable grounded wrap";
+            return wrap ? DefenderTackleChoice.Wrap : DefenderTackleChoice.None;
+        }
         bool lunge = lungeReachable && profile.LungePreference > 0 &&
             (wasReady ? approach.Distance > wrapReach || wrapReachable && profile.LungePreference > profile.WrapPreference
                 : !approach.CanBreakDown || approach.Distance <= urgentLungeDistance);
