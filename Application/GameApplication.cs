@@ -17,15 +17,17 @@ public sealed class GameApplication
     private readonly GameConfig _config;
     private readonly ReturnerCatalog _returners;
     private readonly TackleAlleyConfig _tuning;
-    private readonly InputController _input;
+    private InputController _input;
     private readonly InputConfig _inputConfig;
-    private readonly MenuManager _mainMenu;
-    private readonly MenuManager _pauseMenu;
+    private MenuManager _mainMenu;
+    private MenuManager _pauseMenu;
+    private readonly MenuConfig _menus;
+    private SessionInput? _sessionInput;
     private readonly AssetManager _assets;
     private readonly TackleAlleyGame _game;
     private readonly ReturnerPreview _returnerPreview;
     private readonly ReturnerSelectionView _returnerSelection;
-    private GameState _state = GameState.MainMenu;
+    private GameState _state = GameState.Title;
     private bool _exitRequested;
     private bool _mouseCaptured;
 
@@ -34,6 +36,7 @@ public sealed class GameApplication
         _log = log;
         _log?.Write("INFO", "Constructing game and validating assets");
         _config = config;
+        _menus = menus;
         _settings = settings;
         _settingsStatus = menus.Menus["Options"].Items.FirstOrDefault(i => i.Function == "SettingsStatus");
         assets = returners.PrepareAssets(assets, tuning.OffenseUniform);
@@ -41,7 +44,7 @@ public sealed class GameApplication
         _tuning = tuning;
         _input = new InputController(input);
         _inputConfig = input;
-        foreach (MenuItemDefinition item in menus.Menus["Options"].Items)
+        foreach (MenuItemDefinition item in menus.Menus.Values.SelectMany(menu => menu.Items))
         {
             if (item.Function == "SetFullscreen")
                 item.Value = JsonSerializer.SerializeToElement(config.Fullscreen);
@@ -49,6 +52,22 @@ public sealed class GameApplication
                 item.Value = JsonSerializer.SerializeToElement(config.VSync);
             else if (item.Function == "SetDebug")
                 item.Value = JsonSerializer.SerializeToElement(tuning.DrawGameplayDebug);
+            else if (item.Function == "SetMovementSpeed")
+                item.Value = JsonSerializer.SerializeToElement(Math.Round(tuning.MovementScaling.SpeedScale * 100));
+            else if (item.Function == "SetMovementAcceleration")
+                item.Value = JsonSerializer.SerializeToElement(Math.Round(tuning.MovementScaling.AccelerationScale * 100));
+            else if (item.Function == "SetLeftStickSensitivity")
+                item.Value = JsonSerializer.SerializeToElement(Math.Round(tuning.LeftStickSensitivity * 100));
+            else if (item.Function == "SetCameraPitch")
+            {
+                item.Min = tuning.ThirdPersonCamera.MinPitchDegrees;
+                item.Max = tuning.ThirdPersonCamera.MaxPitchDegrees;
+                item.Value = JsonSerializer.SerializeToElement(tuning.ThirdPersonCamera.InitialPitchDegrees);
+            }
+            else if (item.Function == "SetShoulderAngle")
+                item.Value = JsonSerializer.SerializeToElement(tuning.ThirdPersonCamera.ShoulderAngleDegrees);
+            else if (item.Function == "SetCamera")
+                item.Value = JsonSerializer.SerializeToElement(CameraOptions.Label(tuning.DefaultCameraMode));
         }
         menus.Menus["Returners"].Items.Clear();
         foreach (var entry in returners.Returners)
@@ -110,7 +129,7 @@ public sealed class GameApplication
             _log?.Write("INFO", "Visuals ready; entering main loop");
             while (!_exitRequested && !Raylib.WindowShouldClose())
             {
-                bool captureMouse = _state == GameState.Playing && Raylib.IsWindowFocused();
+                bool captureMouse = _state == GameState.Playing && _sessionInput?.Family == InputDeviceFamily.KeyboardMouse && Raylib.IsWindowFocused();
                 if (captureMouse != _mouseCaptured)
                 {
                     if (captureMouse) Raylib.DisableCursor();
@@ -126,17 +145,18 @@ public sealed class GameApplication
                     _log?.Write("INFO", $"State {previousState} -> {_state}; menu={_mainMenu.CurrentMenuName}; returner={_game.SelectedReturnerId}");
                 Raylib.BeginDrawing();
                 Raylib.ClearBackground(new Color(12, 22, 32, 255));
-                if (_state is GameState.Playing or GameState.Touchdown or GameState.GameOver)
+                if (_state == GameState.Title) TitleScreen.Draw();
+                else if (_state is GameState.Playing or GameState.Touchdown or GameState.GameOver)
                     _game.Draw();
                 else if (_state == GameState.Paused)
                 {
                     _game.Draw();
-                    MenuDisplay.Draw(_pauseMenu, _inputConfig);
+                    MenuDisplay.Draw(_pauseMenu, _sessionInput?.Config ?? _inputConfig);
                 }
                 else
                 {
                     if (_mainMenu.CurrentMenuName != "Returners")
-                        MenuDisplay.Draw(_mainMenu, _inputConfig);
+                        MenuDisplay.Draw(_mainMenu, _sessionInput?.Config ?? _inputConfig);
                     DrawReturnerDetail();
                 }
                 Raylib.EndDrawing();
@@ -150,7 +170,7 @@ public sealed class GameApplication
         finally
         {
             _log?.Write("INFO", "Releasing game resources");
-            SaveSettings();
+            SaveSettings(retryNow: true);
             _returnerPreview.Dispose();
             _game.Dispose();
             _assets.UnloadAll();
@@ -162,10 +182,18 @@ public sealed class GameApplication
 
     private void Update(float deltaTime)
     {
+        _sessionInput?.PinFamily();
         switch (_state)
         {
+            case GameState.Title:
+                if (Raylib.IsGamepadAvailable(0) && Raylib.IsGamepadButtonPressed(0, GamepadButton.MiddleRight))
+                    ChooseSessionInput(InputDeviceFamily.Gamepad);
+                else if (Raylib.IsKeyPressed(KeyboardKey.Space))
+                    ChooseSessionInput(InputDeviceFamily.KeyboardMouse);
+                break;
             case GameState.MainMenu:
-                HandleMenu(_returnerSelection.Update(_mainMenu));
+                HandleMenu(_sessionInput?.Family == InputDeviceFamily.Gamepad
+                    ? ControllerMenu.Update(_mainMenu, _input) : _returnerSelection.Update(_mainMenu));
                 SaveSettings();
                 break;
             case GameState.Playing:
@@ -185,15 +213,32 @@ public sealed class GameApplication
                 else _game.Update(deltaTime);
                 break;
             case GameState.Paused:
-                if (_input.WasPressed("Pause")) { _state = GameState.Playing; break; }
-                HandlePauseMenu(_pauseMenu.Update());
+                if (_pauseMenu.CurrentMenuName == "Pause" && _input.WasPressed("Pause")) { _state = GameState.Playing; break; }
+                HandlePauseMenu(_sessionInput?.Family == InputDeviceFamily.Gamepad
+                    ? ControllerMenu.Update(_pauseMenu, _input) : _pauseMenu.Update());
+                SaveSettings();
                 break;
         }
+        // Clicking the inactive binding column must not arm the other device family.
+        if (_sessionInput is { } session && _input.IsRebinding && _input.RebindingDeviceFamily != session.Family)
+            _input.CancelRebind();
     }
 
-    private void SaveSettings()
+    private void ChooseSessionInput(InputDeviceFamily family)
     {
-        _settings?.SaveIfChanged(_config, _tuning, _inputConfig);
+        if (_sessionInput is not null) return;
+        _sessionInput = new(_inputConfig, family);
+        _input = _sessionInput.Controller;
+        _mainMenu = new(_menus, _input, _sessionInput.Config);
+        _pauseMenu = new(new MenuConfig { StartMenu = "Pause", Menus = _menus.Menus }, _input, _sessionInput.Config);
+        _game.SetInputController(_input, family == InputDeviceFamily.KeyboardMouse);
+        _state = GameState.MainMenu;
+    }
+
+    private void SaveSettings(bool retryNow = false)
+    {
+        _sessionInput?.CopyBindingsTo(_inputConfig);
+        _settings?.SaveIfChanged(_config, _tuning, _inputConfig, retryNow);
         if (_settingsStatus is not null)
             _settingsStatus.Text = _settings?.Error ?? "Settings are saved automatically.";
     }
@@ -208,6 +253,31 @@ public sealed class GameApplication
                 _state = GameState.Playing;
                 break;
             case "ExitGame": _exitRequested = true; break;
+            case "SetCamera" when action.Value is string camera:
+                _tuning.DefaultCameraMode = CameraOptions.Parse(camera);
+                _game.SetCameraMode(_tuning.DefaultCameraMode);
+                break;
+            case "SetCameraPitch" when action.Value is double pitch && double.IsFinite(pitch):
+                _tuning.ThirdPersonCamera.InitialPitchDegrees = (float)Math.Clamp(pitch,
+                    _tuning.ThirdPersonCamera.MinPitchDegrees, _tuning.ThirdPersonCamera.MaxPitchDegrees);
+                _game.ApplyCameraPitchSetting();
+                break;
+            case "SetShoulderAngle" when action.Value is double angle && double.IsFinite(angle):
+                _tuning.ThirdPersonCamera.ShoulderAngleDegrees = (float)(Math.Round(Math.Clamp(angle, 0, 180) / 5) * 5);
+                _game.RefreshCameraSettings();
+                break;
+            case "SetMovementSpeed" when action.Value is double speed && double.IsFinite(speed):
+                _tuning.MovementScaling.SpeedScale = (float)Math.Clamp(speed / 100, .5, 1.5);
+                _game.RefreshMovementSettings();
+                break;
+            case "SetMovementAcceleration" when action.Value is double acceleration && double.IsFinite(acceleration):
+                _tuning.MovementScaling.AccelerationScale = (float)Math.Clamp(acceleration / 100, .25, 2);
+                _game.RefreshMovementSettings();
+                break;
+            case "SetLeftStickSensitivity" when action.Value is double sensitivity:
+                _tuning.LeftStickSensitivity = (float)Math.Clamp(sensitivity / 100, .25, 1);
+                _game.SetLeftStickSensitivity(_tuning.LeftStickSensitivity);
+                break;
             case "SetDebug" when action.Value is bool debug:
                 _tuning.DrawGameplayDebug = debug;
                 _game.SetDebugEnabled(debug);
@@ -232,8 +302,9 @@ public sealed class GameApplication
             case "Resume": _state = GameState.Playing; break;
             case "Restart": _game.ResetRun(); _state = GameState.Playing; break;
             case "MainMenu": _mainMenu.ReturnToStartMenu(); _state = GameState.MainMenu; break;
+            default: HandleMenu(action); break;
         }
     }
 
-    private enum GameState { MainMenu, Playing, Paused, Touchdown, GameOver }
+    private enum GameState { Title, MainMenu, Playing, Paused, Touchdown, GameOver }
 }

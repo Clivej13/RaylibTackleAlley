@@ -16,17 +16,17 @@ in [MovementScaling.md](MovementScaling.md). Missing properties
 use code defaults. The shipped file retains its existing player speed overrides
 (6.5 / 9 / 11.5); the class defaults remain 4 / 6.5 / 9.
 
-Rear view requires the stick within CameraLookBackHalfAngleDegrees of straight back
-(default 10 degrees, giving the 170–190 degree sector), as well as the existing pull
-threshold. The native left-stick angle is checked before movement deadzones discard
-small sideways input.
+Gameplay camera modes and their independent tuning are documented in [Camera.md](Camera.md).
+Fixed camera modes never rotate with the returner. ThirdPerson uses independent orbit,
+camera-relative movement input and sprint zoom. Full 360-degree movement and
+controls are documented in [DirectionalMovement.md](DirectionalMovement.md).
 
 Quick left/right reversals use PlayerReversalInputThreshold and PlayerReversalWindow.
 Each costs PlayerReversalSpeedLoss of the selected pace (default 35%), down to zero.
 PlayerReversalAccelerationDelay blocks acceleration for 0.45 seconds on the first
 reversal; each chained reversal adds PlayerReversalAdditionalDelay (0.2 seconds),
 capped by PlayerReversalMaximumDelay (1 second). Each hit restarts the delay. Normal
-sideways steering shares the lost forward momentum. Once the delay expires, the
+directional travel shares the lost momentum. Once the delay expires, the
 existing acceleration ramp restores speed; fully restored speed ends the chain.
 Small stick noise, held directions, and slow reversals through neutral do not add
 penalties. Set PlayerReversalSpeedLoss to zero to disable the penalty.
@@ -97,9 +97,10 @@ existing distance, facing and interception checks, including during pursuit outs
 the cone. Contact severity now decides whether the carrier stays upright or both
 players enter active ragdoll; capsule overlap alone does not guarantee a takedown.
 
-CameraHeight already controls the view height above the carrier. The shipped camera
-now uses 4.2 metres and CameraSpeed1Distance/CameraSpeed2Distance/CameraSpeed3Distance
-of 6.48/5.4/4.32 metres (20% closer). CameraTargetHeight controls the look-at height.
+Camera framing is stored in ThirdPersonCamera, CloseCamera, MediumCamera and FarCamera.
+DefaultCameraMode is Medium unless overridden by the user's saved selection.
+The old hybrid rear-view/steering camera is removed. ThirdPerson alone has independent
+orbit, camera-relative controls and sprint zoom; Close/Medium/Far use fixed world-space framing.
 
 Edit config.json and restart the game to apply tuning. Live reload is not introduced.
 Distances are metres, time seconds, mass kilograms, and angles degrees unless a name
@@ -112,9 +113,8 @@ explicitly says Radians. Input thresholds and strength/retention shares are in [
 - levels.json owns PlayerSpawn and Defenders, using X/Z coordinates on the ground.
   Authored levels require at least one defender. The legacy C# OpponentSpawns
   property still permits empty standalone practice/test setups.
-- Camera settings cover follow distance, height, field of view, target offset, steering
-  and rear-view thresholds/smoothing. AutoRestartDelay and EndZoneStopFraction control
-  the end-of-run flow.
+- Camera settings cover independent third-person orbit and fixed-follow framing presets.
+  AutoRestartDelay and EndZoneStopFraction control the end-of-run flow.
 - Ragdoll settings cover gravity, damping, ground friction, down/settling thresholds,
   active-drive motors, yielding and support, body masses/radii, and anatomical joint
   limits. Joint limits use three-element MinimumDegrees/MaximumDegrees arrays (X/Y/Z).

@@ -12,8 +12,8 @@ public sealed class ReturnerMenuTests : IDisposable
 {
     private readonly GameApplication _app;
     private readonly ReturnerCatalog _catalog;
-    private readonly MenuManager _menu;
-    private readonly InputController _input;
+    private MenuManager _menu => Field<MenuManager>(_app, "_mainMenu");
+    private InputController _input => Field<InputController>(_app, "_input");
     private readonly TackleAlleyGame _game;
     private readonly AssetManager _assets;
     private readonly IDisposable _preview;
@@ -31,8 +31,7 @@ public sealed class ReturnerMenuTests : IDisposable
         _app = new(new GameConfig(), InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json")),
             menus, AssetConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "assets.json")), new(), _catalog,
             LevelCatalog.Load(Path.Combine(AppContext.BaseDirectory, "levels.json"), new()).Resolve("level-1"));
-        _menu = Field<MenuManager>(_app, "_mainMenu");
-        _input = Field<InputController>(_app, "_input");
+        NativeInputTestState.Clear();
         _game = Field<TackleAlleyGame>(_app, "_game");
         _assets = Field<AssetManager>(_app, "_assets");
         _preview = Field<IDisposable>(_app, "_returnerPreview");
@@ -63,6 +62,11 @@ public sealed class ReturnerMenuTests : IDisposable
     private static void Frame() { Raylib.BeginDrawing(); Raylib.EndDrawing(); }
     private void Press(KeyboardKey key)
     {
+        if (State == "Title")
+        {
+            Event(2, (int)KeyboardKey.Space); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+            Event(1, (int)KeyboardKey.Space); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+        }
         Event(2, (int)key); _input.Update(); Invoke(_app, "Update", 0f); Frame();
         Event(1, (int)key); _input.Update(); Invoke(_app, "Update", 0f); Frame();
     }
@@ -95,7 +99,14 @@ public sealed class ReturnerMenuTests : IDisposable
         var carrier = Field<BallCarrier>(_game, "_player");
         float startZ = carrier.Position.Z;
         _game.Update(.1f);
-        Assert.Equal(carrier.Movement.RunningSpeed * .1f, startZ - carrier.Position.Z, 4);
+        Assert.Equal(PlayerControlState.Auto, carrier.ControlState);
+        Assert.Equal(AutoTendency.Returner, carrier.ActiveAutoTendency);
+        Assert.Equal(.5f * carrier.Movement.AccelerationRate * .01f, startZ - carrier.Position.Z, 4);
+        Event(2, (int)KeyboardKey.W); _input.Update();
+        _game.Update(.1f);
+        Assert.Equal(PlayerControlState.Player, carrier.ControlState);
+        Assert.Equal(.5f * carrier.Movement.AccelerationRate * .04f, startZ - carrier.Position.Z, 4);
+        Event(1, (int)KeyboardKey.W); _input.Update();
 
         Press(KeyboardKey.Escape);
         Assert.Equal("Paused", State);
@@ -104,7 +115,7 @@ public sealed class ReturnerMenuTests : IDisposable
         Assert.Equal(selected.Id, _game.SelectedReturnerId);
 
         Press(KeyboardKey.Escape);
-        Press(KeyboardKey.Down); Press(KeyboardKey.Down); Press(KeyboardKey.Enter); // Main Menu.
+        Press(KeyboardKey.Down); Press(KeyboardKey.Down); Press(KeyboardKey.Down); Press(KeyboardKey.Enter); // Main Menu.
         Assert.Equal("MainMenu", State);
         Assert.Equal("Main", _menu.CurrentMenuName);
         Press(KeyboardKey.Enter);
@@ -115,11 +126,63 @@ public sealed class ReturnerMenuTests : IDisposable
     }
 
     [Fact]
+    public void MenuButtonOpensPauseAndExitIsLast()
+    {
+        void Button(GamepadButton button)
+        {
+            Event(9, 0);
+            if (State == "Title")
+            {
+                Event(12, 0, (int)GamepadButton.MiddleRight); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+                Event(11, 0, (int)GamepadButton.MiddleRight); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+            }
+            Event(12, 0, (int)button); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+            Event(11, 0, (int)button); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+        }
+        Button(GamepadButton.RightFaceDown);
+        Button(GamepadButton.RightFaceDown);
+        Assert.Equal("Playing", State);
+        Button(GamepadButton.RightFaceRight);
+        Assert.Equal("Playing", State);
+        Button(GamepadButton.MiddleRight);
+        Assert.Equal("Paused", State);
+        Button(GamepadButton.MiddleRight);
+        Assert.Equal("Playing", State);
+        Button(GamepadButton.MiddleRight);
+        var pause = Field<MenuManager>(_app, "_pauseMenu");
+        Assert.Equal("Resume", pause.SelectedItem!.Text);
+        Button(GamepadButton.LeftFaceDown);
+        Assert.Equal("Restart", pause.SelectedItem!.Text);
+        Button(GamepadButton.LeftFaceDown);
+        Assert.Equal("Options", pause.SelectedItem!.Text);
+        Button(GamepadButton.RightFaceDown);
+        Assert.Equal("Options", pause.CurrentMenuName);
+        Button(GamepadButton.RightFaceRight);
+        Assert.Equal("Pause", pause.CurrentMenuName);
+        Assert.Equal("Paused", State);
+        // Reopen at the first item so selection restoration cannot affect the order check.
+        Button(GamepadButton.MiddleRight);
+        Button(GamepadButton.MiddleRight);
+        for (int i = 0; i < 3; i++) Button(GamepadButton.LeftFaceDown);
+        Assert.Equal("Main Menu", pause.SelectedItem!.Text);
+        Button(GamepadButton.LeftFaceDown);
+        Assert.Equal("Exit", pause.SelectedItem!.Text);
+        Assert.False(Field<bool>(_app, "_exitRequested"));
+        Button(GamepadButton.RightFaceDown);
+        Assert.True(Field<bool>(_app, "_exitRequested"));
+    }
+
+    [Fact]
     public void GamepadCanHighlightSelectAndBackOut()
     {
         void Button(GamepadButton button)
         {
             Event(9, 0);
+            if (State == "Title")
+            {
+                Event(12, 0, (int)GamepadButton.MiddleRight); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+                Event(11, 0, (int)GamepadButton.MiddleRight); _input.Update(); Invoke(_app, "Update", 0f); Frame();
+            }
             Event(12, 0, (int)button); _input.Update(); Invoke(_app, "Update", 0f); Frame();
             Event(11, 0, (int)button); _input.Update(); Invoke(_app, "Update", 0f); Frame();
         }
@@ -259,7 +322,7 @@ public sealed class ReturnerMenuTests : IDisposable
             Raylib.BeginDrawing(); carrier.Draw(); Raylib.EndDrawing();
             carrier.Reset();
             Assert.False(carrier.IsTaunting);
-            Assert.Equal("CarryRun", carrier.AnimationName);
+            Assert.Equal("TackleReady", carrier.AnimationName);
         }
     }
 

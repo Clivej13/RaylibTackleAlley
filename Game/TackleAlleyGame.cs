@@ -13,8 +13,15 @@ public sealed class TackleAlleyGame : IDisposable
     public string? SelectedReturnerId { get; private set; }
     public PlayerProfile SelectedProfile => _player.Profile;
     private readonly Opponent[] _opponents;
-    private readonly ThirdPersonCamera _camera;
-    private readonly InputController _input;
+    private readonly GameplayCamera _camera;
+    private InputController _input;
+    private bool _keyboardDebugInput = true;
+    public void SetInputController(InputController input, bool keyboardInput)
+    {
+        _input = input;
+        _keyboardDebugInput = keyboardInput;
+        _player.IgnoreNextMouseDelta();
+    }
     private readonly CarrierPursuitPrediction _pursuitPrediction;
     private Opponent? _tackleDefender;
 
@@ -56,7 +63,7 @@ public sealed class TackleAlleyGame : IDisposable
         _field = new FootballField(config, assets);
         _player = new BallCarrier(config);
         _opponents = level.Defenders.Select(spawn => new Opponent(spawn.Position, config, spawn.Profile, spawn.BehaviorProfile)).ToArray();
-        _camera = new ThirdPersonCamera(config);
+        _camera = new GameplayCamera(config);
         ResetRun();
     }
 
@@ -102,11 +109,11 @@ public sealed class TackleAlleyGame : IDisposable
     {
         _tackleDefender = null;
         _celebratingDefender = null;
-        _player.Reset();
+        _player.Reset(AutoTendency.Returner);
         _pursuitPrediction.Reset(_player.Position);
         foreach (Opponent opponent in _opponents)
             opponent.Reset();
-        _camera.Reset(_player.Position, _player.CurrentForwardSpeed);
+        _camera.Reset(_player.Position);
         TacklePendingGroundImpact = false;
         Touchdown = false;
         GameOver = false;
@@ -116,11 +123,43 @@ public sealed class TackleAlleyGame : IDisposable
 
     public void SetDebugEnabled(bool enabled) => _config.DrawGameplayDebug = enabled;
 
+    public void RefreshMovementSettings()
+    {
+        _config.ValidateMovementScaling();
+        _player.RefreshMovementAttributes();
+        foreach (var opponent in _opponents) opponent.RefreshMovementAttributes();
+    }
+
+    public void SetLeftStickSensitivity(float sensitivity)
+    {
+        if (!float.IsFinite(sensitivity) || sensitivity < .25f || sensitivity > 1)
+            throw new ArgumentOutOfRangeException(nameof(sensitivity));
+        _config.LeftStickSensitivity = sensitivity;
+    }
+
     public void IgnoreNextMouseDelta() => _player.IgnoreNextMouseDelta();
+
+    public CameraMode CameraMode => _camera.Mode;
+    public void ApplyCameraPitchSetting() => _camera.ApplyPitchSetting();
+    public void RefreshCameraSettings() => _camera.RefreshSettings();
+
+    public void SetCameraMode(CameraMode mode) => _camera.SetMode(mode, _player.Position, _player.FacingYawDegrees);
 
     public void Update(float deltaTime)
     {
-        if (_config.DrawGameplayDebug) RagdollDebugControls.Update(_opponents, _player.Position);
+        var look = CameraLookInput.Capture(_input);
+        UpdateSimulation(deltaTime);
+        _camera.Update(_player.Position, deltaTime, look, _player.FacingYawDegrees,
+            _player.SpeedTier == 3 && _player.CurrentForwardSpeed > 0.01f);
+    }
+
+    private void UpdateSimulation(float deltaTime)
+    {
+        if (_config.DrawGameplayDebug && _keyboardDebugInput) RagdollDebugControls.Update(_opponents, _player.Position);
+        var input = !TacklePendingGroundImpact && !GameOver && !Touchdown
+            ? _player.CaptureInput(_input) : default;
+        // Resolve intent against the rendered view once, before any physics substeps.
+        input = _camera.ResolveMovement(input);
         // Tighter capsules need short motion steps to catch fast head-on contact.
         if (!TacklePendingGroundImpact && !GameOver && !Touchdown && deltaTime > Ragdoll.FixedStep &&
             _opponents.Any(o => System.Numerics.Vector3.DistanceSquared(o.Position, _player.Position) < MathF.Pow(_config.ContactSubstepDistance * PlayerPhysicalAttributes.MaximumHeightRatio, 2)))
@@ -129,20 +168,19 @@ public sealed class TackleAlleyGame : IDisposable
             while (remaining > 0)
             {
                 float step = remaining <= Ragdoll.FixedStep + 1e-7f ? remaining : Ragdoll.FixedStep;
-                UpdateStep(step);
+                UpdateStep(step, input);
                 remaining = Math.Max(0, remaining - step);
             }
             return;
         }
-        UpdateStep(deltaTime);
+        UpdateStep(deltaTime, input);
     }
 
-    private void UpdateStep(float deltaTime)
+    private void UpdateStep(float deltaTime, PlayerInputSnapshot input)
     {
         if (TacklePendingGroundImpact)
         {
             UpdateOutcomePhysics(deltaTime);
-            _camera.Update(_player.Position, 0, deltaTime);
             if (_player.HasTackleGroundImpact)
             {
                 TacklePendingGroundImpact = false;
@@ -161,20 +199,18 @@ public sealed class TackleAlleyGame : IDisposable
             {
                 // Keep running after scoring, then stop in the middle of the end zone.
                 _player.RunIntoEndZone(deltaTime, _field.GoalLineZ - _field.EndZoneLength * _config.EndZoneStopFraction);
-                _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
             }
             return;
         }
 
         var previousCarrierCapsules = ContactCapsule.Capture(_player.ContactPose());
         foreach (var opponent in _opponents) opponent.CaptureTackleStart(previousCarrierCapsules);
-        _player.Update(_input, deltaTime, _field);
+        _player.Update(input, deltaTime, _field);
         if (_field.IsOutOfBounds(_player.Position))
         {
             OutOfBounds = true;
             GameOver = true;
             EndStateElapsed = 0;
-            _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime);
             return;
         }
         var predictedTarget = _pursuitPrediction.Observe(_player.Position, _player.SpeedTier, deltaTime,
@@ -199,23 +235,6 @@ public sealed class TackleAlleyGame : IDisposable
                 }
             }
         }
-        var cameraInput = new System.Numerics.Vector2(
-            Math.Abs(_input.GetValue("MoveRight")) - Math.Abs(_input.GetValue("MoveLeft")),
-            Math.Abs(_input.GetValue("MoveBackward")) - Math.Abs(_input.GetValue("MoveForward")));
-        // Movement deadzones discard small X values that still matter to the rear-view
-        // cone. Recover raw X only for the standard left-stick mapping and active back
-        // input; keep keyboard and rebound controls on their configured action values.
-        if (cameraInput.Y > 0 && Raylib.IsGamepadAvailable(0) &&
-            _input.GetBinding("MoveBackward", InputDeviceFamily.Gamepad)?.Input == "LeftYPositive" &&
-            _input.GetBinding("MoveLeft", InputDeviceFamily.Gamepad)?.Input == "LeftXNegative" &&
-            _input.GetBinding("MoveRight", InputDeviceFamily.Gamepad)?.Input == "LeftXPositive")
-        {
-            float rawY = Raylib.GetGamepadAxisMovement(0, GamepadAxis.LeftY);
-            float rawX = Raylib.GetGamepadAxisMovement(0, GamepadAxis.LeftX);
-            if (rawY >= cameraInput.Y && Math.Abs(rawX) >= Math.Abs(cameraInput.X))
-                cameraInput.X = rawX;
-        }
-        _camera.Update(_player.Position, _player.CurrentForwardSpeed, deltaTime, cameraInput);
 
         if (TacklePendingGroundImpact) return;
 

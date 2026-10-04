@@ -83,7 +83,7 @@ public sealed class TackleReadyTests
         defender.Update(carrier, 0f);
         Assert.Equal(incoming, defender.CurrentSpeed);
         defender.Update(carrier, 0.1f);
-        Assert.Equal(incoming - config.ForwardDeceleration * 0.1f, defender.CurrentSpeed, 4);
+        Assert.Equal(Math.Max(defender.TackleReadySpeed, incoming - config.ForwardDeceleration * 0.1f), defender.CurrentSpeed, 4);
         bool reachedSpeedOne = false;
         for (int i = 0; i < 120 && defender.State != DefenderState.LungeTackle; i++)
         {

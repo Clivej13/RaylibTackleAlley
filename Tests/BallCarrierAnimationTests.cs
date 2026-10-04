@@ -43,6 +43,7 @@ public sealed class BallCarrierAnimationTests
         Raylib.SetTraceLogLevel(TraceLogLevel.Warning);
         Raylib.SetConfigFlags(ConfigFlags.HiddenWindow);
         Raylib.InitWindow(640, 480, "Player model integration validation");
+        NativeInputTestState.Clear();
         var assets = new AssetManager(AssetConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "assets.json")));
         try
         {
@@ -95,7 +96,7 @@ public sealed class BallCarrierAnimationTests
                 Assert.Equal(grip * hand * world, Field<Matrix4x4>(player, "_footballWorldTransform"));
             }
             CheckAttachment();
-            Assert.Equal("CarryRun", player.AnimationName);
+            Assert.Equal("TackleReady", player.AnimationName);
             Assert.Equal(0f, Field<AnimationPlayer>(player, "_animation").CurrentTime);
 
             void Tick(float dt)
@@ -114,20 +115,30 @@ public sealed class BallCarrierAnimationTests
                 Raylib.EndDrawing();
             }
 
+            Assert.NotSame(clocks["TackleReady"], otherClocks["TackleReady"]);
+            var standingPosition = player.Position;
+            Tick(.2f);
+            Assert.Equal("TackleReady", player.AnimationName);
+            Assert.Equal(.2f, clocks["TackleReady"].CurrentTime, 5);
+            Assert.Equal(standingPosition, player.Position);
+            Assert.Contains(Vertices(player).Zip(startPose), p => MathF.Abs(p.First - p.Second) > .0001f);
+            player.Reset(); baseline.Reset();
+
             var initialHand = Matrix4x4.Identity;
             Assert.True(clocks["CarryRun"].TryGetBoneTransform("Hand.R", out initialHand));
+            Key(KeyboardKey.W, true);
             Tick(0.23f);
             Assert.True(clocks["CarryRun"].TryGetBoneTransform("Hand.R", out var advancedHand));
             Assert.NotEqual(initialHand, advancedHand);
             Assert.NotEqual(startBall, Field<Matrix4x4>(player, "_footballWorldTransform"));
             Assert.Contains(Vertices(player).Zip(startPose), p => MathF.Abs(p.First - p.Second) > 0.001f);
             foreach (var (key, tier, name) in new[] {
-                (KeyboardKey.S, 1, "CarryJog"), (KeyboardKey.LeftShift, 3, "CarrySprint"),
+                (KeyboardKey.LeftControl, 1, "CarryJog"), (KeyboardKey.LeftShift, 3, "CarrySprint"),
                 (KeyboardKey.Null, 2, "CarryRun"), (KeyboardKey.LeftShift, 3, "CarrySprint"),
-                (KeyboardKey.S, 1, "CarryJog"), (KeyboardKey.Null, 2, "CarryRun") })
+                (KeyboardKey.LeftControl, 1, "CarryJog"), (KeyboardKey.Null, 2, "CarryRun") })
             {
                 float phase = Phase(Field<AnimationPlayer>(player, "_animation"));
-                Key(KeyboardKey.S, false);
+                Key(KeyboardKey.LeftControl, false);
                 Key(KeyboardKey.LeftShift, false);
                 if (key != KeyboardKey.Null) Key(key, true);
                 Tick(0f);
@@ -172,7 +183,7 @@ public sealed class BallCarrierAnimationTests
                 Assert.Equal(cut, player.AnimationName);
                 Tick(0.1f);
                 Assert.Equal(cut, player.AnimationName);
-                float exitPlaybackRate = PlayerMovementAttributes.PlaybackRate(player.CurrentForwardSpeed, config.PlayerSprintSpeed);
+                float exitPlaybackRate = player.LocomotionPlaybackRate;
                 Tick(0.08f);
                 Assert.Equal("CarrySprint", player.AnimationName);
                 Assert.Same(clocks["CarrySprint"], Field<AnimationPlayer>(player, "_animation"));
@@ -194,11 +205,13 @@ public sealed class BallCarrierAnimationTests
             foreach (bool slowExit in new[] { false, true })
             {
                 player.Reset(); baseline.Reset();
-                Key(KeyboardKey.S, false);
+                Key(KeyboardKey.LeftControl, false);
                 Key(KeyboardKey.A, false); Key(KeyboardKey.D, false);
                 Key(KeyboardKey.R, false); Key(KeyboardKey.E, false);
                 Key(KeyboardKey.Q, false);
                 Tick(0f);
+                typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(player, player.Speed);
+                typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(baseline, baseline.Speed);
                 if (spin)
                 {
                     Key(KeyboardKey.Q, true); Tick(0f);
@@ -229,12 +242,12 @@ public sealed class BallCarrierAnimationTests
                         BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(player)!;
                     Assert.Equal(-Field<float>(player, "_currentRunYaw"), yaw);
                 }
-                Key(KeyboardKey.S, true); Tick(duration * 0.25f);
+                Key(KeyboardKey.LeftControl, true); Tick(duration * 0.25f);
                 Assert.Equal(name, player.AnimationName);
                 Assert.Same(clocks[name], Field<AnimationPlayer>(player, "_animation"));
                 Assert.Equal(0.5f * (clocks[name].FrameCount - 1) / clocks[name].FramesPerSecond,
                     clocks[name].CurrentTime, 5);
-                Key(KeyboardKey.S, slowExit);
+                Key(KeyboardKey.LeftControl, slowExit);
                 Tick(duration * 0.25f);
                 Assert.Equal(name, player.AnimationName);
                 float remaining = Field<float>(player, spin ? "_spinRemaining" : "_jukeRemaining");
@@ -249,7 +262,7 @@ public sealed class BallCarrierAnimationTests
                 Tick(0.02f); // A held gesture cannot loop or restart the clip.
                 Assert.Equal(carry, player.AnimationName);
                 Assert.Equal(completedTime, clocks[name].CurrentTime);
-                Key(side, false); Key(KeyboardKey.S, false); Key(KeyboardKey.D, false);
+                Key(side, false); Key(KeyboardKey.LeftControl, false); Key(KeyboardKey.D, false);
 
                 // Existing sprint cancellation must select CarrySprint in the same frame.
                 player.Reset(); baseline.Reset(); Tick(0f);
@@ -267,13 +280,15 @@ public sealed class BallCarrierAnimationTests
                 if (spin) { Key(KeyboardKey.Q, true); Tick(0f); Key(KeyboardKey.Q, false); }
                 Key(side, true); Tick(duration * 0.25f);
                 player.Reset(); baseline.Reset();
-                Assert.Same(clocks["CarryRun"], Field<AnimationPlayer>(player, "_animation"));
+                Assert.Same(clocks["TackleReady"], Field<AnimationPlayer>(player, "_animation"));
                 Assert.Equal(startPose, Vertices(player));
                 CheckAttachment();
                 Key(side, false);
 
                 // Touchdown advancement uses the same remaining action time.
                 Tick(0f);
+                typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(player, player.Speed);
+                typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(baseline, baseline.Speed);
                 if (spin) { Key(KeyboardKey.Q, true); Tick(0f); Key(KeyboardKey.Q, false); }
                 Key(side, true); Tick(0f);
                 player.RunIntoEndZone(duration * 0.5f, -100f);
@@ -309,19 +324,16 @@ public sealed class BallCarrierAnimationTests
 
             player.Reset();
             Assert.Equal(Vector3.Zero, player.Position);
-            Assert.Equal("CarryRun", player.AnimationName);
-            Assert.Equal(0f, clocks["CarryRun"].CurrentTime);
-            Assert.Equal(0f, clocks["CarryRun"].CurrentFrame);
+            Assert.Equal("TackleReady", player.AnimationName);
+            Assert.Equal(0f, clocks["TackleReady"].CurrentTime);
+            Assert.Equal(0f, clocks["TackleReady"].CurrentFrame);
             Assert.Equal(startPose, Vertices(player));
             Assert.Equal(startBall, Field<Matrix4x4>(player, "_footballWorldTransform"));
             CheckAttachment();
             player.RunIntoEndZone(0.1f, -1f);
-            Assert.Equal(Math.Max(-1f, -player.Speed * 0.1f), player.Position.Z);
-            Assert.Equal(0.1f, clocks["CarryRun"].CurrentTime, 5);
-            player.RunIntoEndZone(0.1f, -1f);
+            Assert.Equal(-.5f * config.ForwardAcceleration * .01f, player.Position.Z, 5);
+            for (int i = 0; i < 60 && !player.IsTaunting; i++) player.RunIntoEndZone(1f / 60, -1f);
             Assert.Equal(-1f, player.Position.Z);
-            Assert.Equal(0.2f, clocks["CarryRun"].CurrentTime, 5);
-            player.RunIntoEndZone(.2f, -1f);
             Assert.Equal("TauntBicepFlex", player.AnimationName);
             Assert.Equal(0f, player.CurrentForwardSpeed);
             Assert.Equal(-1f, player.Position.Z);

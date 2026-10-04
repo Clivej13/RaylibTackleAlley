@@ -41,11 +41,13 @@ public sealed partial class BallCarrier
     internal void ApplyUprightContact(Vector3 impulse)
     {
         Vector3 delta = impulse / Physical.TotalMass;
-        _contactDrift += new Vector3(delta.X, 0, 0);
         Velocity += delta;
-        CurrentForwardSpeed = Math.Max(0, -Velocity.Z);
-        float yaw = MathF.Atan2(Velocity.X, -Velocity.Z) * 180 / MathF.PI;
-        _currentRunYaw = _targetRunYaw = Math.Clamp(yaw, -_config.PlayerMaxRunYawDegrees, _config.PlayerMaxRunYawDegrees);
+        delta.Y = 0;
+        Vector3 forward = MovementForward;
+        float longitudinal = Vector3.Dot(delta, forward);
+        float nextSpeed = CurrentForwardSpeed + longitudinal;
+        CurrentForwardSpeed = Math.Max(0, nextSpeed);
+        _contactDrift += delta - forward * longitudinal + forward * Math.Min(0, nextSpeed);
         Ragdoll.LastContactImpulse = impulse.Length();
     }
 
@@ -91,7 +93,8 @@ public sealed partial class BallCarrier
                     _recovery = new(_model.Model, _ragdollSkeleton, Ragdoll, _downAnimation!, _getUpAnimation!,
                         _modelScale, _groundOffset, VisualYawDegrees, _config);
                     Position = _recovery.Position;
-                    _currentRunYaw = _targetRunYaw = -_recovery.YawDegrees;
+                    _movementYaw = _currentRunYaw = _targetRunYaw = -_recovery.YawDegrees;
+                    _inputAmount = 0; _contactDrift = Vector3.Zero;
                     CurrentForwardSpeed = 0; Velocity = Vector3.Zero;
                     Ragdoll.Deactivate(); _ragdollSkeleton = null;
                     UpdatePhysicsFootball();

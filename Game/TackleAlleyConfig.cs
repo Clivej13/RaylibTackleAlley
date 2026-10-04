@@ -15,19 +15,11 @@ public sealed partial class TackleAlleyConfig
     public float PlayerJukeDuration { get; set; } = 0.35f;
     // Stick units per mouse pixel per frame; 20 pixels reaches full deflection.
     public float MouseGestureSensitivity { get; set; } = 0.05f;
+    // 1 = linear; smaller values soften partial stick deflection, retaining full speed.
+    public float LeftStickSensitivity { get; set; } = 1f;
     // Units/s²: adjacent 2.5-unit tiers take 0.30s up and 0.20s down.
     public float ForwardAcceleration { get; set; } = 2.5f / 0.30f;
     public float ForwardDeceleration { get; set; } = 2.5f / 0.20f;
-    // Follow offsets behind the player: 90%, 75%, and 60% of the original 9 units.
-    public float CameraSpeed1Distance { get; set; } = 8.10f;
-    public float CameraSpeed2Distance { get; set; } = 6.75f;
-    public float CameraSpeed3Distance { get; set; } = 5.40f;
-    public float CameraHeight { get; set; } = 5.5f;
-    public float CameraSmoothing { get; set; } = 10f;
-    public float CameraSteeringYawDegrees { get; set; } = 12f;
-    public float CameraLookSmoothing { get; set; } = 12f;
-    public float CameraLookBackThreshold { get; set; } = .55f;
-    public float CameraLookBackReleaseThreshold { get; set; } = .35f;
     // Compatibility values for standalone components/legacy callers.
     // Authored games project these from LevelDefinition; config.json no longer owns them.
     public float FieldWidth { get; set; } = 24f;
@@ -49,9 +41,6 @@ public sealed partial class TackleAlleyConfig
     // Include room for the stands beyond the full turf and both end zones.
     public float StadiumAssetWidth { get; set; } = 110f;
     public float StadiumAssetLength { get; set; } = 180f;
-    public float OpponentJogSpeed { get; set; } = 4f;
-    public float OpponentRunSpeed { get; set; } = 6.5f;
-    public float OpponentSprintSpeed { get; set; } = 9f;
     public float OpponentRunDistance { get; set; } = 20f;
     public float OpponentSprintDistance { get; set; } = 8f;
     // Extra separation required before dropping to a slower pace.
@@ -65,10 +54,7 @@ public sealed partial class TackleAlleyConfig
         if (!float.IsFinite(OpponentPaceHysteresis) || OpponentPaceHysteresis < 0f ||
             OpponentPaceHysteresis >= OpponentRunDistance - OpponentSprintDistance)
             throw new ArgumentException("OpponentPaceHysteresis must be nonnegative and smaller than the distance band gap.");
-        if (!float.IsFinite(OpponentJogSpeed) || OpponentJogSpeed < 0f ||
-            !float.IsFinite(OpponentRunSpeed) || OpponentRunSpeed < 0f ||
-            !float.IsFinite(OpponentSprintSpeed) || OpponentSprintSpeed < 0f)
-            throw new ArgumentException("Opponent locomotion speeds must be finite and nonnegative.");
+        ValidateMovementScaling();
     }
     public float RagdollDownDuration { get; set; } = 2f;
     public float RagdollDownBlendDuration { get; set; } = .6f;

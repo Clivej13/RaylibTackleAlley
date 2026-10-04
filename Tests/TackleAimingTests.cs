@@ -143,8 +143,8 @@ public sealed class TackleAimingTests
     [Fact]
     public void IndividualSpeedAndAccelerationChangeReach()
     {
-        var slow = new PlayerMovementAttributes(new() { Speed = 1, Acceleration = 1 }, _config, true);
-        var fast = new PlayerMovementAttributes(new() { Speed = 100, Acceleration = 100 }, _config, true);
+        var slow = new PlayerMovementAttributes(new() { Speed = 1, Acceleration = 1 }, _config);
+        var fast = new PlayerMovementAttributes(new() { Speed = 100, Acceleration = 100 }, _config);
         Assert.True(TackleAiming.Reach(0, fast.AccelerationRate, fast.JogSpeed, .5f) >
             TackleAiming.Reach(0, slow.AccelerationRate, slow.JogSpeed, .5f));
         Assert.True(TackleAiming.Reach(1, 10, 8, .5f) > TackleAiming.Reach(1, 2, 8, .5f));

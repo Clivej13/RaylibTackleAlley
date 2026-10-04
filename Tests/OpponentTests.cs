@@ -97,9 +97,9 @@ public sealed class OpponentTests
     public void DefaultLocomotionTuningIsUnchanged()
     {
         var config = new TackleAlleyConfig();
-        Assert.Equal(4f, config.OpponentJogSpeed);
-        Assert.Equal(6.5f, config.OpponentRunSpeed);
-        Assert.Equal(9f, config.OpponentSprintSpeed);
+        Assert.Equal(4f, config.PlayerSlowSpeed);
+        Assert.Equal(6.5f, config.PlayerForwardSpeed);
+        Assert.Equal(9f, config.PlayerSprintSpeed);
         Assert.Equal(20f, config.OpponentRunDistance);
         Assert.Equal(8f, config.OpponentSprintDistance);
         Assert.Equal(0.5f, config.OpponentPaceHysteresis);
@@ -109,7 +109,7 @@ public sealed class OpponentTests
     public void ConfiguredSpeedsAndBandsAreUsed()
     {
         var config = new TackleAlleyConfig {
-            OpponentJogSpeed = 1, OpponentRunSpeed = 2, OpponentSprintSpeed = 3,
+            PlayerSlowSpeed = 1, PlayerForwardSpeed = 2, PlayerSprintSpeed = 3,
             OpponentRunDistance = 10, OpponentSprintDistance = 4
         };
         foreach (var (distance, speed) in new[] { (15f, 1f), (7f, 2f), (2f, 3f) })

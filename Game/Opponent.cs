@@ -20,7 +20,8 @@ public sealed partial class Opponent : IDisposable
     private Vector3 _modelScale;
     public PlayerProfile Profile { get; }
     public PlayerVisualProfile VisualProfile { get; }
-    public PlayerMovementAttributes Movement { get; }
+    public PlayerMovementAttributes Movement { get; private set; }
+    internal void RefreshMovementAttributes() => Movement = new(Profile, _config);
     public PlayerPhysicalAttributes Physical { get; }
     public TackleImpact? LastTackle { get; internal set; }
     public Vector3 Momentum => Ragdoll.IsActive ? Ragdoll.Momentum : Physical.Momentum(Velocity);
@@ -124,7 +125,7 @@ public sealed partial class Opponent : IDisposable
         _aimingConfig = config.ForDefender(BehaviorProfile);
         Profile = (profile ?? new PlayerProfile()) with { };
         VisualProfile = new(Profile);
-        Movement = new(Profile, config, defender: true);
+        Movement = new(Profile, config);
         Physical = new(Profile, config);
         _defaultCarrierPhysical = new(config.BallCarrierProfile, config);
         Ragdoll = new(config, Physical);

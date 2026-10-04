@@ -22,6 +22,7 @@ public sealed class ReturnerArchetypeTests : IDisposable
         Raylib.InitWindow(64, 64, "Returner archetypes");
         _input = new(InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json")));
         _input.ApplyRebind(new InputRebindResult("RightStickRight", "Keyboard", "E"));
+        Key(KeyboardKey.W, true);
         _field = new(_config, new AssetManager(new AssetConfig()));
     }
 
@@ -51,6 +52,7 @@ public sealed class ReturnerArchetypeTests : IDisposable
             var movement = player.Movement;
             var physical = player.Physical;
             var profile = player.Profile;
+            typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(player, movement.RunningSpeed);
             float z = player.Position.Z;
             Tick(player, .5f);
             float run = z - player.Position.Z;
@@ -65,6 +67,7 @@ public sealed class ReturnerArchetypeTests : IDisposable
             float acceleration = player.CurrentForwardSpeed;
 
             player.Reset();
+            typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(player, movement.RunningSpeed);
             Key(KeyboardKey.LeftShift, true);
             Key(KeyboardKey.D, true);
             float x = player.Position.X;
@@ -75,6 +78,7 @@ public sealed class ReturnerArchetypeTests : IDisposable
 
             player.Reset();
             x = player.Position.X;
+            typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(player, movement.RunningSpeed);
             Key(KeyboardKey.E, true); Tick(player, 0);
             Assert.True(player.IsEvading);
             Tick(player, _config.PlayerJukeDuration);
@@ -88,7 +92,7 @@ public sealed class ReturnerArchetypeTests : IDisposable
             Assert.Same(movement, player.Movement);
             Assert.Same(physical, player.Physical);
             Assert.Same(physical, player.Ragdoll.Physical);
-            Assert.Equal(movement.RunningSpeed, player.CurrentForwardSpeed);
+            Assert.Equal(0, player.CurrentForwardSpeed);
             measures.Add(entry.Id, (run, acceleration, steering, juke));
         }
         Assert.Equal("marcus-reed", measures.MaxBy(p => p.Value.Run).Key);
@@ -144,6 +148,7 @@ public sealed class ReturnerArchetypeTests : IDisposable
         Assert.Equal(neutral.Movement.AccelerationRate, player.Movement.AccelerationRate);
         Assert.Equal(neutral.Movement.SpinSpeed, player.Movement.SpinSpeed);
         Assert.Equal(neutral.Movement.ReversalDelay, player.Movement.ReversalDelay);
+        typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(player, player.Speed);
         Key(KeyboardKey.E, true); Tick(player, 0);
         float x = player.Position.X;
         Tick(player, _config.PlayerJukeDuration - .01f);

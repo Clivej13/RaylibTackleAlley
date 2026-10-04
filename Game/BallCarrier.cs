@@ -6,10 +6,14 @@ using RaylibGameFramework.ThreeD;
 
 namespace RaylibTackleAlley.Game;
 
+public enum PlayerControlState { Player, Auto }
+public enum AutoTendency { Returner }
+
 public sealed partial class BallCarrier : IDisposable
 {
     private readonly TackleAlleyConfig _config;
     private readonly RightStickInput _rightStick;
+    private readonly MovementStickInput _movementStick = new();
     private ModelInstance? _model;
     // Borrowed asset value; only the draw-local copy's transform is changed.
     private Model? _football;
@@ -48,13 +52,19 @@ public sealed partial class BallCarrier : IDisposable
     private Vector3 _modelScale;
     public PlayerProfile Profile { get; }
     public PlayerVisualProfile VisualProfile { get; }
-    public PlayerMovementAttributes Movement { get; }
+    public PlayerMovementAttributes Movement { get; private set; }
+    internal void RefreshMovementAttributes() => Movement = new(Profile, _config);
     public PlayerPhysicalAttributes Physical { get; }
     public TackleImpact? LastTackle { get; internal set; }
     public Vector3 Momentum => Ragdoll.IsActive ? Ragdoll.Momentum : Physical.Momentum(Velocity);
     private float _groundOffset;
-    // Two input units (-1 to +1) in 0.6 seconds; small corrections settle sooner.
-    private float _effectiveLateral;
+    // Movement intent and facing are world-space, independent of every camera.
+    private Vector2 _lastMovementInput;
+    private float _movementYaw, _inputAmount;
+    private Vector3 _evadeRight = Vector3.UnitX;
+    private float _cutBasisYaw;
+    public float FacingYawDegrees => _currentRunYaw;
+    private Vector3 MovementForward => DirectionalMovement.Forward(_movementYaw);
     private int _lastSteeringSide, _reversalChain;
     private float _steeringNeutralTime, _reversalDelay;
     public float SteeringRecoveryRemaining => _reversalDelay;
@@ -93,9 +103,14 @@ public sealed partial class BallCarrier : IDisposable
     private float _tauntDuration = 2.6f;
     public bool TauntComplete => IsTaunting && _tauntElapsed >= _tauntDuration;
 
+    public PlayerControlState ControlState { get; private set; } = PlayerControlState.Player;
+
+    public AutoTendency? ActiveAutoTendency { get; private set; }
+
     public int SpeedTier { get; private set; } = 2;
     public float CurrentForwardSpeed { get; private set; }
-    public float TargetForwardSpeed => Speed;
+    // Scalar speed along the selected world-space heading (not world -Z).
+    public float TargetForwardSpeed => Speed * _inputAmount;
     public float Speed => SpeedTier switch
     {
         1 => Movement.JogSpeed,
@@ -108,8 +123,9 @@ public sealed partial class BallCarrier : IDisposable
     private string? EvadeAnimationName => _spinRemaining > 0f ? (_spinDirection < 0 ? "SpinLeft" : "SpinRight")
         : _jukeRemaining > 0f ? (_jukeDirection < 0 ? "JukeRight" : "JukeLeft") : null;
 
-    // Tier 0 remains reserved; no stationary clip is selected.
-    public string AnimationName => _recovery is not null ? (_recovery.Phase == RecoveryPhase.Down ? "Down" : "GetUp") : IsTaunting ? _tauntName : _cutName ?? EvadeAnimationName ?? (SpeedTier switch
+    // Standing shares the defender ready clip; actions retain priority.
+    private bool IsStanding => CurrentForwardSpeed <= 0.001f && _inputAmount <= 0.001f;
+    public string AnimationName => _recovery is not null ? (_recovery.Phase == RecoveryPhase.Down ? "Down" : "GetUp") : IsTaunting ? _tauntName : _cutName ?? EvadeAnimationName ?? (IsStanding ? "TackleReady" : SpeedTier switch
     {
         1 => "CarryJog",
         2 => "CarryRun",
@@ -146,7 +162,7 @@ public sealed partial class BallCarrier : IDisposable
             return;
 
         var clips = new Dictionary<string, ModelAnimation>();
-        foreach (string key in new[] { "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
+        foreach (string key in new[] { "FootballPlayerTackleReadyAnimations", "FootballPlayerCarryJogAnimations", "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
             "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
             "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",
             "FootballPlayerSpinLeftAnimations", "FootballPlayerSpinRightAnimations", _tauntAsset })
@@ -162,15 +178,15 @@ public sealed partial class BallCarrier : IDisposable
         ModelInstance model = assets.CreateModelInstance("FootballPlayer");
         try
         {
-            // Construct the initial CarryRun player last so its starting pose is applied last.
-            foreach (string name in new[] { _tauntName, "CutLeft", "CutRight", "JukeLeft", "JukeRight", "SpinLeft", "SpinRight", "CarryJog", "CarrySprint", "CarryRun" })
+            // Measure scale from the same CarryRun pose as before; SelectAnimation applies the active pose afterward.
+            foreach (string name in new[] { "TackleReady", _tauntName, "CutLeft", "CutRight", "JukeLeft", "JukeRight", "SpinLeft", "SpinRight", "CarryJog", "CarrySprint", "CarryRun" })
             {
                 if (!clips.TryGetValue(name, out ModelAnimation clip) || clip.KeyFrameCount <= 0 ||
                     !Raylib.IsModelAnimationValid(model.Model, clip))
                     throw new InvalidDataException($"{name} must be nonempty and compatible with FootballPlayer.");
                 // BallCarrier owns its playback clocks and deformable model instance.
                 // Raylib resamples glTF animation at 60 Hz independently of Blender FPS.
-                _animations.Add(name, new AnimationPlayer(model, clip, loop: name.StartsWith("Carry", StringComparison.Ordinal)));
+                _animations.Add(name, new AnimationPlayer(model, clip, loop: name == "TackleReady" || name.StartsWith("Carry", StringComparison.Ordinal)));
             }
             BoundingBox bounds = Raylib.GetModelBoundingBox(model.Model);
             float height = bounds.Max.Y - bounds.Min.Y;
@@ -202,7 +218,7 @@ public sealed partial class BallCarrier : IDisposable
             ReferenceEquals(next, _animation))
             return;
         float phase = 0f;
-        if (!IsTaunting && _cutName is null && EvadeAnimationName is null && _animation is { } previous &&
+        if (!IsStanding && !IsTaunting && _cutName is null && EvadeAnimationName is null && _animation is { } previous &&
             (_animations["CarryJog"] == previous || _animations["CarryRun"] == previous || _animations["CarrySprint"] == previous))
         {
             float duration = previous.FrameCount / previous.FramesPerSecond;
@@ -235,8 +251,12 @@ public sealed partial class BallCarrier : IDisposable
         Reset();
     }
 
-    public void Reset()
+    public void Reset(AutoTendency? autoTendency = null)
     {
+        if (autoTendency.HasValue && !Enum.IsDefined(autoTendency.Value))
+            throw new ArgumentOutOfRangeException(nameof(autoTendency));
+        ActiveAutoTendency = autoTendency;
+        ControlState = autoTendency.HasValue ? PlayerControlState.Auto : PlayerControlState.Player;
         LastTackle = null;
         _contactDrift = Vector3.Zero;
         Ragdoll.Deactivate(); _ragdollSkeleton = null; _recovery = null;
@@ -245,7 +265,9 @@ public sealed partial class BallCarrier : IDisposable
         _rightStick.IgnoreNextMouseDelta();
         _mouseSpinGesture = false;
         Position = _config.PlayerSpawn.Position;
-        _effectiveLateral = 0f;
+        _inputAmount = _movementYaw = _cutBasisYaw = 0f;
+        _lastMovementInput = Vector2.Zero;
+        _evadeRight = Vector3.UnitX;
         ResetSteeringPenalty();
         _currentRunYaw = 0f;
         _targetRunYaw = 0f;
@@ -255,7 +277,7 @@ public sealed partial class BallCarrier : IDisposable
         _lastCutSide = 0;
         _cutReversalRemaining = 0f;
         SpeedTier = 2;
-        CurrentForwardSpeed = TargetForwardSpeed;
+        CurrentForwardSpeed = 0;
         _evadeDistanceScale = 0f;
         _jukeRemaining = 0f;
         _jukeDirection = 0;
@@ -274,39 +296,66 @@ public sealed partial class BallCarrier : IDisposable
 
     public void IgnoreNextMouseDelta() => _rightStick.IgnoreNextMouseDelta();
 
-    public void Update(InputController input, float deltaTime, FootballField field)
+    public PlayerInputSnapshot CaptureInput(InputController input) => PlayerInputSnapshot.Capture(input, _rightStick, _movementStick, _config.LeftStickSensitivity);
+
+    // Compatibility for standalone callers: one Update is one input frame.
+    // The game loop captures once and calls the snapshot overload for every substep.
+    public void Update(InputController input, float deltaTime, FootballField field) =>
+        Update(CaptureInput(input), deltaTime, field);
+
+    public void Update(PlayerInputSnapshot input, float deltaTime, FootballField field)
     {
         if (UpdatePhysicsAndRecovery(deltaTime)) return;
-        Vector3 previousPosition = Position;
-        float lateral = GetDirectionalValue(input.GetValue("MoveLeft"), input.GetValue("MoveRight"));
-        deltaTime = Math.Max(0f, deltaTime);
-        // Backward input selects the slow running tier.
-        float backwardInput = input.GetValue("MoveBackward");
-        bool sprinting = input.GetValue("Sprint") > _config.SprintInputThreshold;
-        SpeedTier = sprinting ? 3 : Math.Abs(backwardInput) > _config.SlowInputThreshold ? 1 : 2;
-
-        ObserveSteeringReversal(lateral, deltaTime);
-        _effectiveLateral = SpeedTier == 3
-            ? _effectiveLateral + Math.Clamp(lateral - _effectiveLateral,
-                -Movement.SteeringResponse * deltaTime, Movement.SteeringResponse * deltaTime)
-            : _effectiveLateral + (lateral - _effectiveLateral) * Movement.DirectionBlend(deltaTime);
-
-        UpdateCutGesture(lateral, deltaTime);
-        // Relative cut clips own the turn; retain the incoming external yaw.
-        if (_cutName is null)
+        if (ControlState == PlayerControlState.Auto)
         {
-            // Sprint steering already limits the turn; facing shares that movement state.
-            if (sprinting)
-                _currentRunYaw = _targetRunYaw = _effectiveLateral * _config.PlayerMaxRunYawDegrees;
-            else
-                UpdateRunYaw(_effectiveLateral, deltaTime);
+            bool interacting = input.Movement.LengthSquared() > 0.000001f ||
+                input.Sprint > _config.SprintInputThreshold || input.Slow > _config.SlowInputThreshold ||
+                input.Gesture.LengthSquared() >= _config.EvadeReleaseThreshold * _config.EvadeReleaseThreshold;
+            if (interacting)
+            {
+                ControlState = PlayerControlState.Player;
+                ActiveAutoTendency = null;
+            }
+            else input = ActiveAutoTendency switch
+            {
+                AutoTendency.Returner => new PlayerInputSnapshot(0, 0, 0, Vector2.Zero, false, Forward: 1),
+                _ => throw new InvalidOperationException("Auto control requires a supported tendency.")
+            };
+        }
+        Vector3 previousPosition = Position;
+        deltaTime = Math.Max(0f, deltaTime);
+        Vector2 command = input.Movement;
+        float magnitude = Math.Min(1, command.Length());
+        _inputAmount = magnitude;
+        bool sprinting = input.Sprint > _config.SprintInputThreshold;
+        SpeedTier = sprinting ? 3 : input.Slow > _config.SlowInputThreshold ? 1 : 2;
+        bool reversalApplied = ObserveDirectionReversal(command, deltaTime);
+        if (!_wasSprinting && sprinting && _cutReversalRemaining <= 0) _cutBasisYaw = _movementYaw;
+        float lateral = Vector3.Dot(new Vector3(command.X, 0, command.Y),
+            DirectionalMovement.Right(_cutBasisYaw));
+        UpdateCutGesture(lateral, deltaTime, reversalApplied);
+        if (magnitude > 0)
+        {
+            float desiredYaw = DirectionalMovement.Yaw(command);
+            // Running accepts any direction; sprint keeps the existing steering response.
+            _movementYaw = input.MovementIsStick && _config.LeftStickSensitivity < .999f && CurrentForwardSpeed > 0.01f
+                ? DirectionalMovement.TurnTowards(_movementYaw, desiredYaw,
+                    (sprinting ? 180 : 240) * Movement.SteeringMultiplier * deltaTime)
+                : sprinting && CurrentForwardSpeed > 0.01f
+                ? DirectionalMovement.TurnTowards(_movementYaw, desiredYaw,
+                    Movement.SteeringResponse * 90 * deltaTime)
+                : _movementYaw + DirectionalMovement.Delta(_movementYaw, desiredYaw) * Movement.DirectionBlend(deltaTime);
+            _targetRunYaw = _movementYaw;
+            if (_cutName is null)
+                _currentRunYaw += DirectionalMovement.Delta(_currentRunYaw, _targetRunYaw)
+                    * (1 - MathF.Exp(-Movement.FacingResponse * deltaTime));
         }
 
         // Keep Cut advancement and heading handoff at their existing point in the frame.
         bool cutAdvanced = _cutName is not null;
         if (cutAdvanced) AdvanceAnimation(deltaTime);
 
-        var rightStick = _rightStick.Read(input);
+        var rightStick = (Direction: input.Gesture, IsMouse: input.GestureIsMouse);
         float juke = rightStick.Direction.X;
         float spinX = rightStick.Direction.X;
         float spinBack = Math.Max(0f, rightStick.Direction.Y);
@@ -349,24 +398,14 @@ public sealed partial class BallCarrier : IDisposable
         float spinTime = Math.Min(deltaTime, _spinRemaining);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
         Vector3 position = Position;
-        bool steeringPenaltyActive = _reversalChain > 0;
-        // Forward travel is automatic, independent of forward/back input.
-        float lateralAmount = Math.Abs(_effectiveLateral);
-        float forwardRetention = 1f + (_config.FullSteeringForwardRetention - 1f) * lateralAmount;
-        // Recover momentum during either evade, but pause forward travel until it ends.
-        // Split at the move boundary so long frames resume only after the animation.
+        // Evades retain their captured local right axis even while input changes.
         float evadeTime = jukeTime + spinTime;
         if (evadeTime > 0f) AdvanceForwardSpeed(evadeTime);
         float normalTime = Math.Max(0f, deltaTime - evadeTime);
-        float forwardDistance = AdvanceForwardSpeed(normalTime);
-        // Integrate sideways motion using the same lost/recovered momentum, so a
-        // stopped runner cannot keep zigzagging at full lateral speed.
-        float lateralTime = steeringPenaltyActive
-            ? (TargetForwardSpeed > 0 ? forwardDistance / TargetForwardSpeed : 0) : normalTime;
-        position.X += _jukeDirection * Movement.JukeSpeed * _evadeDistanceScale * jukeTime
-            + _spinDirection * Movement.SpinSpeed * _evadeDistanceScale * spinTime
-            + _effectiveLateral * Movement.LateralSpeed * lateralTime;
-        position.Z -= forwardDistance * forwardRetention;
+        float distance = AdvanceForwardSpeed(normalTime);
+        position += MovementForward * distance;
+        position += _evadeRight * (_jukeDirection * Movement.JukeSpeed * _evadeDistanceScale * jukeTime
+            + _spinDirection * Movement.SpinSpeed * _evadeDistanceScale * spinTime);
         float driftDecay = 1 - MathF.Exp(-5f * Physical.BalanceSupportMultiplier * deltaTime);
         position += _contactDrift * (driftDecay / (5f * Physical.BalanceSupportMultiplier));
         _contactDrift *= 1 - driftDecay;
@@ -378,6 +417,7 @@ public sealed partial class BallCarrier : IDisposable
 
     public void RunIntoEndZone(float deltaTime, float stopZ)
     {
+        _inputAmount = 1; // Scripted post-score celebration only.
         if (Position.Z <= stopZ || IsTaunting)
         {
             IsTaunting = true;
@@ -399,7 +439,7 @@ public sealed partial class BallCarrier : IDisposable
         _jukeRemaining = Math.Max(0f, _jukeRemaining - deltaTime);
         _spinRemaining = Math.Max(0f, _spinRemaining - deltaTime);
         if (_cutName is null)
-            UpdateRunYaw(0f, deltaTime);
+            FaceDownfield(deltaTime);
         if (_cutName is not null) AdvanceAnimation(deltaTime);
         else AdvanceEvadeAnimation(deltaTime, evadeName, evadeRemaining);
         Position = new Vector3(Position.X, Position.Y,
@@ -407,7 +447,7 @@ public sealed partial class BallCarrier : IDisposable
         UpdateFootballAttachment();
     }
 
-    private void UpdateCutGesture(float lateral, float deltaTime)
+    private void UpdateCutGesture(float lateral, float deltaTime, bool reversalApplied)
     {
         bool sprinting = SpeedTier == 3;
         bool releasedSprint = _wasSprinting && !sprinting;
@@ -431,6 +471,8 @@ public sealed partial class BallCarrier : IDisposable
         {
             if (side != 0 && _lastCutSide == -side)
             {
+                // A brief neutral command must not bypass the cut momentum cost.
+                if (!reversalApplied) ApplyReversalPenalty();
                 _cutName = side > 0 ? "CutRight" : "CutLeft";
                 _cutRemaining = _config.PlayerCutDuration;
                 _targetRunYaw = _currentRunYaw;
@@ -470,10 +512,12 @@ public sealed partial class BallCarrier : IDisposable
         SelectAnimation();
         // Authored exits: JukeLeft/SpinRight phase 1; JukeRight/SpinLeft phase 13.
         _animation?.SeekPhase(name is "JukeRight" or "SpinLeft" ? 0.5f : 0f);
-        _animation?.Update((deltaTime - remaining) * LocomotionPlaybackRate);
+        _animation?.Update((deltaTime - remaining) * AnimationPlaybackRate);
     }
 
-    public float LocomotionPlaybackRate => PlayerMovementAttributes.PlaybackRate(
+    private float AnimationPlaybackRate => AnimationName == "TackleReady" ? 1 : LocomotionPlaybackRate;
+
+    public float LocomotionPlaybackRate => CurrentForwardSpeed <= 0.001f ? 0 : PlayerMovementAttributes.PlaybackRate(
         CurrentForwardSpeed, Movement.BaselineSpeed(SpeedTier));
 
     private void AdvanceAnimation(float deltaTime)
@@ -481,7 +525,7 @@ public sealed partial class BallCarrier : IDisposable
         SelectAnimation();
         if (_cutName is null)
         {
-            _animation?.Update(deltaTime * LocomotionPlaybackRate);
+            _animation?.Update(deltaTime * AnimationPlaybackRate);
             return;
         }
 
@@ -493,46 +537,55 @@ public sealed partial class BallCarrier : IDisposable
         // Match the authored exit: CarryRun frame 22 (right) or 10 (left),
         // on its 24-interval gait. Sprint/Jog use the equivalent gait phase.
         float exitPhase = _cutName == "CutRight" ? 21f / 24f : 9f / 24f;
-        // Neutral locomotion takes over the absolute heading from the local 90-degree turn.
-        _currentRunYaw = _targetRunYaw = _cutName == "CutLeft" ? -_config.PlayerMaxRunYawDegrees : _config.PlayerMaxRunYawDegrees;
+        // Hand the authored relative turn back to the current movement heading.
+        _currentRunYaw = _targetRunYaw = _movementYaw;
         _cutName = null;
         SelectAnimation();
         _animation?.SeekPhase(exitPhase);
-        _animation?.Update((deltaTime - cutTime) * LocomotionPlaybackRate);
+        _animation?.Update((deltaTime - cutTime) * AnimationPlaybackRate);
     }
 
     private void ResetSteeringPenalty()
     {
         _lastSteeringSide = _reversalChain = 0;
+        _lastMovementInput = Vector2.Zero;
         _steeringNeutralTime = _reversalDelay = 0;
     }
 
-    private void ObserveSteeringReversal(float lateral, float dt)
+    private bool ObserveDirectionReversal(Vector2 command, float dt)
     {
-        int side = Math.Abs(lateral) >= _config.PlayerReversalInputThreshold ? Math.Sign(lateral) : 0;
-        if (side == 0)
+        if (command.LengthSquared() < 1e-8f || command.Length() < _config.PlayerReversalInputThreshold)
         {
             _steeringNeutralTime += dt;
             if (_steeringNeutralTime > _config.PlayerReversalWindow) _lastSteeringSide = 0;
-            return;
+            return false;
         }
-        if (_lastSteeringSide != 0 && side != _lastSteeringSide &&
-            _steeringNeutralTime <= _config.PlayerReversalWindow && Movement.ReversalPenalty > 0)
-        {
-            CurrentForwardSpeed = Math.Max(0, CurrentForwardSpeed - TargetForwardSpeed * Movement.ReversalPenalty);
-            // Bound the chain counter once further reversals cannot lengthen the delay.
-            float delay = Movement.ReversalDelay +
-                _reversalChain * Movement.ReversalAdditionalDelay;
-            if (_reversalChain == 0 || (Movement.ReversalAdditionalDelay > 0 &&
-                delay < Movement.ReversalMaximumDelay)) _reversalChain++;
-            _reversalDelay = Math.Min(delay, Movement.ReversalMaximumDelay);
-        }
-        _lastSteeringSide = side;
+        // Generalise the old strong-left/strong-right turn angle to any heading.
+        float thresholdSquared = _config.PlayerReversalInputThreshold * _config.PlayerReversalInputThreshold;
+        float reversalCosine = Math.Min(.99999f, (1 - thresholdSquared) / (1 + thresholdSquared));
+        bool reversed = _lastSteeringSide != 0 &&
+            Vector2.Dot(Vector2.Normalize(command), _lastMovementInput) <= reversalCosine &&
+            _steeringNeutralTime <= _config.PlayerReversalWindow;
+        if (reversed) ApplyReversalPenalty();
+        _lastSteeringSide = 1;
+        _lastMovementInput = Vector2.Normalize(command);
         _steeringNeutralTime = 0;
+        return reversed;
+    }
+
+    private void ApplyReversalPenalty()
+    {
+        if (Movement.ReversalPenalty <= 0) return;
+        CurrentForwardSpeed = Math.Max(0, CurrentForwardSpeed - TargetForwardSpeed * Movement.ReversalPenalty);
+        float delay = Movement.ReversalDelay + _reversalChain * Movement.ReversalAdditionalDelay;
+        if (_reversalChain == 0 || (Movement.ReversalAdditionalDelay > 0 &&
+            delay < Movement.ReversalMaximumDelay)) _reversalChain++;
+        _reversalDelay = Math.Min(delay, Movement.ReversalMaximumDelay);
     }
 
     private void CaptureEvadeDistance()
     {
+        _evadeRight = DirectionalMovement.Right(_currentRunYaw);
         // Snapshot physical pace before the move's own speed penalty. Recovery during
         // the animation must not lengthen an evade started slowly or at a standstill.
         _evadeDistanceScale = Movement.RunningSpeed > 0
@@ -543,7 +596,7 @@ public sealed partial class BallCarrier : IDisposable
     private void ApplyEvadeSpeedRetention(float retention)
     {
         float speed = TargetForwardSpeed * retention;
-        CurrentForwardSpeed = _reversalChain > 0 ? Math.Min(CurrentForwardSpeed, speed) : speed;
+        CurrentForwardSpeed = Math.Min(CurrentForwardSpeed, speed);
     }
 
     private float AdvanceForwardSpeed(float deltaTime)
@@ -596,19 +649,11 @@ public sealed partial class BallCarrier : IDisposable
         }
     }
 
-    private static float GetDirectionalValue(float negativeDirection, float positiveDirection)
+    private void FaceDownfield(float deltaTime)
     {
-        float value = negativeDirection < 0 || positiveDirection < 0
-            ? positiveDirection + negativeDirection
-            : positiveDirection - negativeDirection;
-        return Math.Clamp(value, -1f, 1f);
-    }
-
-    private void UpdateRunYaw(float lateral, float deltaTime)
-    {
-        _targetRunYaw = lateral * _config.PlayerMaxRunYawDegrees;
+        _targetRunYaw = 0;
         float blend = 1f - MathF.Exp(-Movement.FacingResponse * deltaTime);
-        _currentRunYaw += (_targetRunYaw - _currentRunYaw) * blend;
+        _currentRunYaw += DirectionalMovement.Delta(_currentRunYaw, _targetRunYaw) * blend;
     }
 
     public void Draw()

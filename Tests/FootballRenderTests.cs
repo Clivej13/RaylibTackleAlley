@@ -21,7 +21,7 @@ public sealed class FootballRenderTests
         RenderTexture2D target = Raylib.LoadRenderTexture(640, 480);
         try
         {
-            assets.RequireAssets("Football", "FootballPlayer", "FootballPlayerCarryJogAnimations",
+            assets.RequireAssets("FootballPlayerTackleReadyAnimations", "Football", "FootballPlayer", "FootballPlayerCarryJogAnimations",
                 "FootballPlayerCarryRunAnimations", "FootballPlayerCarrySprintAnimations",
                 "FootballPlayerCutLeftAnimations", "FootballPlayerCutRightAnimations",
                 "FootballPlayerJukeLeftAnimations", "FootballPlayerJukeRightAnimations",

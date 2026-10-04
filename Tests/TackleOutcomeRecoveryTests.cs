@@ -296,6 +296,8 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
     [Fact]
     public void WeakRearContactLeavesCarrierUprightAndReportsScores()
     {
+        Key(KeyboardKey.W, true); _input.Update();
+        typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(_carrier, _carrier.Speed);
         Launch();
         typeof(Opponent).GetProperty(nameof(Opponent.CurrentSpeed))!.SetValue(_defender, 4f);
         Assert.False(LungeTackleOutcome.Confirm(_defender, _carrier));
@@ -314,6 +316,7 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
     [Fact]
     public void MissLeavesCarrierMovingAndNeverConfirmsTackle()
     {
+        Key(KeyboardKey.W, true); _input.Update();
         Launch(); Position(_carrier, new(-10, 0, 0));
         var lunge = Field<AnimationPlayer>(_defender, "_animation");
         _defender.Update(Vector3.Zero, .6f - lunge.CurrentTime);
@@ -356,7 +359,7 @@ public sealed class TackleOutcomeRecoveryTests : IDisposable
         Assert.Equal("TauntBicepFlex", _defender.AnimationName);
         for (int i = 0; i < 360; i++) _game.Update(Ragdoll.FixedStep);
         Assert.True(_game.OutcomeCelebrationComplete);
-        Assert.False(_carrier.IsRecovering); Assert.StartsWith("Carry", _carrier.AnimationName);
+        Assert.False(_carrier.IsRecovering); Assert.Equal("TackleReady", _carrier.AnimationName);
         Assert.False(_carrier.Ragdoll.IsActive);
         _game.ResetRun(); Assert.Equal(Vector3.Zero, _carrier.Position);
     }

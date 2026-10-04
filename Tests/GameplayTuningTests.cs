@@ -76,7 +76,6 @@ public sealed class GameplayTuningTests
     [InlineData(nameof(TackleAlleyConfig.PlayerReversalSpeedLoss), 1.1f)]
     [InlineData(nameof(TackleAlleyConfig.PlayerReversalWindow), 0)]
     [InlineData(nameof(TackleAlleyConfig.PlayerReversalAccelerationDelay), -1)]
-    [InlineData(nameof(TackleAlleyConfig.CameraLookBackHalfAngleDegrees), 90)]
     [InlineData(nameof(TackleAlleyConfig.PlayerEvadeMaximumDistanceScale), -1)]
     [InlineData(nameof(TackleAlleyConfig.PlayerSpinDuration), 0)]
     [InlineData(nameof(TackleAlleyConfig.RagdollChestMass), 0)]
@@ -86,7 +85,6 @@ public sealed class GameplayTuningTests
     [InlineData(nameof(TackleAlleyConfig.RagdollStruggleBlendIn), 0)]
     [InlineData(nameof(TackleAlleyConfig.OpponentFallGravity), 0)]
     [InlineData(nameof(TackleAlleyConfig.LungeFullPredictionDistance), 0)]
-    [InlineData(nameof(TackleAlleyConfig.CameraFovY), 180)]
     [InlineData(nameof(TackleAlleyConfig.FullSteeringForwardRetention), 1.1f)]
     public void UnsafeScalarValuesAreRejected(string property, float value)
     {
@@ -101,7 +99,6 @@ public sealed class GameplayTuningTests
         Assert.ThrowsAny<ArgumentException>(() => new TackleAlleyConfig { PlayerReversalMaximumDelay = .1f }.Validate());
         Assert.ThrowsAny<ArgumentException>(() => new TackleAlleyConfig { OpponentReadyExitDistance = 2 }.Validate());
         Assert.ThrowsAny<ArgumentException>(() => new TackleAlleyConfig { OpponentMaximumLungeReachDistance = 1 }.Validate());
-        Assert.ThrowsAny<ArgumentException>(() => new TackleAlleyConfig { CameraLookBackReleaseThreshold = .8f }.Validate());
         Assert.ThrowsAny<ArgumentException>(() => new TackleAlleyConfig { EvadeReleaseThreshold = .9f }.Validate());
         Assert.ThrowsAny<ArgumentException>(() => new TackleAlleyConfig { ContactHitLimbPelvisShare = .5f }.Validate());
         Assert.ThrowsAny<ArgumentException>(() => new TackleAlleyConfig { PlayerForwardSpeed = 4 }.Validate());
@@ -138,7 +135,7 @@ public sealed class GameplayTuningTests
         var config = new TackleAlleyConfig {
             OpponentInitialYawDegrees = 0, OpponentLungeReachDistance = 5,
             OpponentMaximumLungeReachDistance = 5, OpponentLungeLaunchVerticalSpeed = 7,
-            OpponentFallGravity = 4, OpponentJogSpeed = 8, OpponentRunSpeed = 9, OpponentSprintSpeed = 10
+            OpponentFallGravity = 4, PlayerSlowSpeed = 8, PlayerForwardSpeed = 10, PlayerSprintSpeed = 14
         };
         var defender = new Opponent(Vector3.Zero, config);
         defender.Update(new(0, 0, -10), 0, true, Vector2.Zero, false);
@@ -148,25 +145,6 @@ public sealed class GameplayTuningTests
         defender.Update(new(0, 0, -4.8f), .1f);
         Assert.Equal(6.6f, defender.VerticalVelocity, 4);
         Assert.Equal(.68f, defender.Position.Y, 4);
-    }
-
-    [Fact]
-    public void CustomCameraFramingAndLookThresholdsAreUsed()
-    {
-        var config = new TackleAlleyConfig {
-            CameraFovY = 70, CameraTargetHeight = 2, CameraLookAheadDistance = 3,
-            CameraSteeringYawDegrees = 20, CameraLookBackThreshold = .8f,
-            CameraLookBackReleaseThreshold = .7f
-        };
-        var camera = new ThirdPersonCamera(config);
-        camera.Reset(Vector3.Zero, 6.5f);
-        Assert.Equal(70, camera.Camera.FovY);
-        Assert.Equal(new Vector3(0, 2, -3), camera.Camera.Target);
-        camera.Update(Vector3.Zero, 6.5f, 1, new(1, .6f));
-        Vector3 view = camera.Camera.Target - camera.Camera.Position;
-        Assert.InRange(MathF.Atan2(view.X, -view.Z) * 180 / MathF.PI, 19.9f, 20.1f);
-        camera.Update(Vector3.Zero, 6.5f, 1, new(0, .9f));
-        Assert.True(camera.Camera.Target.Z > camera.Camera.Position.Z);
     }
 
     [Fact]

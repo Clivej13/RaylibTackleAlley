@@ -21,18 +21,23 @@ public sealed class UserSettingsTests : IDisposable
         config.Fullscreen = true;
         config.VSync = false;
         tuning.DrawGameplayDebug = true;
+        tuning.LeftStickSensitivity = .45f;
+        tuning.ThirdPersonCamera.ShoulderAngleDegrees = 125;
         new InputController(input).ApplyRebind(new("Sprint", "Keyboard", "Space"));
         session.SaveIfChanged(config, tuning, input);
 
         var restoredConfig = new GameConfig();
         var restoredTuning = new TackleAlleyConfig();
         var restoredInput = new InputConfig();
+        restoredInput.Bindings.Add(new() { Action = "Sprint", Device = "Keyboard", Input = "LeftShift" });
         new UserSettingsSession(SettingsPath).Load(restoredConfig, restoredTuning, restoredInput);
         Assert.True(restoredConfig.Fullscreen);
         Assert.False(restoredConfig.VSync);
         Assert.True(restoredTuning.DrawGameplayDebug);
+        Assert.Equal(.45f, restoredTuning.LeftStickSensitivity);
+        Assert.Equal(125, restoredTuning.ThirdPersonCamera.ShoulderAngleDegrees);
         Assert.Equal("Space", Assert.Single(restoredInput.Bindings).Input);
-        Assert.Equal(new TackleAlleyConfig().OpponentRunSpeed, restoredTuning.OpponentRunSpeed);
+        Assert.Equal(new TackleAlleyConfig().PlayerForwardSpeed, restoredTuning.PlayerForwardSpeed);
     }
 
     [Theory]
@@ -66,6 +71,41 @@ public sealed class UserSettingsTests : IDisposable
         Assert.True(config.Fullscreen);
         Assert.True(tuning.DrawGameplayDebug);
         Assert.False(File.Exists(SettingsPath));
+    }
+
+    [Fact]
+    public void InvalidSavedMovementScalesKeepAuthoredDefaults()
+    {
+        new JsonSettingsStore<UserSettings>(SettingsPath).Save(new()
+        {
+            MovementSpeedScale = -1, MovementAccelerationScale = 5, LeftStickSensitivity = .5f
+        });
+        var tuning = new TackleAlleyConfig();
+        var session = new UserSettingsSession(SettingsPath);
+        session.Load(new(), tuning, new());
+        Assert.Equal(1, tuning.MovementScaling.SpeedScale);
+        Assert.Equal(1, tuning.MovementScaling.AccelerationScale);
+        Assert.Equal(.5f, tuning.LeftStickSensitivity);
+        Assert.Contains("movement scaling", session.Error!);
+    }
+
+    [Theory]
+    [InlineData(false, "RightFaceRight", "MiddleRight")]
+    [InlineData(false, "MiddleLeft", "MiddleRight")]
+    [InlineData(true, "MiddleLeft", "MiddleLeft")]
+    [InlineData(false, "MiddleRight", "MiddleRight")]
+    [InlineData(true, "MiddleRight", "MiddleRight")]
+    public void PauseDefaultMigratesFromLegacySnapshotsWithoutLosingCustomRebinds(bool modern, string savedButton, string expected)
+    {
+        var binding = new InputBinding { Device = "GamepadButton", Input = savedButton, Action = "Pause" };
+        var saved = modern ? new UserSettings { BindingOverrides = [binding] }
+            : new UserSettings { Input = new InputConfig { Bindings = [binding] } };
+        new JsonSettingsStore<UserSettings>(SettingsPath).Save(saved);
+        var input = InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json"));
+        new UserSettingsSession(SettingsPath).Load(new(), new(), input);
+        var controller = new InputController(input);
+        Assert.Equal(expected, controller.GetBinding("Pause", InputDeviceFamily.Gamepad)!.Input);
+        Assert.Equal("RightFaceRight", controller.GetBinding("MenuBack", InputDeviceFamily.Gamepad)!.Input);
     }
 
     [Fact]

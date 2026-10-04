@@ -1,5 +1,7 @@
 {
   "Bindings": [
+    { "Device": "Keyboard", "Input": "LeftControl", "Action": "Slow" },
+    { "Device": "GamepadButton", "Input": "LeftTrigger2", "Action": "Slow" },
     { "Device": "Keyboard", "Input": "LeftShift", "Action": "Sprint" },
     { "Device": "GamepadButton", "Input": "RightTrigger2", "Action": "Sprint" },
     { "Device": "Keyboard", "Input": "A", "Action": "MoveLeft" },
@@ -13,7 +15,7 @@
     { "Device": "Keyboard", "Input": "Right", "Action": "MenuRight" },
     { "Device": "Keyboard", "Input": "Enter", "Action": "MenuConfirm" },
     { "Device": "Keyboard", "Input": "Escape", "Action": "MenuBack" },
-    { "Device": "GamepadButton", "Input": "RightFaceRight", "Action": "Pause" },
+    { "Device": "GamepadButton", "Input": "MiddleRight", "Action": "Pause" },
     { "Device": "GamepadButton", "Input": "LeftFaceUp", "Action": "MenuUp" },
     { "Device": "GamepadButton", "Input": "LeftFaceDown", "Action": "MenuDown" },
     { "Device": "GamepadButton", "Input": "LeftFaceLeft", "Action": "MenuLeft" },
@@ -35,6 +37,14 @@
     { "Device": "MouseAxis", "Input": "MouseYNegative", "Action": "RightStickForward" },
     { "Device": "GamepadAxis", "Input": "RightYNegative", "Action": "RightStickForward" },
     { "Device": "MouseAxis", "Input": "MouseYPositive", "Action": "RightStickBack" },
-    { "Device": "GamepadAxis", "Input": "RightYPositive", "Action": "RightStickBack" }
+    { "Device": "GamepadAxis", "Input": "RightYPositive", "Action": "RightStickBack" },
+    { "Device": "Keyboard", "Input": "J", "Action": "CameraLookLeft" },
+    { "Device": "GamepadButton", "Input": "LeftFaceLeft", "Action": "CameraLookLeft" },
+    { "Device": "Keyboard", "Input": "L", "Action": "CameraLookRight" },
+    { "Device": "GamepadButton", "Input": "LeftFaceRight", "Action": "CameraLookRight" },
+    { "Device": "Keyboard", "Input": "I", "Action": "CameraLookUp" },
+    { "Device": "GamepadButton", "Input": "LeftFaceUp", "Action": "CameraLookUp" },
+    { "Device": "Keyboard", "Input": "K", "Action": "CameraLookDown" },
+    { "Device": "GamepadButton", "Input": "LeftFaceDown", "Action": "CameraLookDown" }
   ]
 }
