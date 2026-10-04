@@ -137,9 +137,9 @@ public sealed class PlayerProfileTests
         using var game = new TackleAlleyGame(config, input, assets);
         const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         var opponents = (Opponent[])typeof(TackleAlleyGame).GetField("_opponents", flags)!.GetValue(game)!;
-        var camera = (ThirdPersonCamera)typeof(TackleAlleyGame).GetField("_camera", flags)!.GetValue(game)!;
-        var expectedCamera = new ThirdPersonCamera(config);
-        expectedCamera.Reset(config.PlayerSpawn.Position, config.PlayerForwardSpeed);
+        var camera = (GameplayCamera)typeof(TackleAlleyGame).GetField("_camera", flags)!.GetValue(game)!;
+        var expectedCamera = new GameplayCamera(config);
+        expectedCamera.Reset(config.PlayerSpawn.Position);
         Assert.Equal(expectedCamera.Camera.Position, camera.Camera.Position);
         Assert.Equal(expectedCamera.Camera.Target, camera.Camera.Target);
         game.ResetRun();

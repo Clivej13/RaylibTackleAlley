@@ -134,7 +134,8 @@ public sealed class ReturnerTests
             Assert.Equal(entry.Id, game.SelectedReturnerId);
             Assert.Equal(entry.Profile, carrier.Profile);
             var expected = new PlayerMovementAttributes(entry.Profile, config);
-            Assert.Equal(expected.RunningSpeed, carrier.CurrentForwardSpeed);
+            Assert.Equal(0, carrier.CurrentForwardSpeed);
+            Assert.Equal(expected.RunningSpeed, carrier.Speed);
             Assert.Equal(expected.AccelerationRate, carrier.Movement.AccelerationRate);
             Assert.Equal(expected.JukeSpeed, carrier.Movement.JukeSpeed);
             Assert.Equal(entry.Profile.Weight, carrier.Physical.TotalMass);

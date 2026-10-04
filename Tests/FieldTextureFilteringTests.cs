@@ -67,7 +67,7 @@ public sealed class FieldTextureFilteringTests(ITestOutputHelper output)
             var input = new InputController(InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json")));
             var game = new TackleAlleyGame(config, input, assets);
             game.InitializeVisuals(assets);
-            var camera = Field<ThirdPersonCamera>(game, "_camera");
+            var camera = Field<GameplayCamera>(game, "_camera");
             Camera3D gameplayCamera = camera.Camera;
             void Draw()
             {
@@ -110,15 +110,15 @@ public sealed class FieldTextureFilteringTests(ITestOutputHelper output)
                     if (mode == 2) Raylib.SetTextureFilter(filtered, TextureFilter.Anisotropic16X);
                 }
             }
-            void Camera(Camera3D value) => typeof(ThirdPersonCamera).GetProperty(nameof(ThirdPersonCamera.Camera))!.SetValue(camera, value);
+            void Camera(Camera3D value) => typeof(GameplayCamera).GetProperty(nameof(GameplayCamera.Camera))!.SetValue(camera, value);
             string directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../artifacts/field-filtering"));
             Directory.CreateDirectory(directory);
             var views = new (string Name, Camera3D Camera)[]
             {
                 ("normal-near", gameplayCamera),
-                ("shallow-near", new() { Position = new(0, 1.2f, 6.75f), Target = new(0, .3f, -15), Up = Vector3.UnitY, FovY = config.CameraFovY, Projection = CameraProjection.Perspective }),
-                ("normal-far", new() { Position = new(0, 5.5f, -77), Target = new(0, 1.1f, -64.75f), Up = Vector3.UnitY, FovY = config.CameraFovY, Projection = CameraProjection.Perspective }),
-                ("shallow-far", new() { Position = new(0, 1.2f, -77), Target = new(0, .3f, -55.25f), Up = Vector3.UnitY, FovY = config.CameraFovY, Projection = CameraProjection.Perspective })
+                ("shallow-near", new() { Position = new(0, 1.2f, 6.75f), Target = new(0, .3f, -15), Up = Vector3.UnitY, FovY = config.MediumCamera.FovY, Projection = CameraProjection.Perspective }),
+                ("normal-far", new() { Position = new(0, 5.5f, -77), Target = new(0, 1.1f, -64.75f), Up = Vector3.UnitY, FovY = config.MediumCamera.FovY, Projection = CameraProjection.Perspective }),
+                ("shallow-far", new() { Position = new(0, 1.2f, -77), Target = new(0, .3f, -55.25f), Up = Vector3.UnitY, FovY = config.MediumCamera.FovY, Projection = CameraProjection.Perspective })
             };
             foreach (var view in views)
             {

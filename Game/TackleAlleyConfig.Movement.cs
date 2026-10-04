@@ -23,17 +23,26 @@ public sealed class MovementTierInfluence
     }
 }
 
-/// <summary>Role-wide rules only; player profiles contain no scaling overrides.</summary>
+/// <summary>One shared movement scale for both teams; profiles supply ratings only.</summary>
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class MovementScaling
 {
-    public MovementTierInfluence SpeedTierInfluence { get; set; } = new();
+    public float SpeedScale { get; set; } = 1;
+    public float AccelerationScale { get; set; } = 1;
+    public MovementTierInfluence SpeedTierInfluence { get; set; } = new() { Jog = .05f, Run = .15f, Sprint = .30f };
+
+    public static bool ValidSpeedScale(float value) => float.IsFinite(value) && value >= .5f && value <= 1.5f;
+    public static bool ValidAccelerationScale(float value) => float.IsFinite(value) && value >= .25f && value <= 2;
     public MovementTierInfluence AccelerationTierInfluence { get; set; } =
         new() { Jog = .25f, Run = .25f, Sprint = .25f };
 
     internal void Validate(string path, float jogBaseline, float runBaseline,
         float sprintBaseline, float readyBaseline, float accelerationBaseline)
     {
+        if (!ValidSpeedScale(SpeedScale)) throw new ArgumentException($"{path}.SpeedScale must be between 0.5 and 1.5.");
+        if (!ValidAccelerationScale(AccelerationScale)) throw new ArgumentException($"{path}.AccelerationScale must be between 0.25 and 2.");
+        jogBaseline *= SpeedScale; runBaseline *= SpeedScale; sprintBaseline *= SpeedScale;
+        readyBaseline *= SpeedScale; accelerationBaseline *= AccelerationScale;
         if (SpeedTierInfluence is null) throw new ArgumentException($"{path}.SpeedTierInfluence is required.");
         if (AccelerationTierInfluence is null) throw new ArgumentException($"{path}.AccelerationTierInfluence is required.");
         SpeedTierInfluence.Validate($"{path}.SpeedTierInfluence");
@@ -67,23 +76,12 @@ public sealed class MovementScaling
 
 public sealed partial class TackleAlleyConfig
 {
-    public MovementScaling ReturnerMovementScaling { get; set; } = new()
-    {
-        SpeedTierInfluence = new() { Jog = .05f, Run = .15f, Sprint = .30f }
-    };
-    // Preserve the existing defender mapping independently of returner balance.
-    public MovementScaling DefenderMovementScaling { get; set; } = new()
-    {
-        SpeedTierInfluence = new() { Jog = .20f, Run = .20f, Sprint = .20f }
-    };
+    public MovementScaling MovementScaling { get; set; } = new();
 
     public void ValidateMovementScaling()
     {
-        if (ReturnerMovementScaling is null) throw new ArgumentException("ReturnerMovementScaling is required.");
-        if (DefenderMovementScaling is null) throw new ArgumentException("DefenderMovementScaling is required.");
-        ReturnerMovementScaling.Validate(nameof(ReturnerMovementScaling), PlayerSlowSpeed,
+        if (MovementScaling is null) throw new ArgumentException("MovementScaling is required.");
+        MovementScaling.Validate(nameof(MovementScaling), PlayerSlowSpeed,
             PlayerForwardSpeed, PlayerSprintSpeed, PlayerSlowSpeed, ForwardAcceleration);
-        DefenderMovementScaling.Validate(nameof(DefenderMovementScaling), OpponentJogSpeed,
-            OpponentRunSpeed, OpponentSprintSpeed, PlayerSlowSpeed, ForwardAcceleration);
     }
 }

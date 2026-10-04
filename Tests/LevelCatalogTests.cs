@@ -137,7 +137,7 @@ public sealed class LevelCatalogTests
         Assert.Equal(Field<FootballField>(previous, "_field").Width, Field<FootballField>(game, "_field").Width);
         Assert.Equal(Field<FootballField>(previous, "_field").GoalLineZ, Field<FootballField>(game, "_field").GoalLineZ);
         Assert.Equal(Field<BallCarrier>(previous, "_player").Position, Field<BallCarrier>(game, "_player").Position);
-        Assert.Equal(Field<ThirdPersonCamera>(previous, "_camera").Camera.Position, Field<ThirdPersonCamera>(game, "_camera").Camera.Position);
+        Assert.Equal(Field<GameplayCamera>(previous, "_camera").Camera.Position, Field<GameplayCamera>(game, "_camera").Camera.Position);
         var defenders = Field<Opponent[]>(game, "_opponents");
         var oldDefenders = Field<Opponent[]>(previous, "_opponents");
         for (int i = 0; i < defenders.Length; i++)

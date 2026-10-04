@@ -134,7 +134,7 @@ public sealed class DefenderRecoveryTests : IDisposable
         Assert.True(Vector3.Distance(position, d.Position) > 0);
         Assert.True(d.HasEngaged);
         Assert.Equal(OpponentPace.Sprint, d.Pace);
-        Assert.Equal(new TackleAlleyConfig().OpponentSprintSpeed, d.TargetSpeed);
+        Assert.Equal(new TackleAlleyConfig().PlayerSprintSpeed, d.TargetSpeed);
     }
 
     [Theory]

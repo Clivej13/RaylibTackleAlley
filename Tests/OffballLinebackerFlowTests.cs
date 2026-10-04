@@ -214,7 +214,7 @@ public sealed class OffballLinebackerFlowTests(ITestOutputHelper output)
         Assert.True(sprintWindowRatio < runWindowRatio && runWindowRatio < slowWindowRatio);
         Assert.True(sprintWindowRatio < .8f);
         Assert.Equal(.15f, Linebacker().ReactionTime);
-        Assert.Equal(.2f, config.DefenderMovementScaling.SpeedTierInfluence.Sprint);
+        Assert.Equal(.3f, config.MovementScaling.SpeedTierInfluence.Sprint);
     }
 
     [Theory]

@@ -39,11 +39,11 @@ public sealed class PlayerMovementAttributes
     public float JukeSpeed { get; }
     public float SpinSpeed { get; }
 
-    public PlayerMovementAttributes(PlayerProfile profile, TackleAlleyConfig config, bool defender = false)
+    public PlayerMovementAttributes(PlayerProfile profile, TackleAlleyConfig config)
     {
         profile.Validate();
         config.ValidateMovementScaling();
-        var scaling = defender ? config.DefenderMovementScaling : config.ReturnerMovementScaling;
+        var scaling = config.MovementScaling;
         JogSpeedMultiplier = InfluenceMultiplier(profile.Speed, scaling.SpeedTierInfluence.Jog);
         RunningSpeedMultiplier = InfluenceMultiplier(profile.Speed, scaling.SpeedTierInfluence.Run);
         SprintSpeedMultiplier = InfluenceMultiplier(profile.Speed, scaling.SpeedTierInfluence.Sprint);
@@ -54,19 +54,19 @@ public sealed class PlayerMovementAttributes
         ReversalMultiplier = RatingMultiplier(profile.Agility, 1.15f, .85f);
         EvadeMultiplier = RatingMultiplier(profile.Agility, .9f, 1.1f);
         JukeMultiplier = RatingMultiplier(profile.Juke, .85f, 1.15f);
-        BaselineJogSpeed = defender ? config.OpponentJogSpeed : config.PlayerSlowSpeed;
-        BaselineRunSpeed = defender ? config.OpponentRunSpeed : config.PlayerForwardSpeed;
-        BaselineSprintSpeed = defender ? config.OpponentSprintSpeed : config.PlayerSprintSpeed;
-        BaselineReadySpeed = config.PlayerSlowSpeed;
-        JogSpeed = BaselineJogSpeed * JogSpeedMultiplier;
-        RunningSpeed = BaselineRunSpeed * RunningSpeedMultiplier;
-        SprintSpeed = BaselineSprintSpeed * SprintSpeedMultiplier;
-        ReadySpeed = BaselineReadySpeed * JogSpeedMultiplier;
+        BaselineJogSpeed = config.PlayerSlowSpeed;
+        BaselineRunSpeed = config.PlayerForwardSpeed;
+        BaselineSprintSpeed = config.PlayerSprintSpeed;
+        BaselineReadySpeed = BaselineJogSpeed;
+        JogSpeed = BaselineJogSpeed * scaling.SpeedScale * JogSpeedMultiplier;
+        RunningSpeed = BaselineRunSpeed * scaling.SpeedScale * RunningSpeedMultiplier;
+        SprintSpeed = BaselineSprintSpeed * scaling.SpeedScale * SprintSpeedMultiplier;
+        ReadySpeed = BaselineReadySpeed * scaling.SpeedScale * JogSpeedMultiplier;
         // Speed never boosts the acceleration ramp: a larger sprint-speed gap takes
         // longer to cover. The separate Acceleration rating still owns this rate.
-        JogAccelerationRate = config.ForwardAcceleration * JogAccelerationMultiplier;
-        AccelerationRate = config.ForwardAcceleration * AccelerationMultiplier;
-        SprintAccelerationRate = config.ForwardAcceleration * SprintAccelerationMultiplier;
+        JogAccelerationRate = config.ForwardAcceleration * scaling.AccelerationScale * JogAccelerationMultiplier;
+        AccelerationRate = config.ForwardAcceleration * scaling.AccelerationScale * AccelerationMultiplier;
+        SprintAccelerationRate = config.ForwardAcceleration * scaling.AccelerationScale * SprintAccelerationMultiplier;
         LateralSpeed = config.PlayerLateralSpeed * SteeringMultiplier;
         SteeringResponse = config.PlayerSprintSteeringRate * SteeringMultiplier;
         FacingResponse = config.PlayerRunYawResponse * SteeringMultiplier;

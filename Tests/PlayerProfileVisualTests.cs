@@ -167,17 +167,18 @@ public sealed class PlayerProfileVisualTests : IDisposable
             RaylibGameFramework.Input.InputConfigLoader.Load(Path.Combine(AppContext.BaseDirectory, "input.json")));
         var field = new FootballField(config, _assets);
         input.Update();
-        carrier.Update(input, .1f, field);
+        typeof(BallCarrier).GetProperty(nameof(BallCarrier.CurrentForwardSpeed))!.SetValue(carrier, carrier.Speed);
+        carrier.Update(new PlayerInputSnapshot(0, 0, 0, default, false, Forward: 1), .1f, field);
         defender.Update(new(0, 0, -40), .1f, false, Vector2.Zero, false);
         Assert.Equal(.1f * carrier.Movement.RunningSpeedMultiplier, Field<AnimationPlayer>(carrier, "_animation").CurrentTime, 5);
-        Assert.Equal(.1f * defender.Movement.RunningSpeedMultiplier, Field<AnimationPlayer>(defender, "_animation").CurrentTime, 5);
+        Assert.Equal(.1f * defender.Movement.JogSpeedMultiplier, Field<AnimationPlayer>(defender, "_animation").CurrentTime, 5);
         Assert.InRange(carrier.LocomotionPlaybackRate, .35f, 1.5f);
         Assert.InRange(defender.LocomotionPlaybackRate, .35f, 1.5f);
 
         // Start the existing cut state and verify its authored clock is not speed-scaled.
         typeof(BallCarrier).GetField("_cutName", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(carrier, "CutRight");
         typeof(BallCarrier).GetField("_cutRemaining", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(carrier, config.PlayerCutDuration);
-        carrier.Update(input, .1f, field);
+        carrier.Update(new PlayerInputSnapshot(0, 0, 0, default, false, Forward: 1), .1f, field);
         Assert.Equal("CutRight", carrier.AnimationName);
         Assert.Equal(.1f, Field<AnimationPlayer>(carrier, "_animation").CurrentTime, 5);
         Assert.Equal(config.PlayerCutDuration - .1f, Field<float>(carrier, "_cutRemaining"), 5);

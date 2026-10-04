@@ -18,7 +18,8 @@ internal sealed class RightStickInput
 
     public void IgnoreNextMouseDelta() => _ignoreNextMouseDelta = true;
 
-    public (Vector2 Direction, bool IsMouse) Read(InputController input)
+    // Called only while capturing a rendered frame, never from a simulation substep.
+    public (Vector2 Direction, bool IsMouse) ReadFrame(InputController input)
     {
         var bindings = new List<(string Device, string Input, string Action)>();
         foreach (string action in Actions)

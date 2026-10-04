@@ -22,8 +22,25 @@
       "Items": [
         { "Type": "Toggle", "Text": "Fullscreen", "Function": "SetFullscreen", "Value": false },
         { "Type": "Toggle", "Text": "VSync", "Function": "SetVSync", "Value": true },
+        { "Type": "Selector", "Text": "Camera", "Function": "SetCamera", "Options": ["Third Person", "Close", "Medium", "Far"], "Value": "Medium" },
         { "Type": "Toggle", "Text": "Debug", "Function": "SetDebug", "Value": false },
+        { "Type": "Button", "Text": "Movement", "Function": "OpenMenu", "Target": "Movement" },
+        { "Type": "Slider", "Text": "Third Person Position (degrees)", "Function": "SetShoulderAngle", "Min": 0, "Max": 180, "Step": 5, "Value": 0 },
+        { "Type": "Label", "Text": "0: Right shoulder   90: Over head   180: Left shoulder" },
+        { "Type": "Slider", "Text": "Third Person Tilt (degrees)", "Function": "SetCameraPitch", "Min": -10, "Max": 75, "Step": 5, "Value": 20 },
+        { "Type": "Label", "Text": "Higher tilt looks down more. Third Person only." },
         { "Type": "Label", "Text": "Settings are saved automatically.", "Function": "SettingsStatus" },
+        { "Type": "Button", "Text": "Back", "Function": "Back" }
+      ]
+    },
+    "Movement": {
+      "Title": "Movement",
+      "Items": [
+        { "Type": "Slider", "Text": "Player Speed (%)", "Function": "SetMovementSpeed", "Min": 50, "Max": 150, "Step": 5, "Value": 100 },
+        { "Type": "Slider", "Text": "Player Acceleration (%)", "Function": "SetMovementAcceleration", "Min": 25, "Max": 200, "Step": 5, "Value": 100 },
+        { "Type": "Label", "Text": "Speed and acceleration apply to both teams. Ratings determine individual differences." },
+        { "Type": "Slider", "Text": "Left Stick Sensitivity (%)", "Function": "SetLeftStickSensitivity", "Min": 25, "Max": 100, "Step": 5, "Value": 70 },
+        { "Type": "Label", "Text": "Lower sensitivity softens small stick movements." },
         { "Type": "Button", "Text": "Back", "Function": "Back" }
       ]
     },
@@ -41,6 +58,13 @@
         { "Type": "ControlDescription", "Text": "Spin Right", "KeyboardMouseDescription": "Mouse Down -> Right", "ControllerDescription": "Stick Back -> Roll Right" },
         { "Type": "ControlDescription", "Text": "Head Fake", "KeyboardMouseDescription": "Shift + Mouse", "ControllerDescription": "RT + Right Stick" },
         { "Type": "KeyBind", "Text": "Pause", "Function": "Rebind", "Action": "Pause" },
+        { "Type": "KeyBind", "Text": "Camera Left", "Function": "Rebind", "Action": "CameraLookLeft" },
+        { "Type": "KeyBind", "Text": "Camera Right", "Function": "Rebind", "Action": "CameraLookRight" },
+        { "Type": "KeyBind", "Text": "Camera Up", "Function": "Rebind", "Action": "CameraLookUp" },
+        { "Type": "KeyBind", "Text": "Camera Down", "Function": "Rebind", "Action": "CameraLookDown" },
+        { "Type": "KeyBind", "Text": "Jog", "Function": "Rebind", "Action": "Slow" },
+        { "Type": "Label", "Text": "Movement: camera-relative in Third Person; world-relative in fixed views" },
+        { "Type": "Label", "Text": "Camera look: Third Person mode only" },
         { "Type": "Label", "Text": "Confirm: Enter / A   Back: Escape / B" },
         { "Type": "Button", "Text": "Back", "Function": "Back" }
       ]
@@ -50,7 +74,9 @@
       "Items": [
         { "Type": "Button", "Text": "Resume", "Function": "Resume" },
         { "Type": "Button", "Text": "Restart", "Function": "Restart" },
-        { "Type": "Button", "Text": "Main Menu", "Function": "MainMenu" }
+        { "Type": "Button", "Text": "Options", "Function": "OpenMenu", "Target": "Options" },
+        { "Type": "Button", "Text": "Main Menu", "Function": "MainMenu" },
+        { "Type": "Button", "Text": "Exit", "Function": "ExitGame" }
       ]
     }
   }

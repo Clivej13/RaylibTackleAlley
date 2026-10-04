@@ -7,7 +7,6 @@ namespace RaylibTackleAlley.Game;
 // times seconds, masses kilograms, angles degrees unless the property says Radians.
 public sealed partial class TackleAlleyConfig
 {
-    public float CameraLookBackHalfAngleDegrees { get; set; } = 10f;
     public float PlayerReversalInputThreshold { get; set; } = .55f;
     public float PlayerReversalWindow { get; set; } = .25f;
     public float PlayerReversalSpeedLoss { get; set; } = .35f;
@@ -81,9 +80,6 @@ public sealed partial class TackleAlleyConfig
     public float OpponentLungeContactDistance { get; set; } = .5f;
 
     // Camera and run flow
-    public float CameraFovY { get; set; } = 55f;
-    public float CameraTargetHeight { get; set; } = 1.1f;
-    public float CameraLookAheadDistance { get; set; } = 5.5f;
     public float AutoRestartDelay { get; set; } = 2.5f;
     public float EndZoneStopFraction { get; set; } = .5f;
 
@@ -197,6 +193,8 @@ public sealed partial class TackleAlleyConfig
         Nonnegative(PlayerJukeSpeed, nameof(PlayerJukeSpeed));
         Positive(PlayerJukeDuration, nameof(PlayerJukeDuration));
         Nonnegative(MouseGestureSensitivity, nameof(MouseGestureSensitivity));
+        if (!float.IsFinite(LeftStickSensitivity) || LeftStickSensitivity < .25f || LeftStickSensitivity > 1)
+            throw new ArgumentOutOfRangeException(nameof(LeftStickSensitivity), "Sensitivity must be between 0.25 and 1.");
         Nonnegative(ForwardAcceleration, nameof(ForwardAcceleration));
         Nonnegative(ForwardDeceleration, nameof(ForwardDeceleration));
         Positive(PlayerVisualHeight, nameof(PlayerVisualHeight));
@@ -229,36 +227,11 @@ public sealed partial class TackleAlleyConfig
         PlayerSpawn.Validate();
     }
 
-    public void ValidateCamera()
-    {
-        Positive(CameraLookBackHalfAngleDegrees, nameof(CameraLookBackHalfAngleDegrees));
-        if (CameraLookBackHalfAngleDegrees >= 90)
-            throw new ArgumentException("Rear-view half angle must be smaller than 90 degrees.");
-        Positive(CameraSpeed1Distance, nameof(CameraSpeed1Distance));
-        Positive(CameraSpeed2Distance, nameof(CameraSpeed2Distance));
-        Positive(CameraSpeed3Distance, nameof(CameraSpeed3Distance));
-        Positive(CameraHeight, nameof(CameraHeight));
-        Nonnegative(CameraSmoothing, nameof(CameraSmoothing));
-        Nonnegative(CameraSteeringYawDegrees, nameof(CameraSteeringYawDegrees));
-        Nonnegative(CameraLookSmoothing, nameof(CameraLookSmoothing));
-        Unit(CameraLookBackThreshold, nameof(CameraLookBackThreshold));
-        Unit(CameraLookBackReleaseThreshold, nameof(CameraLookBackReleaseThreshold));
-        Positive(CameraFovY, nameof(CameraFovY));
-        Nonnegative(CameraTargetHeight, nameof(CameraTargetHeight));
-        Nonnegative(CameraLookAheadDistance, nameof(CameraLookAheadDistance));
-        if (!(PlayerSlowSpeed < PlayerForwardSpeed && PlayerForwardSpeed < PlayerSprintSpeed))
-            throw new ArgumentException("Camera speed anchors require PlayerSlowSpeed < PlayerForwardSpeed < PlayerSprintSpeed.");
-        if (CameraLookBackReleaseThreshold >= CameraLookBackThreshold || CameraFovY >= 180)
-            throw new ArgumentException("Camera release threshold must be below activation, and FOV below 180 degrees.");
-    }
-
     public void ValidateTackle()
     {
         ValidateTackleAiming();
         ValidateOpponentLocomotion();
-        Nonnegative(OpponentJogSpeed, nameof(OpponentJogSpeed));
-        Nonnegative(OpponentRunSpeed, nameof(OpponentRunSpeed));
-        Nonnegative(OpponentSprintSpeed, nameof(OpponentSprintSpeed));
+        ValidateMovementScaling();
         Positive(OpponentRunDistance, nameof(OpponentRunDistance));
         Nonnegative(OpponentSprintDistance, nameof(OpponentSprintDistance));
         Nonnegative(OpponentPaceHysteresis, nameof(OpponentPaceHysteresis));

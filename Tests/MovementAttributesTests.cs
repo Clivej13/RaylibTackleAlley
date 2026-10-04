@@ -21,6 +21,7 @@ public sealed class MovementAttributesTests : IDisposable
         _input.ApplyRebind(new InputRebindResult("RightStickLeft", "Keyboard", "R"));
         _input.ApplyRebind(new InputRebindResult("RightStickRight", "Keyboard", "E"));
         _input.ApplyRebind(new InputRebindResult("RightStickBack", "Keyboard", "Q"));
+        Key(KeyboardKey.W, true);
         _field = new FootballField(_config, new AssetManager(new AssetConfig()));
     }
     public void Dispose() => Raylib.CloseWindow();
@@ -40,10 +41,12 @@ public sealed class MovementAttributesTests : IDisposable
     [InlineData(true)]
     public void FiftyPreservesAllBaselineValues(bool defender)
     {
-        var a = new PlayerMovementAttributes(new(), _config, defender);
-        Assert.Equal(defender ? _config.OpponentJogSpeed : _config.PlayerSlowSpeed, a.JogSpeed);
-        Assert.Equal(defender ? _config.OpponentRunSpeed : _config.PlayerForwardSpeed, a.RunningSpeed);
-        Assert.Equal(defender ? _config.OpponentSprintSpeed : _config.PlayerSprintSpeed, a.SprintSpeed);
+        using var carrier = new BallCarrier(_config);
+        using var opponent = new Opponent(Vector3.Zero, _config);
+        var a = defender ? opponent.Movement : carrier.Movement;
+        Assert.Equal(defender ? _config.PlayerSlowSpeed : _config.PlayerSlowSpeed, a.JogSpeed);
+        Assert.Equal(defender ? _config.PlayerForwardSpeed : _config.PlayerForwardSpeed, a.RunningSpeed);
+        Assert.Equal(defender ? _config.PlayerSprintSpeed : _config.PlayerSprintSpeed, a.SprintSpeed);
         Assert.Equal(_config.PlayerSlowSpeed, a.ReadySpeed);
         Assert.Equal(_config.ForwardAcceleration, a.AccelerationRate);
         Assert.Equal(_config.PlayerLateralSpeed, a.LateralSpeed);
@@ -65,10 +68,11 @@ public sealed class MovementAttributesTests : IDisposable
     public void MappingsHaveExactAnchors(int rating, float speed, float acceleration, float agility, float reversal, float evade)
     {
         var a = new PlayerMovementAttributes(new() { Speed = rating, Acceleration = rating, Agility = rating }, _config);
-        var defender = new PlayerMovementAttributes(new() { Speed = rating }, _config, defender: true);
-        Assert.Equal(speed, defender.JogSpeedMultiplier, 5);
-        Assert.Equal(speed, defender.RunningSpeedMultiplier, 5);
-        Assert.Equal(speed, defender.SprintSpeedMultiplier, 5);
+        var defender = new PlayerMovementAttributes(new() { Speed = rating }, _config);
+        Assert.Equal(speed, PlayerMovementAttributes.RatingMultiplier(rating, .8f, 1.2f), 5);
+        Assert.Equal(a.JogSpeedMultiplier, defender.JogSpeedMultiplier);
+        Assert.Equal(a.RunningSpeedMultiplier, defender.RunningSpeedMultiplier);
+        Assert.Equal(a.SprintSpeedMultiplier, defender.SprintSpeedMultiplier);
         Assert.Equal(acceleration, a.AccelerationMultiplier, 5);
         Assert.Equal(agility, a.SteeringMultiplier, 5);
         Assert.Equal(reversal, a.ReversalMultiplier, 5);
@@ -83,7 +87,7 @@ public sealed class MovementAttributesTests : IDisposable
         using var normal = Carrier(new());
         using var fast = Carrier(new() { Speed = 100 });
         Assert.Equal(normal.Movement.AccelerationRate, fast.Movement.AccelerationRate);
-        Assert.Equal(normal.Speed * (1 + _config.ReturnerMovementScaling.SpeedTierInfluence.Run), fast.Speed);
+        Assert.Equal(normal.Speed * (1 + _config.MovementScaling.SpeedTierInfluence.Run), fast.Speed);
         Speed(normal, 0); Speed(fast, 0);
         Tick(normal, .1f); Tick(fast, .1f);
         Assert.Equal(normal.CurrentForwardSpeed, fast.CurrentForwardSpeed);
@@ -100,18 +104,17 @@ public sealed class MovementAttributesTests : IDisposable
     public void BothRolesApplyTargetTierAccelerationToActualTravel(int tier)
     {
         var config = new TackleAlleyConfig();
-        config.ReturnerMovementScaling.AccelerationTierInfluence = new() { Jog = .1f, Run = .3f, Sprint = .5f };
-        config.DefenderMovementScaling.AccelerationTierInfluence = new() { Jog = .05f, Run = .15f, Sprint = .25f };
+        config.MovementScaling.AccelerationTierInfluence = new() { Jog = .1f, Run = .3f, Sprint = .5f };
         var profile = new PlayerProfile { Acceleration = 100 };
         using var carrier = new BallCarrier(config, profile);
         Speed(carrier, 0);
-        Key(KeyboardKey.S, tier == 1);
+        Key(KeyboardKey.LeftControl, tier == 1);
         Key(KeyboardKey.LeftShift, tier == 3);
         Tick(carrier, .1f);
         Assert.Equal(tier, carrier.SpeedTier);
         Assert.Equal(carrier.Movement.TierAcceleration(tier) * .1f, carrier.CurrentForwardSpeed, 5);
         Assert.Equal(.5f * carrier.Movement.TierAcceleration(tier) * .01f, -carrier.Position.Z, 5);
-        Key(KeyboardKey.S, false);
+        Key(KeyboardKey.LeftControl, false);
         Key(KeyboardKey.LeftShift, false);
         Tick(carrier, 0);
 
@@ -152,9 +155,10 @@ public sealed class MovementAttributesTests : IDisposable
         Assert.True(high.Position.X > low.Position.X);
         Assert.True(Math.Abs(Field<float>(high, "_currentRunYaw")) > Math.Abs(Field<float>(low, "_currentRunYaw")));
         low.Reset(); high.Reset();
+        Speed(low, low.Speed); Speed(high, high.Speed);
         Key(KeyboardKey.LeftShift, true);
         Tick(low, .05f); Tick(high, .05f);
-        Assert.True(Field<float>(high, "_effectiveLateral") > Field<float>(low, "_effectiveLateral"));
+        Assert.True(Field<float>(high, "_movementYaw") > Field<float>(low, "_movementYaw"));
         Key(KeyboardKey.LeftShift, false); Key(KeyboardKey.D, false);
     }
 
@@ -163,6 +167,7 @@ public sealed class MovementAttributesTests : IDisposable
     {
         using var low = Carrier(new() { Agility = 1 });
         using var high = Carrier(new() { Agility = 100 });
+        Speed(low, low.Speed); Speed(high, high.Speed);
         Key(KeyboardKey.A, true); Tick(low, .01f); Tick(high, .01f);
         Key(KeyboardKey.A, false); Key(KeyboardKey.D, true);
         Tick(low, 0); Tick(high, 0);
@@ -185,6 +190,7 @@ public sealed class MovementAttributesTests : IDisposable
         {
             using var p = Carrier(new() { Agility = agility });
             Key(KeyboardKey.E, false); Key(KeyboardKey.Q, false); Tick(p, 0);
+            Speed(p, p.Speed);
             if (spin) { Key(KeyboardKey.Q, true); Tick(p, 0); Key(KeyboardKey.Q, false); }
             Key(KeyboardKey.E, true); Tick(p, 0);
             float duration = spin ? _config.PlayerSpinDuration : _config.PlayerJukeDuration;
@@ -253,7 +259,8 @@ public sealed class MovementAttributesTests : IDisposable
         p.Reset();
         Assert.Same(attributes, p.Movement);
         Assert.Equal(80, p.Profile.Speed);
-        Assert.Equal(attributes.RunningSpeed, p.CurrentForwardSpeed);
+        Assert.Equal(0, p.CurrentForwardSpeed);
+        Assert.Equal(attributes.RunningSpeed, p.Speed);
     }
 
     [Theory]
